@@ -5,7 +5,6 @@ const path = require("path");
 const crypto = require("crypto");
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { getStorage } = require("firebase-admin/storage");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -18,7 +17,6 @@ const FIREBASE_LOCAL_PATH =
     path.join(ROOT_DIR, "firebase-service-account.json");
 
 let db = null;
-let storageBucket = null;
 let firebaseEnabled = false;
 
 function initializeFirebase() {
@@ -52,26 +50,8 @@ function initializeFirebase() {
 
         db = getFirestore();
 
-        // Firebase Storage bucket. Prefer an explicit bucket name from
-        // FIREBASE_STORAGE_BUCKET; otherwise use the standard App Engine
-        // bucket name for the Firebase project.
-        const bucketName =
-            process.env.FIREBASE_STORAGE_BUCKET ||
-            `${serviceAccount.project_id}.appspot.com`;
-
-        try {
-            storageBucket = getStorage().bucket(bucketName);
-            console.log(
-                `Firebase Storage: configured (${bucketName})`
-            );
-        } catch (storageError) {
-            storageBucket = null;
-            console.error(
-                "Firebase Storage initialization failed:",
-                storageError.message
-            );
-        }
-
+        // HTML MCQ files are stored directly in Firestore.
+        // This avoids requiring a Firebase Storage bucket.
         firebaseEnabled = true;
 
         console.log(
@@ -115,46 +95,23 @@ function firestoreQuizRef(classNumber, subject, chapterNumber) {
 
 function firestoreHTMLRef(id) {
     if (!firebaseEnabled || !db) return null;
-
-    return db.collection("mcqHtml").doc(String(id));
-}
-
-function firestoreHTMLDocId(info, id) {
-    return `class${info.classNumber}_${info.subject}_${info.chapterNumber}_${id}`;
-}
-
-function firestoreHTMLRef(id) {
-    if (!firebaseEnabled || !db) return null;
     return db.collection("mcqHtml").doc(String(id));
 }
 
 async function saveHTMLToFirebase(info, item, html) {
     if (!firebaseEnabled || !db) return false;
 
-    if (!storageBucket) {
+    const htmlSize = Buffer.byteLength(
+        String(html),
+        "utf8"
+    );
+
+    // Firestore documents have a 1 MiB limit. Keep a safety margin.
+    if (htmlSize > 900000) {
         throw new Error(
-            "Firebase Storage bucket configured nahi hai. Firebase Console mein Storage enable karo ya Render mein FIREBASE_STORAGE_BUCKET set karo."
+            "HTML MCQ file 900 KB se bada hai. Current Firebase setup mein HTML ko Firestore document ke andar store karne ke liye file chhoti honi chahiye."
         );
     }
-
-    const storagePath =
-        `mcq-html/class${info.classNumber}/${info.subject}/chapter-${String(info.chapterNumber).padStart(2, "0")}/${item.fileName}`;
-
-    const file = storageBucket.file(storagePath);
-
-    await file.save(Buffer.from(html, "utf8"), {
-        resumable: false,
-        contentType: "text/html; charset=utf-8",
-        metadata: {
-            cacheControl: "public,max-age=3600",
-            metadata: {
-                mcqId: item.id,
-                classNumber: String(info.classNumber),
-                subject: info.subject,
-                chapterNumber: String(info.chapterNumber)
-            }
-        }
-    });
 
     const ref = firestoreHTMLRef(item.id);
 
@@ -163,7 +120,9 @@ async function saveHTMLToFirebase(info, item, html) {
         classNumber: Number(info.classNumber),
         subject: String(info.subject).toLowerCase(),
         chapterNumber: Number(info.chapterNumber),
-        storagePath,
+        html: String(html),
+        htmlSize,
+        storageType: "firestore",
         updatedAt: new Date().toISOString()
     });
 
@@ -179,18 +138,13 @@ async function getHTMLFromFirebase(id) {
 
     const data = snapshot.data();
 
-    if (!data.storagePath || !storageBucket) {
+    if (typeof data.html === "string") {
         return data;
     }
 
-    const [buffer] = await storageBucket
-        .file(data.storagePath)
-        .download();
-
-    return {
-        ...data,
-        html: buffer.toString("utf8")
-    };
+    // Backward compatibility for any old document that may still contain
+    // a Storage path. Current uploads no longer depend on Storage.
+    return data;
 }
 
 async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
@@ -205,6 +159,7 @@ async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
 
     return snapshot.docs.map(doc => {
         const data = doc.data();
+
         return {
             id: doc.id,
             fileName: data.fileName,
@@ -214,7 +169,7 @@ async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
             url: `/api/mcq-html/file/${encodeURIComponent(doc.id)}`,
-            source: "firebase-storage"
+            source: "firebase-firestore"
         };
     });
 }
@@ -226,30 +181,9 @@ async function renameHTMLInFirebase(info, id, newFileName, newName) {
     const snapshot = await ref.get();
     if (!snapshot.exists) return false;
 
-    const data = snapshot.data();
-    let storagePath = data.storagePath || "";
-
-    if (storagePath && storageBucket) {
-        const oldFile = storageBucket.file(storagePath);
-        const newStoragePath =
-            path.posix.join(
-                path.posix.dirname(storagePath),
-                newFileName
-            );
-
-        if (storagePath !== newStoragePath) {
-            await oldFile.copy(
-                storageBucket.file(newStoragePath)
-            );
-            await oldFile.delete().catch(() => {});
-            storagePath = newStoragePath;
-        }
-    }
-
     await ref.set({
         fileName: newFileName,
         name: newName,
-        storagePath,
         updatedAt: new Date().toISOString()
     }, { merge: true });
 
@@ -262,18 +196,6 @@ async function deleteHTMLFromFirebase(id) {
 
     const snapshot = await ref.get();
     if (!snapshot.exists) return false;
-
-    const data = snapshot.data();
-
-    if (data.storagePath && storageBucket) {
-        await storageBucket
-            .file(data.storagePath)
-            .delete()
-            .catch(error => {
-                // File may already be gone; Firestore metadata should still be removed.
-                if (error.code !== 404) throw error;
-            });
-    }
 
     await ref.delete();
     return true;
@@ -1205,8 +1127,7 @@ app.post(
                     `/api/mcq-html/file/${encodeURIComponent(id)}`
             };
 
-            // HTML ka permanent copy Firebase Storage mein aur metadata
-            // Firestore mein save hota hai.
+            // HTML ka permanent copy Firestore mein save hota hai.
             let firebaseSaved = false;
 
             if (firebaseEnabled) {
@@ -1317,7 +1238,7 @@ app.patch(
 
                         return res.json({
                             success: true,
-                            message: "MCQ file name Firebase Storage aur Firestore mein update ho gaya.",
+                            message: "MCQ file name Firebase Firestore mein update ho gaya.",
                             item: {
                                 ...firebaseItem,
                                 fileName: updatedFileName,
@@ -1513,7 +1434,7 @@ app.delete(
             res.json({
                 success: true,
                 message: firebaseExists
-                    ? "MCQ file local storage aur Firebase dono se delete ho gaya."
+                    ? "MCQ file local storage aur Firebase Firestore dono se delete ho gaya."
                     : "MCQ file delete ho gaya.",
                 firebaseDeleted: firebaseExists
             });
