@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCERT GK-GS Notes + MCQ — Admin</title>
+    <link rel="stylesheet" href="admin.css">
+
+    <style>
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .home-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            padding: 10px 17px;
+            border-radius: 9px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .home-btn:hover {
+            background: #bfdbfe;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="admin-shell">
+
+    <header class="topbar">
+
+        <div>
+            <div class="brand">📚 NCERT GK-GS NOTES MCQ</div>
+            <div class="brand-sub">Admin Dashboard</div>
+        </div>
+
+        <div class="topbar-actions">
+
+            <!-- MAIN WEBSITE HOME -->
+            <a
+                class="home-btn"
+                href="index.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Main Website Home"
+            >
+                🏠 Home
+            </a>
+
+            <!-- LOGOUT -->
+            <button
+                class="logout-btn"
+                onclick="logout()"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <main class="container">
+
+        <!-- LOGIN -->
+        <section
+            id="loginCard"
+            class="login-card card"
+        >
+
+            <div class="login-icon">
+                🔐
+            </div>
+
+            <h1>
+                Admin Login
+            </h1>
+
+            <p>
+                Admin panel open karne ke liye password daaliye.
+            </p>
+
+            <div class="login-form">
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Admin Password"
+                    autocomplete="current-password"
+                >
+
+                <button
+                    class="primary-btn"
+                    onclick="login()"
+                >
+                    Login
+                </button>
+
+            </div>
+
+            <div
+                id="loginMessage"
+                class="message"
+            ></div>
+
+        </section>
+
+
+        <!-- ADMIN -->
+        <section
+            id="adminPanel"
+            class="hidden"
+        >
+
+            <div class="welcome card">
+
+                <div>
+
+                    <h1>
+                        Admin Dashboard
+                    </h1>
+
+                    <p>
+                        General Science ke subjects, classes, chapters
+                        aur MCQ ek hi page se manage karein.
+                    </p>
+
+                </div>
+
+                <div class="dashboard-badge">
+                    OWNER
+                </div>
+
+            </div>
+
+
+            <!-- SUBJECTS -->
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            General Science
+                        </h2>
+
+                        <p>
+                            Subject select karke neeche Class aur Chapter manage karein.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="subject-grid">
+
+                    <button
+                        class="subject-card active"
+                        data-subject="Physics"
+                        onclick="selectSubject('Physics')"
+                    >
+
+                        <span>⚛️</span>
+
+                        <strong>
+                            Physics
+                        </strong>
+
+                        <small>
+                            भौतिक विज्ञान
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        class="subject-card"
+                        data-subject="Chemistry"
+                        onclick="selectSubject('Chemistry')"
+                    >
+
+                        <span>🧪</span>
+
+                        <strong>
+                            Chemistry
+                        </strong>
+
+                        <small>
+                            रसायन विज्ञान
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        class="subject-card"
+                        data-subject="Biology"
+                        onclick="selectSubject('Biology')"
+                    >
+
+                        <span>🧬</span>
+
+                        <strong>
+                            Biology
+                        </strong>
+
+                        <small>
+                            जीव विज्ञान
+                        </small>
+
+                    </button>
+
+
+                    <button
+                        class="subject-card"
+                        data-subject="Environmental-Science"
+                        onclick="selectSubject('Environmental-Science')"
+                    >
+
+                        <span>🌱</span>
+
+                        <strong>
+                            Environmental Science
+                        </strong>
+
+                        <small>
+                            पर्यावरण विज्ञान
+                        </small>
+
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- CLASS / CHAPTER -->
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2 id="currentSubjectTitle">
+                            Physics
+                        </h2>
+
+                        <p>
+                            Class aur chapter select karein.
+                        </p>
+
+                    </div>
+
+                    <span
+                        id="selectionBadge"
+                        class="selection-badge"
+                    >
+                        Class 6 • Chapter 7
+                    </span>
+
+                </div>
+
+
+                <div class="selector-grid">
+
+                    <div class="field">
+
+                        <label for="classNumber">
+                            Class
+                        </label>
+
+                        <select id="classNumber">
+
+                            <option value="6">
+                                Class 6
+                            </option>
+
+                            <option value="7">
+                                Class 7
+                            </option>
+
+                            <option value="8">
+                                Class 8
+                            </option>
+
+                            <option value="9">
+                                Class 9
+                            </option>
+
+                            <option value="10">
+                                Class 10
+                            </option>
+
+                            <option value="11">
+                                Class 11
+                            </option>
+
+                            <option value="12">
+                                Class 12
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="field">
+
+                        <label for="chapterNumber">
+                            Chapter Number
+                        </label>
+
+                        <input
+                            id="chapterNumber"
+                            type="number"
+                            min="1"
+                            placeholder="e.g. 7"
+                            value="7"
+                        >
+
+                    </div>
+
+
+                    <div class="field wide">
+
+                        <label for="chapterTitle">
+
+                            Chapter Title
+
+                            <span>
+                                (JSON save ke liye)
+                            </span>
+
+                        </label>
+
+                        <input
+                            id="chapterTitle"
+                            type="text"
+                            placeholder="Chapter title"
+                        >
+
+                    </div>
+
+
+                    <button
+                        class="secondary-btn load-btn"
+                        onclick="loadQuizzes()"
+                    >
+                        🔄 Load MCQ
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="chapterMessage"
+                    class="message"
+                ></div>
+
+            </section>
+
+
+            <!-- MCQ MANAGEMENT -->
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📋 MCQ Management
+                        </h2>
+
+                        <p id="listDescription">
+                            Selected chapter ke uploaded MCQ yahan dikhenge.
+                        </p>
+
+                    </div>
+
+                    <span
+                        id="mcqCountBadge"
+                        class="count-badge"
+                    >
+                        0 MCQ Sets
+                    </span>
+
+                </div>
+
+
+                <div id="quizList">
+
+                    <div class="empty">
+
+                        Chapter select karke
+                        <strong>
+                            Load MCQ
+                        </strong>
+                        dabaiye.
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- HTML UPLOAD -->
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📤 Ready-made MCQ HTML Upload
+                        </h2>
+
+                        <p>
+                            Selected Class → Subject → Chapter mein
+                            HTML quiz upload karein.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="upload-grid">
+
+                    <div class="file-drop">
+
+                        <div class="upload-icon">
+                            📄
+                        </div>
+
+                        <strong>
+                            MCQ HTML file select karein
+                        </strong>
+
+                        <input
+                            type="file"
+                            id="mcqFile"
+                            accept=".html,.htm"
+                        >
+
+                        <div
+                            id="htmlFileName"
+                            class="file-name"
+                        >
+                            No file selected
+                        </div>
+
+                    </div>
+
+
+                    <div class="upload-side">
+
+                        <div class="upload-summary">
+
+                            <div>
+
+                                <span>
+                                    Class
+                                </span>
+
+                                <strong id="uploadClassText">
+                                    6
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    Subject
+                                </span>
+
+                                <strong id="uploadSubjectText">
+                                    Physics
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    Chapter
+                                </span>
+
+                                <strong id="uploadChapterText">
+                                    7
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <button
+                            class="primary-btn"
+                            onclick="uploadMCQ()"
+                        >
+                            📤 Upload MCQ HTML
+                        </button>
+
+
+                        <div
+                            id="uploadMessage"
+                            class="message"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- JSON IMPORT -->
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📥 MCQ JSON Import
+                        </h2>
+
+                        <p>
+                            150 MCQs validate karke permanent JSON save karein.
+                        </p>
+
+                    </div>
+
+                    <span class="count-badge">
+                        150 Questions
+                    </span>
+
+                </div>
+
+
+                <div class="json-grid">
+
+                    <div class="field">
+
+                        <label for="jsonFile">
+                            JSON File
+                        </label>
+
+                        <input
+                            type="file"
+                            id="jsonFile"
+                            accept=".json"
+                        >
+
+                        <div
+                            id="fileName"
+                            class="file-name"
+                        >
+                            Koi JSON file select nahi ki gayi
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        id="importBtn"
+                        class="primary-btn json-import-btn"
+                    >
+                        📥 Import JSON
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="progressCard"
+                    class="progress-card hidden"
+                >
+
+                    <div class="progress-track">
+
+                        <div
+                            id="progressBar"
+                            class="progress-bar"
+                        ></div>
+
+                    </div>
+
+                    <div
+                        id="progressText"
+                        class="progress-text"
+                    >
+                        Ready...
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="sectionStatus"
+                    class="section-status"
+                ></div>
+
+
+                <div
+                    id="summary"
+                    class="summary"
+                ></div>
+
+
+                <div
+                    id="previewCard"
+                    class="preview-card hidden"
+                >
+
+                    <div class="preview-heading">
+
+                        <h3>
+                            JSON Preview
+                        </h3>
+
+                        <span
+                            id="questionCount"
+                            class="count-badge"
+                        >
+                            0 questions
+                        </span>
+
+                    </div>
+
+
+                    <textarea
+                        id="jsonPreview"
+                        spellcheck="false"
+                    ></textarea>
+
+
+                    <div class="button-row">
+
+                        <button
+                            id="copyBtn"
+                            class="secondary-btn"
+                        >
+                            📋 Copy JSON
+                        </button>
+
+
+                        <button
+                            id="downloadBtn"
+                            class="secondary-btn"
+                        >
+                            ⬇ Download JSON
+                        </button>
+
+
+                        <button
+                            id="saveQuizBtn"
+                            class="primary-btn"
+                        >
+                            💾 Save Permanently & Start Quiz
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="resultCard"
+                    class="result-card hidden"
+                >
+
+                    <div id="resultText"></div>
+
+                </div>
+
+            </section>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script src="js/admin.js"></script>
+
+</body>
+</html>

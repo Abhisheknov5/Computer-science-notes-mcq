@@ -1,0 +1,1575 @@
+/* =========================================
+   NCERT NOTES + MCQ
+   MAIN APPLICATION
+========================================= */
+
+const subjects = [
+    {
+        id: "physics",
+        name: "Physics",
+        icon: "⚛️",
+        description:
+            "Motion, Force, Energy, Electricity and other Physics topics."
+    },
+    {
+        id: "chemistry",
+        name: "Chemistry",
+        icon: "🧪",
+        description:
+            "Matter, Atoms, Reactions, Acids, Bases and more."
+    },
+    {
+        id: "biology",
+        name: "Biology",
+        icon: "🧬",
+        description:
+            "Living Organisms, Plants, Human Body and Life Processes."
+    },
+    {
+        id: "environmental-science",
+        name: "Environmental Science",
+        icon: "🌱",
+        description:
+            "Environment, Ecosystems, Natural Resources and Conservation."
+    }
+];
+
+const classes = [6, 7, 8, 9, 10, 11, 12];
+
+const app = document.getElementById("app");
+
+
+/* =========================================
+   CLASS 6 PHYSICS
+   COMMON NOTES GOOGLE DOC
+========================================= */
+
+const COMMON_NOTES_URL =
+    "https://docs.google.com/document/d/1krZ9Puyn1JuFtiaTeyxNtXRbFJWSAFhcCeSdpi0j22Y/edit?tab=t.0#heading=h.c7ziergcxtih";
+
+
+/* =========================================
+   CLASS 6 PHYSICS
+   ACTUAL NCERT CHAPTERS
+========================================= */
+
+const CLASS6_PHYSICS_CHAPTERS = [
+    {
+        number: 7,
+        title:
+            "गति एवं दूरियों का मापन (Motion and Measurement of Distances)"
+    },
+    {
+        number: 8,
+        title:
+            "प्रकाश–छायाएँ एवं परावर्तन (Light, Shadows and Reflections)"
+    },
+    {
+        number: 9,
+        title:
+            "विद्युत तथा परिपथ (Electricity and Circuits)"
+    },
+    {
+        number: 10,
+        title:
+            "चुंबकों द्वारा मनोरंजन (Fun with Magnets)"
+    }
+];
+
+
+/* =========================================
+   SUBJECT FOLDER MAP
+========================================= */
+
+const subjectFolderMap = {
+    physics: "Physics",
+    chemistry: "Chemistry",
+    biology: "Biology",
+    "environmental-science": "Environmental-Science"
+};
+
+
+/* =========================================
+   HTML ESCAPE
+========================================= */
+
+function escapeHtml(value) {
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+        return "";
+    }
+
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+/* =========================================
+   JSON PATH
+========================================= */
+
+function getJSONPath(
+    classNumber,
+    subjectId,
+    chapterNumber,
+    type
+) {
+
+    const folder =
+        type === "notes"
+            ? "Notes"
+            : "MCQ";
+
+    const subjectFolder =
+        subjectFolderMap[subjectId];
+
+    if (!subjectFolder) {
+
+        console.error(
+            "Unknown subject:",
+            subjectId
+        );
+
+        return "";
+    }
+
+    const fileNumber =
+        String(chapterNumber).padStart(2, "0");
+
+    return (
+        `data/class${classNumber}/` +
+        `${folder}/` +
+        `${subjectFolder}/` +
+        `chapter-${fileNumber}.json`
+    );
+}
+
+
+/* =========================================
+   MCQ HTML PATH
+   CLASS 6 PHYSICS ONLY
+========================================= */
+
+function getMCQHTMLPath(
+    classNumber,
+    subjectId,
+    chapterNumber
+) {
+
+    const fileNumber =
+        String(chapterNumber).padStart(2, "0");
+
+    return (
+        `data/class${classNumber}/` +
+        `MCQ/` +
+        `${subjectFolderMap[subjectId]}/` +
+        `chapter-${fileNumber}.html`
+    );
+}
+
+
+/* =========================================
+   LOAD JSON
+========================================= */
+
+async function loadJSON(path) {
+
+    if (!path) {
+        return null;
+    }
+
+    try {
+
+        const response =
+            await fetch(path, {
+                cache: "no-store"
+            });
+
+        if (!response.ok) {
+
+            console.warn(
+                `JSON not found: ${path} (${response.status})`
+            );
+
+            return null;
+        }
+
+        return await response.json();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "JSON Load Error:",
+            path,
+            error
+        );
+
+        return null;
+    }
+}
+
+
+/* =========================================
+   FIND BALANCED ARRAY
+   Used for extracting:
+   const questions = [ ... ];
+========================================= */
+
+function extractBalancedArray(
+    text,
+    startIndex
+) {
+
+    const firstBracket =
+        text.indexOf(
+            "[",
+            startIndex
+        );
+
+    if (firstBracket === -1) {
+        return null;
+    }
+
+    let depth = 0;
+
+    let quote = null;
+
+    let escaped = false;
+
+    for (
+        let i = firstBracket;
+        i < text.length;
+        i++
+    ) {
+
+        const char =
+            text[i];
+
+        if (quote) {
+
+            if (escaped) {
+
+                escaped = false;
+
+                continue;
+            }
+
+            if (char === "\\") {
+
+                escaped = true;
+
+                continue;
+            }
+
+            if (char === quote) {
+
+                quote = null;
+            }
+
+            continue;
+        }
+
+
+        if (
+            char === '"' ||
+            char === "'" ||
+            char === "`"
+        ) {
+
+            quote = char;
+
+            continue;
+        }
+
+
+        if (char === "[") {
+
+            depth++;
+        }
+
+        else if (char === "]") {
+
+            depth--;
+
+            if (depth === 0) {
+
+                return text.substring(
+                    firstBracket,
+                    i + 1
+                );
+            }
+        }
+    }
+
+    return null;
+}
+
+
+/* =========================================
+   LOAD MCQ HTML
+========================================= */
+
+async function loadMCQHTML(path) {
+
+    if (!path) {
+        return null;
+    }
+
+    try {
+
+        const response =
+            await fetch(path, {
+                cache: "no-store"
+            });
+
+        if (!response.ok) {
+
+            console.warn(
+                `MCQ HTML not found: ${path} (${response.status})`
+            );
+
+            return null;
+        }
+
+
+        const html =
+            await response.text();
+
+
+        const questionsIndex =
+            html.indexOf(
+                "const questions"
+            );
+
+
+        if (questionsIndex === -1) {
+
+            console.error(
+                "questions array not found:",
+                path
+            );
+
+            return null;
+        }
+
+
+        const arrayText =
+            extractBalancedArray(
+                html,
+                questionsIndex
+            );
+
+
+        if (!arrayText) {
+
+            console.error(
+                "Questions array could not be extracted:",
+                path
+            );
+
+            return null;
+        }
+
+
+        const questions =
+            Function(
+                `"use strict"; return (${arrayText});`
+            )();
+
+
+        if (!Array.isArray(questions)) {
+
+            console.error(
+                "Extracted questions is not an array:",
+                path
+            );
+
+            return null;
+        }
+
+
+        return {
+
+            title:
+                getHTMLTitle(html),
+
+            questions:
+                questions
+
+        };
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "MCQ HTML Load Error:",
+            path,
+            error
+        );
+
+        return null;
+    }
+}
+
+
+/* =========================================
+   GET HTML TITLE
+========================================= */
+
+function getHTMLTitle(html) {
+
+    const titleMatch =
+        html.match(
+            /<title[^>]*>([\s\S]*?)<\/title>/i
+        );
+
+
+    if (
+        titleMatch &&
+        titleMatch[1]
+    ) {
+
+        const temp =
+            document.createElement(
+                "div"
+            );
+
+        temp.innerHTML =
+            titleMatch[1];
+
+        return (
+            temp.textContent ||
+            temp.innerText ||
+            ""
+        ).trim();
+    }
+
+
+    return "";
+}
+
+
+/* =========================================
+   GET MCQ DATA
+   CLASS 6 PHYSICS:
+   HTML
+
+   OTHER:
+   JSON
+========================================= */
+
+async function loadMCQData(
+    classNumber,
+    subjectId,
+    chapterNumber
+) {
+
+    if (
+        classNumber === 6 &&
+        subjectId === "physics"
+    ) {
+
+        const path =
+            getMCQHTMLPath(
+                classNumber,
+                subjectId,
+                chapterNumber
+            );
+
+        return await loadMCQHTML(
+            path
+        );
+    }
+
+
+    const path =
+        getJSONPath(
+            classNumber,
+            subjectId,
+            chapterNumber,
+            "mcq"
+        );
+
+    return await loadJSON(
+        path
+    );
+}
+
+
+/* =========================================
+   ROUTER
+========================================= */
+
+function router() {
+
+    const hash =
+        window.location.hash || "#home";
+
+    const parts =
+        hash
+            .substring(1)
+            .split("/");
+
+    const page =
+        parts[0];
+
+
+    if (page === "home") {
+
+        renderHome();
+
+    }
+
+    else if (page === "science") {
+
+        renderScience();
+
+    }
+
+    else if (page === "class") {
+
+        const classNumber =
+            Number(parts[1]);
+
+        renderClassPage(
+            classNumber
+        );
+
+    }
+
+    else if (page === "subject") {
+
+        const classNumber =
+            Number(parts[1]);
+
+        const subjectId =
+            parts[2];
+
+        renderChapterList(
+            classNumber,
+            subjectId
+        );
+
+    }
+
+    else if (page === "read-notes") {
+
+        const classNumber =
+            Number(parts[1]);
+
+        const subjectId =
+            parts[2];
+
+        const chapterNumber =
+            Number(parts[3]);
+
+        renderNotes(
+            classNumber,
+            subjectId,
+            chapterNumber
+        );
+
+    }
+
+    else if (page === "quiz") {
+
+        const classNumber =
+            Number(parts[1]);
+
+        const subjectId =
+            parts[2];
+
+        const chapterNumber =
+            Number(parts[3]);
+
+        const directStart =
+            parts[4] === "direct";
+
+        renderQuizPage(
+            classNumber,
+            subjectId,
+            chapterNumber,
+            directStart
+        );
+
+    }
+
+    else {
+
+        renderHome();
+
+    }
+}
+
+
+/* =========================================
+   HOME
+========================================= */
+
+function renderHome() {
+
+    app.innerHTML = `
+
+        <section class="hero">
+
+            <div class="hero-icon">
+                📚
+            </div>
+
+            <h1>
+                NCERT Notes + MCQ
+            </h1>
+
+            <p>
+                NCERT आधारित Notes और MCQ Practice
+            </p>
+
+        </section>
+
+
+        <section class="section">
+
+            <h2 class="section-title">
+                General Science
+            </h2>
+
+            <div class="card-grid">
+
+                <div class="card">
+
+                    <div class="card-icon">
+                        🔬
+                    </div>
+
+                    <h3>
+                        General Science
+                    </h3>
+
+                    <p>
+                        Physics, Chemistry, Biology
+                        और Environmental Science
+                    </p>
+
+                    <button
+                        class="btn"
+                        onclick="location.hash='science'"
+                    >
+                        Explore
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+    `;
+}
+
+
+/* =========================================
+   GENERAL SCIENCE
+========================================= */
+
+function renderScience() {
+
+    app.innerHTML = `
+
+        <button
+            class="back-btn"
+            onclick="location.hash='home'"
+        >
+            ← Back to Home
+        </button>
+
+
+        <div class="page-header">
+
+            <h1>
+                🔬 General Science
+            </h1>
+
+            <p>
+                Select your class to explore
+                NCERT Notes and MCQs
+            </p>
+
+        </div>
+
+
+        <div class="card-grid">
+
+            ${classes.map(classNumber => `
+
+                <div class="card">
+
+                    <div class="card-icon">
+                        📘
+                    </div>
+
+                    <h3>
+                        Class ${classNumber}
+                    </h3>
+
+                    <p>
+                        Notes & MCQs
+                    </p>
+
+                    <button
+                        class="btn"
+                        onclick="location.hash='class/${classNumber}'"
+                    >
+                        Explore
+                    </button>
+
+                </div>
+
+            `).join("")}
+
+        </div>
+    `;
+}
+
+
+/* =========================================
+   CLASS PAGE
+========================================= */
+
+function renderClassPage(
+    classNumber
+) {
+
+    if (
+        !classes.includes(
+            classNumber
+        )
+    ) {
+
+        renderScience();
+
+        return;
+    }
+
+
+    app.innerHTML = `
+
+        <button
+            class="back-btn"
+            onclick="location.hash='science'"
+        >
+            ← Back to General Science
+        </button>
+
+
+        <div class="page-header">
+
+            <h1>
+                📘 Class ${classNumber} - General Science
+            </h1>
+
+            <p>
+                Choose a subject
+            </p>
+
+        </div>
+
+
+        <div class="card-grid">
+
+            ${subjects.map(subject => `
+
+                <div class="card">
+
+                    <div class="card-icon">
+                        ${subject.icon}
+                    </div>
+
+                    <h3>
+                        ${subject.name}
+                    </h3>
+
+                    <p>
+                        ${subject.description}
+                    </p>
+
+                    <button
+                        class="btn"
+                        onclick="location.hash='subject/${classNumber}/${subject.id}'"
+                    >
+                        Explore
+                    </button>
+
+                </div>
+
+            `).join("")}
+
+        </div>
+    `;
+}
+
+
+/* =========================================
+   CHAPTER LIST
+   CLASS 6 PHYSICS = CHAPTER 7–10
+========================================= */
+
+async function renderChapterList(
+    classNumber,
+    subjectId
+) {
+
+    const subject =
+        subjects.find(
+            item =>
+                item.id === subjectId
+        );
+
+
+    if (!subject) {
+
+        renderScience();
+
+        return;
+    }
+
+
+    app.innerHTML = `
+
+        <button
+            class="back-btn"
+            onclick="location.hash='class/${classNumber}'"
+        >
+            ← Back to Class ${classNumber}
+        </button>
+
+
+        <div class="page-header">
+
+            <h1>
+                ${subject.icon}
+                Class ${classNumber} ${subject.name}
+            </h1>
+
+            <p>
+                NCERT Chapters, Notes and MCQ Practice
+            </p>
+
+        </div>
+
+
+        ${
+            classNumber === 6 &&
+            subjectId === "physics"
+                ? `
+
+                    <div
+                        style="
+                            text-align:center;
+                            margin: 0 0 18px 0;
+                        "
+                    >
+
+                        <a
+                            class="btn btn-blue"
+                            href="${COMMON_NOTES_URL}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            📖 Notes
+                        </a>
+
+                    </div>
+
+                `
+                : ""
+        }
+
+
+        <div
+            id="chapterLoading"
+            class="card"
+        >
+
+            <h2>
+                Loading Chapters...
+            </h2>
+
+            <p>
+                Please wait.
+            </p>
+
+        </div>
+    `;
+
+
+    const chapters = [];
+
+
+    /* =========================================
+       CLASS 6 PHYSICS
+       ACTUAL CHAPTERS = 7, 8, 9, 10
+    ========================================= */
+
+    if (
+        classNumber === 6 &&
+        subjectId === "physics"
+    ) {
+
+        for (
+            const chapter
+            of CLASS6_PHYSICS_CHAPTERS
+        ) {
+
+            const mcqPath =
+                getMCQHTMLPath(
+                    classNumber,
+                    subjectId,
+                    chapter.number
+                );
+
+
+            const mcqData =
+                await loadMCQHTML(
+                    mcqPath
+                );
+
+
+            if (!mcqData) {
+                continue;
+            }
+
+
+            chapters.push({
+
+                number:
+                    chapter.number,
+
+                title:
+                    chapter.title,
+
+                notes:
+                    null,
+
+                mcq:
+                    mcqData
+
+            });
+        }
+
+    }
+
+    else {
+
+        /* =========================================
+           OTHER SUBJECTS / CLASSES
+           Existing JSON system remains unchanged
+        ========================================= */
+
+        for (
+            let i = 1;
+            i <= 100;
+            i++
+        ) {
+
+            const notesPath =
+                getJSONPath(
+                    classNumber,
+                    subjectId,
+                    i,
+                    "notes"
+                );
+
+
+            const mcqPath =
+                getJSONPath(
+                    classNumber,
+                    subjectId,
+                    i,
+                    "mcq"
+                );
+
+
+            const [
+                notesData,
+                mcqData
+            ] = await Promise.all([
+
+                loadJSON(
+                    notesPath
+                ),
+
+                loadJSON(
+                    mcqPath
+                )
+
+            ]);
+
+
+            if (
+                !notesData &&
+                !mcqData
+            ) {
+
+                continue;
+            }
+
+
+            chapters.push({
+
+                number: i,
+
+                notes:
+                    notesData,
+
+                mcq:
+                    mcqData
+
+            });
+        }
+    }
+
+
+    const loading =
+        document.getElementById(
+            "chapterLoading"
+        );
+
+
+    if (!chapters.length) {
+
+        loading.innerHTML = `
+
+            <h2>
+                No Chapters Found
+            </h2>
+
+            <p>
+                इस subject के MCQ files अभी उपलब्ध नहीं हैं।
+            </p>
+
+            <p>
+
+                <strong>
+                    Expected folder:
+                </strong>
+
+                ${
+                    classNumber === 6 &&
+                    subjectId === "physics"
+                        ? "data/class6/MCQ/Physics/"
+                        : `data/class${classNumber}/${subjectFolderMap[subjectId]}/`
+                }
+
+            </p>
+
+        `;
+
+        return;
+    }
+
+
+    loading.remove();
+
+
+    const chapterContainer =
+        document.createElement(
+            "div"
+        );
+
+
+    chapterContainer.className =
+        "chapter-list";
+
+
+    chapters.forEach(
+        chapter => {
+
+            const notes =
+                chapter.notes;
+
+
+            const mcq =
+                chapter.mcq;
+
+
+            const chapterTitle =
+                chapter.title ||
+                notes?.title ||
+                mcq?.title ||
+                `Chapter ${chapter.number}`;
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+
+            row.className =
+                "chapter-item";
+
+
+            const left =
+                document.createElement(
+                    "div"
+                );
+
+
+            left.className =
+                "chapter-name";
+
+
+            left.innerHTML = `
+
+                <strong>
+                    Chapter ${chapter.number}
+                </strong>
+
+                <span>
+                    ${escapeHtml(
+                        chapterTitle
+                    )}
+                </span>
+
+            `;
+
+
+            const actions =
+                document.createElement(
+                    "div"
+                );
+
+
+            actions.className =
+                "chapter-actions";
+
+
+            /* =================================
+               CLASS 6 PHYSICS
+               Common Notes button already
+               shown above.
+
+               Chapter-wise Notes button
+               intentionally नहीं है.
+            ================================= */
+
+
+            /* =================================
+               MCQ BUTTON
+            ================================= */
+
+            if (mcq) {
+
+                const mcqButton =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                mcqButton.className =
+                    "btn btn-green";
+
+
+                mcqButton.textContent =
+                    "📝 MCQ";
+
+
+                mcqButton.type =
+                    "button";
+
+
+                mcqButton.onclick =
+                    function () {
+
+                        location.hash =
+                            `quiz/${classNumber}/${subjectId}/${chapter.number}/direct`;
+
+                    };
+
+
+                actions.appendChild(
+                    mcqButton
+                );
+            }
+
+
+            row.appendChild(
+                left
+            );
+
+
+            row.appendChild(
+                actions
+            );
+
+
+            chapterContainer.appendChild(
+                row
+            );
+
+        }
+    );
+
+
+    app.appendChild(
+        chapterContainer
+    );
+}
+
+
+/* =========================================
+   NOTES PAGE
+========================================= */
+
+async function renderNotes(
+    classNumber,
+    subjectId,
+    chapterNumber
+) {
+
+    const subject =
+        subjects.find(
+            item =>
+                item.id === subjectId
+        );
+
+
+    const notesPath =
+        getJSONPath(
+            classNumber,
+            subjectId,
+            chapterNumber,
+            "notes"
+        );
+
+
+    const notes =
+        await loadJSON(
+            notesPath
+        );
+
+
+    if (!notes) {
+
+        app.innerHTML = `
+
+            <button
+                class="back-btn"
+                onclick="location.hash='subject/${classNumber}/${subjectId}'"
+            >
+                ← Back to Chapters
+            </button>
+
+
+            <div class="card">
+
+                <h2>
+                    Notes Not Found
+                </h2>
+
+
+                <p>
+                    इस chapter की Notes JSON file नहीं मिली।
+                </p>
+
+
+                <p>
+
+                    File:
+
+                    <strong>
+                        ${escapeHtml(
+                            notesPath
+                        )}
+                    </strong>
+
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    /*
+       अगर Google Docs URL है,
+       तो Google Docs directly open होगा.
+    */
+
+    if (
+        notes.googleDocsUrl
+    ) {
+
+        window.location.href =
+            notes.googleDocsUrl;
+
+        return;
+    }
+
+
+    /* =================================
+       LOCAL NOTES
+    ================================= */
+
+    app.innerHTML = `
+
+        <button
+            class="back-btn"
+            onclick="location.hash='subject/${classNumber}/${subjectId}'"
+        >
+            ← Back to ${subject?.name || "Chapters"}
+        </button>
+
+
+        <div class="page-header">
+
+            <h1>
+                ${subject?.icon || "📘"}
+                Class ${classNumber}
+                ${subject?.name || ""}
+            </h1>
+
+
+            <p>
+                Chapter ${chapterNumber}
+            </p>
+
+        </div>
+
+
+        <div class="card notes-content">
+
+            <h2>
+
+                ${escapeHtml(
+                    notes.title ||
+                    `Chapter ${chapterNumber}`
+                )}
+
+            </h2>
+
+
+            ${
+                notes.content
+                    ? notes.content
+                    : "<p>Notes content available नहीं है।</p>"
+            }
+
+        </div>
+    `;
+}
+/* =========================================
+   QUIZ PAGE
+========================================= */
+
+async function renderQuizPage(
+    classNumber,
+    subjectId,
+    chapterNumber,
+    directStart = false
+) {
+
+    const subject =
+        subjects.find(
+            item =>
+                item.id === subjectId
+        );
+
+
+    app.innerHTML = `
+
+        <button
+            class="back-btn"
+            onclick="renderQuizHome()"
+        >
+            ← Back to Chapters
+        </button>
+
+
+        <div class="page-header">
+
+            <h1>
+
+                ${subject?.icon || "📝"}
+
+                ${subject?.name || "MCQ"}
+
+                — Chapter ${chapterNumber}
+
+            </h1>
+
+
+            <p>
+                NCERT MCQ Practice
+            </p>
+
+        </div>
+
+
+        <div id="quizApp">
+
+            <div class="card">
+
+                <h2>
+                    Loading Questions...
+                </h2>
+
+
+                <p>
+                    Please wait.
+                </p>
+
+            </div>
+
+        </div>
+    `;
+
+
+    /* =========================================
+       LOAD MCQ
+       CLASS 6 PHYSICS = HTML
+       OTHER = JSON
+    ========================================= */
+
+    const mcqData =
+        await loadMCQData(
+            classNumber,
+            subjectId,
+            chapterNumber
+        );
+
+
+    const mcqPath =
+        (
+            classNumber === 6 &&
+            subjectId === "physics"
+        )
+            ? getMCQHTMLPath(
+                classNumber,
+                subjectId,
+                chapterNumber
+            )
+            : getJSONPath(
+                classNumber,
+                subjectId,
+                chapterNumber,
+                "mcq"
+            );
+
+
+    if (!mcqData) {
+
+        document.getElementById(
+            "quizApp"
+        ).innerHTML = `
+
+            <div class="card">
+
+                <h2>
+                    No Questions
+                </h2>
+
+
+                <p>
+                    इस chapter में अभी questions उपलब्ध नहीं हैं।
+                </p>
+
+
+                <p>
+
+                    File:
+
+                    <strong>
+                        ${escapeHtml(
+                            mcqPath
+                        )}
+                    </strong>
+
+                </p>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /* =================================
+       INITIALIZE QUIZ SYSTEM
+    ================================= */
+
+    if (
+        typeof initializeQuizSystem ===
+        "function"
+    ) {
+
+        initializeQuizSystem(
+
+            mcqData,
+
+            classNumber,
+
+            subjectId,
+
+            chapterNumber,
+
+            directStart
+
+        );
+
+    }
+
+    else {
+
+        console.error(
+            "quiz.js not loaded"
+        );
+
+
+        document.getElementById(
+            "quizApp"
+        ).innerHTML = `
+
+            <div class="card">
+
+                <h2>
+                    Quiz System Error
+                </h2>
+
+
+                <p>
+                    quiz.js load नहीं हुआ।
+                </p>
+
+            </div>
+
+        `;
+    }
+}
+
+
+/* =========================================
+   EVENTS
+========================================= */
+
+window.addEventListener(
+    "hashchange",
+    router
+);
+
+
+window.addEventListener(
+    "DOMContentLoaded",
+    router
+);

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NCERT MCQ Admin Panel</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      padding: 11px;
+      border-radius: 7px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .logout {
+      background: #dc2626;
+      width: auto;
+      padding: 9px 18px;
+      float: right;
+      margin-top: -45px;
+    }
+
+    .logout:hover {
+      background: #b91c1c;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .message {
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 7px;
+      display: none;
+    }
+
+    .success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .quiz-item {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 12px;
+      background: #fafafa;
+    }
+
+    .quiz-name {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .quiz-info {
+      color: #666;
+      margin-top: 6px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .actions button,
+    .actions a {
+      width: auto;
+      margin: 0;
+      padding: 8px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .open-btn {
+      background: #16a34a;
+      color: white;
+    }
+
+    .rename-btn {
+      background: #f59e0b;
+      color: white;
+      border: none;
+    }
+
+    .delete-btn {
+      background: #dc2626;
+    }
+
+    .chapter-title {
+      margin-top: 30px;
+    }
+
+    .empty {
+      padding: 20px;
+      text-align: center;
+      color: #777;
+      border: 1px dashed #bbb;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- LOGIN -->
+  <div id="loginCard" class="card">
+    <h1>🔐 Admin Panel</h1>
+
+    <label>Admin Password</label>
+    <input
+      type="password"
+      id="password"
+      placeholder="Password daaliye"
+    >
+
+    <button onclick="login()">Login</button>
+
+    <div id="loginMessage" class="message"></div>
+  </div>
+
+
+  <!-- ADMIN PANEL -->
+  <div id="adminPanel" class="hidden">
+
+    <div class="card">
+      <h1>📚 NCERT MCQ Admin Panel</h1>
+
+      <button class="logout" onclick="logout()">Logout</button>
+
+      <p>
+        Yahan se Class 6 Physics ke ready-made MCQ HTML files
+        upload, rename aur delete kar sakte hain.
+      </p>
+    </div>
+
+
+    <!-- UPLOAD -->
+    <div class="card">
+
+      <h2>📤 MCQ HTML Upload</h2>
+
+      <label>Class</label>
+      <input type="text" value="Class 6" disabled>
+
+      <label>Subject</label>
+      <input type="text" value="Physics" disabled>
+
+      <label>Chapter</label>
+
+      <select id="chapter">
+        <option value="7">Chapter 7 - गति एवं दूरियों का मापन</option>
+        <option value="8">Chapter 8 - प्रकाश, छायाएँ और परावर्तन</option>
+        <option value="9">Chapter 9 - विद्युत तथा परिपथ</option>
+        <option value="10">Chapter 10 - चुंबक के साथ खेलना</option>
+      </select>
+
+      <label>MCQ HTML File</label>
+
+      <input
+        type="file"
+        id="mcqFile"
+        accept=".html,.htm"
+      >
+
+      <button onclick="uploadMCQ()">
+        📤 Upload MCQ
+      </button>
+
+      <div id="uploadMessage" class="message"></div>
+
+    </div>
+
+
+    <!-- QUIZ LIST -->
+    <div class="card">
+
+      <h2 class="chapter-title">
+        📋 Uploaded MCQ
+      </h2>
+
+      <div id="quizList">
+        <div class="empty">
+          Chapter select karne ke baad MCQ list yahan dikhegi.
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+  let currentChapter = "7";
+
+
+  // -------------------------
+  // MESSAGE
+  // -------------------------
+
+  function showMessage(elementId, text, type) {
+
+    const box = document.getElementById(elementId);
+
+    box.textContent = text;
+    box.className = "message " + type;
+    box.style.display = "block";
+  }
+
+
+  // -------------------------
+  // CHECK LOGIN
+  // -------------------------
+
+  async function checkLogin() {
+
+    try {
+
+      const response = await fetch("/api/owner/status");
+
+      const data = await response.json();
+
+      if (data && data.isOwner) {
+
+        document.getElementById("loginCard")
+          .classList.add("hidden");
+
+        document.getElementById("adminPanel")
+          .classList.remove("hidden");
+
+        loadQuizzes();
+
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+  }
+
+
+  // -------------------------
+  // LOGIN
+  // -------------------------
+
+  async function login() {
+
+    const password =
+      document.getElementById("password").value.trim();
+
+    if (!password) {
+
+      showMessage(
+        "loginMessage",
+        "Password daaliye.",
+        "error"
+      );
+
+      return;
+    }
+
+
+    try {
+
+      const response = await fetch(
+        "/api/owner/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            password: password
+          })
+        }
+      );
+
+
+      const data = await response.json();
+
+
+      if (!response.ok) {
+
+        showMessage(
+          "loginMessage",
+          data.message || "Login failed.",
+          "error"
+        );
+
+        return;
+      }
+
+
+      document.getElementById("loginCard")
+        .classList.add("hidden");
+
+      document.getElementById("adminPanel")
+        .classList.remove("hidden");
+
+
+      document.getElementById("password").value = "";
+
+      loadQuizzes();
+
+
+    } catch (error) {
+
+      showMessage(
+        "loginMessage",
+        "Server se connection nahi ho raha.",
+        "error"
+      );
+
+    }
+
+  }
+
+
+  // -------------------------
+  // LOGOUT
+  // -------------------------
+
+  async function logout() {
+
+    try {
+
+      await fetch(
+        "/api/owner/logout",
+        {
+          method: "POST"
+        }
+      );
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
+
+
+    document.getElementById("adminPanel")
+      .classList.add("hidden");
+
+    document.getElementById("loginCard")
+      .classList.remove("hidden");
+
+  }
+
+
+  // -------------------------
+  // CHAPTER CHANGE
+  // -------------------------
+
+  document
+    .getElementById("chapter")
+    .addEventListener(
+      "change",
+      function() {
+
+        currentChapter = this.value;
+
+        loadQuizzes();
+
+      }
+    );
+
+
+  // -------------------------
+  // LOAD QUIZZES
+  // -------------------------
+
+  async function loadQuizzes() {
+
+    currentChapter =
+      document.getElementById("chapter").value;
+
+
+    const list =
+      document.getElementById("quizList");
+
+
+    list.innerHTML =
+      "<div class='empty'>Loading...</div>";
+
+
+    try {
+
+      const response = await fetch(
+        `/api/mcq-html/6/physics/${currentChapter}`
+      );
+
+
+      const data = await response.json();
+
+
+      if (!response.ok) {
+
+        list.innerHTML =
+          "<div class='empty'>MCQ load nahi hua.</div>";
+
+        return;
+      }
+
+
+      const items =
+        Array.isArray(data)
+          ? data
+          : (data.items || []);
+
+
+      if (items.length === 0) {
+
+        list.innerHTML =
+          "<div class='empty'>Is chapter me abhi koi MCQ HTML upload nahi hai.</div>";
+
+        return;
+      }
+
+
+      list.innerHTML = "";
+
+
+      items.forEach(function(item) {
+
+        const div =
+          document.createElement("div");
+
+        div.className = "quiz-item";
+
+
+        const name =
+          item.name ||
+          item.originalName ||
+          item.filename ||
+          "MCQ Quiz";
+
+
+        const count =
+          item.questionCount ??
+          item.questions ??
+          "—";
+
+
+        div.innerHTML = `
+
+          <div class="quiz-name">
+            ${escapeHTML(name)}
+          </div>
+
+          <div class="quiz-info">
+            Questions: ${count}
+          </div>
+
+          <div class="actions">
+
+            <a
+              class="open-btn"
+              href="${item.url}"
+              target="_blank"
+            >
+              ▶ Open Quiz
+            </a>
+
+            <button
+              class="rename-btn"
+              onclick="renameQuiz('${escapeJS(item.id)}', '${escapeJS(name)}')"
+            >
+              ✏ Rename
+            </button>
+
+            <button
+              class="delete-btn"
+              onclick="deleteQuiz('${escapeJS(item.id)}')"
+            >
+              🗑 Delete
+            </button>
+
+          </div>
+
+        `;
+
+
+        list.appendChild(div);
+
+      });
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      list.innerHTML =
+        "<div class='empty'>Server error.</div>";
+
+    }
+
+  }
+
+
+  // -------------------------
+  // UPLOAD
+  // -------------------------
+
+  async function uploadMCQ() {
+
+    const fileInput =
+      document.getElementById("mcqFile");
+
+    const chapter =
+      document.getElementById("chapter").value;
+
+
+    if (!fileInput.files.length) {
+
+      showMessage(
+        "uploadMessage",
+        "Pehle HTML file select karo.",
+        "error"
+      );
+
+      return;
+    }
+
+
+    const file =
+      fileInput.files[0];
+
+
+    if (
+      !file.name.toLowerCase().endsWith(".html") &&
+      !file.name.toLowerCase().endsWith(".htm")
+    ) {
+
+      showMessage(
+        "uploadMessage",
+        "Sirf HTML file upload karo.",
+        "error"
+      );
+
+      return;
+    }
+
+
+    const formData =
+      new FormData();
+
+
+    formData.append(
+      "mcqFile",
+      file
+    );
+
+
+    formData.append(
+      "classNumber",
+      "6"
+    );
+
+
+    formData.append(
+      "subject",
+      "physics"
+    );
+
+
+    formData.append(
+      "chapterNumber",
+      chapter
+    );
+
+
+    try {
+
+      showMessage(
+        "uploadMessage",
+        "Uploading...",
+        "success"
+      );
+
+
+      const response =
+        await fetch(
+          "/api/mcq-html/upload",
+          {
+            method: "POST",
+            body: formData
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if (!response.ok) {
+
+        showMessage(
+          "uploadMessage",
+          data.message ||
+          data.error ||
+          "Upload failed.",
+          "error"
+        );
+
+        return;
+      }
+
+
+      showMessage(
+        "uploadMessage",
+        "✅ MCQ successfully upload ho gaya.",
+        "success"
+      );
+
+
+      fileInput.value = "";
+
+
+      loadQuizzes();
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      showMessage(
+        "uploadMessage",
+        "Server error. Upload nahi hua.",
+        "error"
+      );
+
+    }
+
+  }
+
+
+  // -------------------------
+  // RENAME
+  // -------------------------
+
+  async function renameQuiz(id, oldName) {
+
+    const newName =
+      prompt(
+        "Naya quiz name daaliye:",
+        oldName
+      );
+
+
+    if (!newName) return;
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/mcq-html/rename",
+          {
+            method: "PATCH",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+              classNumber: 6,
+
+              subject: "physics",
+
+              chapterNumber:
+                currentChapter,
+
+              id: id,
+
+              newName: newName
+
+            })
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if (!response.ok) {
+
+        alert(
+          data.message ||
+          data.error ||
+          "Rename failed."
+        );
+
+        return;
+      }
+
+
+      loadQuizzes();
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert("Server error.");
+
+    }
+
+  }
+
+
+  // -------------------------
+  // DELETE
+  // -------------------------
+
+  async function deleteQuiz(id) {
+
+    const confirmDelete =
+      confirm(
+        "Kya aap is MCQ ko delete karna chahte hain?"
+      );
+
+
+    if (!confirmDelete) return;
+
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/mcq-html",
+          {
+            method: "DELETE",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+
+              classNumber: 6,
+
+              subject: "physics",
+
+              chapterNumber:
+                currentChapter,
+
+              id: id
+
+            })
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if (!response.ok) {
+
+        alert(
+          data.message ||
+          data.error ||
+          "Delete failed."
+        );
+
+        return;
+      }
+
+
+      loadQuizzes();
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert("Server error.");
+
+    }
+
+  }
+
+
+  // -------------------------
+  // SECURITY HELPERS
+  // -------------------------
+
+  function escapeHTML(value) {
+
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+
+  }
+
+
+  function escapeJS(value) {
+
+    return String(value)
+      .replaceAll("\\", "\\\\")
+      .replaceAll("'", "\\'")
+      .replaceAll("\n", "\\n")
+      .replaceAll("\r", "\\r");
+
+  }
+
+
+  // -------------------------
+  // START
+  // -------------------------
+
+  checkLogin();
+
+</script>
+
+</body>
+</html>
