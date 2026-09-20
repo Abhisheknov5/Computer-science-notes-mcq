@@ -864,32 +864,177 @@ function renderClassPage(
 
 
 /* =========================================
+   CHAPTER LIST CACHE
+   Cache is only for the lightweight chapter list.
+   Notes/quiz content is still loaded from the server
+   when the user opens it.
+========================================= */
+
+const CHAPTER_CACHE_PREFIX = "ncertChapterList:v2:";
+const CHAPTER_CACHE_BUSTER_KEY = "ncertChapterList:buster";
+
+function getChapterCacheKey(classNumber, subjectId) {
+    return `${CHAPTER_CACHE_PREFIX}${classNumber}:${subjectId}`;
+}
+
+function readChapterCache(classNumber, subjectId) {
+    try {
+        const raw = localStorage.getItem(
+            getChapterCacheKey(classNumber, subjectId)
+        );
+
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+
+        if (!parsed || !Array.isArray(parsed.chapters)) {
+            return null;
+        }
+
+        return parsed.chapters;
+    } catch (error) {
+        console.warn("Chapter cache read failed:", error);
+        return null;
+    }
+}
+
+function saveChapterCache(classNumber, subjectId, chapters) {
+    try {
+        /* Store only lightweight chapter-list data. */
+        const lightweight = chapters.map(chapter => ({
+            number: chapter.number,
+            title: chapter.title,
+            mcqSets: Array.isArray(chapter.mcqSets)
+                ? chapter.mcqSets
+                : []
+        }));
+
+        localStorage.setItem(
+            getChapterCacheKey(classNumber, subjectId),
+            JSON.stringify({
+                savedAt: Date.now(),
+                chapters: lightweight
+            })
+        );
+    } catch (error) {
+        console.warn("Chapter cache save skipped:", error);
+    }
+}
+
+function renderChapterRows(classNumber, subjectId, chapters) {
+    const loading =
+        document.getElementById("chapterLoading");
+
+    if (!chapters.length) {
+        if (loading) {
+            loading.innerHTML = `
+                <h2>No Chapters Found</h2>
+                <p>इस subject के chapters अभी उपलब्ध नहीं हैं।</p>
+            `;
+        }
+        return;
+    }
+
+    if (loading) {
+        loading.remove();
+    }
+
+    const oldContainer =
+        app.querySelector(".chapter-list");
+
+    if (oldContainer) {
+        oldContainer.remove();
+    }
+
+    const chapterContainer =
+        document.createElement("div");
+
+    chapterContainer.className = "chapter-list";
+
+    chapters.forEach(chapter => {
+        const notes = chapter.notes;
+        const mcq = chapter.mcq;
+        const mcqSets = Array.isArray(chapter.mcqSets)
+            ? chapter.mcqSets
+            : [];
+
+        const chapterTitle =
+            chapter.title ||
+            notes?.title ||
+            mcq?.title ||
+            `Chapter ${chapter.number}`;
+
+        const row =
+            document.createElement("div");
+
+        row.className = "chapter-item";
+
+        const left =
+            document.createElement("div");
+
+        left.className = "chapter-name";
+
+        left.innerHTML = `
+            <strong>Chapter ${chapter.number}</strong>
+            <span>${escapeHtml(chapterTitle)}</span>
+        `;
+
+        const actions =
+            document.createElement("div");
+
+        actions.className = "chapter-actions";
+
+        const hasMCQSets = mcqSets.length > 0;
+
+        if (hasMCQSets) {
+            const mcqButton =
+                document.createElement("button");
+
+            mcqButton.className = "btn btn-green";
+            mcqButton.type = "button";
+            mcqButton.textContent =
+                `📝 MCQ (${mcqSets.length} Set${mcqSets.length === 1 ? "" : "s"})`;
+
+            mcqButton.onclick = function () {
+                location.hash =
+                    `mcq-sets/${classNumber}/${subjectId}/${chapter.number}`;
+            };
+
+            actions.appendChild(mcqButton);
+        } else {
+            const noMCQ = document.createElement("span");
+            noMCQ.style.cssText =
+                "color:#777;font-size:15px;";
+            noMCQ.textContent = "MCQ अभी उपलब्ध नहीं";
+            actions.appendChild(noMCQ);
+        }
+
+        row.appendChild(left);
+        row.appendChild(actions);
+        chapterContainer.appendChild(row);
+    });
+
+    app.appendChild(chapterContainer);
+}
+
+/* =========================================
    CHAPTER LIST
-   CLASS 6 PHYSICS = CHAPTER 7–10
+   Cache-first + background refresh.
 ========================================= */
 
 async function renderChapterList(
     classNumber,
     subjectId
 ) {
-
     const subject =
-        subjects.find(
-            item =>
-                item.id === subjectId
-        );
-
+        subjects.find(item => item.id === subjectId);
 
     if (!subject) {
-
         renderScience();
-
         return;
     }
 
-
     app.innerHTML = `
-
         <button
             class="back-btn"
             onclick="location.hash='class/${classNumber}'"
@@ -897,33 +1042,18 @@ async function renderChapterList(
             ← Back to Class ${classNumber}
         </button>
 
-
         <div class="page-header">
-
             <h1>
                 ${subject.icon}
                 Class ${classNumber} ${subject.name}
             </h1>
-
-            <p>
-                NCERT Chapters, Notes and MCQ Practice
-            </p>
-
+            <p>NCERT Chapters, Notes and MCQ Practice</p>
         </div>
 
-
         ${
-            classNumber === 6 &&
-            subjectId === "physics"
+            classNumber === 6 && subjectId === "physics"
                 ? `
-
-                    <div
-                        style="
-                            text-align:center;
-                            margin: 0 0 18px 0;
-                        "
-                    >
-
+                    <div style="text-align:center;margin:0 0 18px 0;">
                         <a
                             class="btn btn-blue"
                             href="${COMMON_NOTES_URL}"
@@ -932,301 +1062,182 @@ async function renderChapterList(
                         >
                             📖 Notes
                         </a>
-
                     </div>
-
                 `
                 : ""
         }
 
-
-        <div
-            id="chapterLoading"
-            class="card"
-        >
-
-            <h2>
-                Loading Chapters...
-            </h2>
-
-            <p>
-                Please wait.
-            </p>
-
+        <div id="chapterLoading" class="card">
+            <h2>Loading Chapters...</h2>
+            <p>Please wait.</p>
         </div>
     `;
 
+    /* =========================================
+       1) Show cached chapter list immediately.
+    ========================================= */
+    const cachedChapters =
+        readChapterCache(classNumber, subjectId);
 
-    const chapters = [];
-
+    if (cachedChapters && cachedChapters.length) {
+        renderChapterRows(
+            classNumber,
+            subjectId,
+            cachedChapters
+        );
+    }
 
     /* =========================================
-       CLASS 6 PHYSICS
-       CHAPTERS 7–10 ARE ALWAYS SHOWN.
-
-       MCQ files are loaded from the server
-       and can contain multiple Sets.
+       2) Always refresh in background so newly
+          uploaded/renamed/deleted MCQs appear.
     ========================================= */
+    const chapters = [];
 
     if (
         classNumber === 6 &&
         subjectId === "physics"
     ) {
+        const chapterResults = await Promise.all(
+            CLASS6_PHYSICS_CHAPTERS.map(async chapter => {
+                let items = [];
 
-        for (
-            const chapter
-            of CLASS6_PHYSICS_CHAPTERS
-        ) {
-
-            let items = [];
-
-            try {
-
-                /* Existing HTML MCQ Sets */
-                const response =
-                    await fetch(
+                try {
+                    const response = await fetch(
                         `/api/mcq-html/6/physics/${chapter.number}`,
-                        {
-                            cache: "no-store"
-                        }
+                        { cache: "no-store" }
                     );
 
-                if (response.ok) {
-
-                    const data =
-                        await response.json();
-
-                    items =
-                        Array.isArray(data)
+                    if (response.ok) {
+                        const data = await response.json();
+                        items = Array.isArray(data)
                             ? data
-                            : (
-                                Array.isArray(data.items)
-                                    ? data.items
-                                    : []
-                            );
+                            : (Array.isArray(data.items) ? data.items : []);
+                    }
+                } catch (error) {
+                    console.error(
+                        "MCQ HTML list load error:",
+                        chapter.number,
+                        error
+                    );
                 }
 
-            } catch (error) {
-
-                console.error(
-                    "MCQ HTML list load error:",
-                    chapter.number,
-                    error
-                );
-            }
-
-            try {
-
-                /* Saved JSON MCQ */
-                const jsonResponse =
-                    await fetch(
+                try {
+                    const jsonResponse = await fetch(
                         `/api/mcqs/6/physics/${chapter.number}`,
-                        {
-                            cache: "no-store"
-                        }
+                        { cache: "no-store" }
                     );
 
-                if (jsonResponse.ok) {
+                    if (jsonResponse.ok) {
+                        const jsonData = await jsonResponse.json();
 
-                    const jsonData =
-                        await jsonResponse.json();
-
-                    if (
-                        jsonData &&
-                        jsonData.success &&
-                        jsonData.exists &&
-                        jsonData.data &&
-                        Array.isArray(jsonData.data.questions)
-                    ) {
-
-                        items.push({
-
-                            id:
-                                "saved-json-mcq",
-
-                            name:
-                                jsonData.data.title ||
-                                `Chapter ${chapter.number} JSON MCQ`,
-
-                            questionCount:
-                                jsonData.data.questions.length,
-
-                            isJSON:
-                                true,
-
-                            url:
-                                `/#quiz/6/physics/${chapter.number}/json/direct`
-
-                        });
+                        if (
+                            jsonData &&
+                            jsonData.success &&
+                            jsonData.exists &&
+                            jsonData.data &&
+                            Array.isArray(jsonData.data.questions)
+                        ) {
+                            items.push({
+                                id: "saved-json-mcq",
+                                name:
+                                    jsonData.data.title ||
+                                    `Chapter ${chapter.number} JSON MCQ`,
+                                questionCount:
+                                    jsonData.data.questions.length,
+                                isJSON: true,
+                                url:
+                                    `/#quiz/6/physics/${chapter.number}/json/direct`
+                            });
+                        }
                     }
+                } catch (error) {
+                    console.error(
+                        "Saved JSON MCQ load error:",
+                        chapter.number,
+                        error
+                    );
                 }
 
-            } catch (error) {
+                return {
+                    number: chapter.number,
+                    title: chapter.title,
+                    notes: null,
+                    mcqSets: items
+                };
+            })
+        );
 
-                console.error(
-                    "Saved JSON MCQ load error:",
-                    chapter.number,
-                    error
-                );
-            }
+        chapters.push(...chapterResults);
+    } else {
+        const chapterNumbers = Array.from(
+            { length: 100 },
+            (_, index) => index + 1
+        );
 
-
-            chapters.push({
-
-                number:
-                    chapter.number,
-
-                title:
-                    chapter.title,
-
-                notes:
-                    null,
-
-                mcqSets:
-                    items
-
-            });
-        }
-
-    }
-
-    else {
-
-        /* =========================================
-           ALL GENERAL SCIENCE CLASSES / SUBJECTS
-
-           HTML MCQ uploads are supported for every
-           Class 6–12 General Science subject.
-           Saved JSON MCQs are also supported.
-        ========================================= */
-
-        for (
-            let i = 1;
-            i <= 100;
-            i++
-        ) {
-
-            let notesData = null;
-            let htmlItems = [];
-            let mcqData = null;
-
-            try {
-
-                const notesPath =
-                    getJSONPath(
-                        classNumber,
-                        subjectId,
-                        i,
-                        "notes"
-                    );
-
-                notesData =
-                    await loadJSON(notesPath);
-
-            } catch (error) {
-
-                console.error(
-                    "Notes load error:",
+        const chapterResults = await Promise.all(
+            chapterNumbers.map(async i => {
+                const notesPath = getJSONPath(
                     classNumber,
                     subjectId,
                     i,
-                    error
+                    "notes"
                 );
-            }
 
-            /* =====================================
-               HTML MCQ uploaded from Admin
-            ===================================== */
+                const notesPromise = loadJSON(notesPath);
 
-            try {
+                const htmlPromise = fetch(
+                    `/api/mcq-html/${classNumber}/${subjectId}/${i}`,
+                    { cache: "no-store" }
+                )
+                    .then(async response => {
+                        if (!response.ok) return [];
 
-                const response =
-                    await fetch(
-                        `/api/mcq-html/${classNumber}/${subjectId}/${i}`,
-                        {
-                            cache: "no-store"
-                        }
-                    );
-
-                if (response.ok) {
-
-                    const data =
-                        await response.json();
-
-                    htmlItems =
-                        Array.isArray(data)
+                        const data = await response.json();
+                        return Array.isArray(data)
                             ? data
-                            : (
-                                Array.isArray(data.items)
-                                    ? data.items
-                                    : []
-                            );
-                }
+                            : (Array.isArray(data.items) ? data.items : []);
+                    })
+                    .catch(() => []);
 
-            } catch (error) {
+                const jsonPromise = fetch(
+                    `/api/mcqs/${classNumber}/${subjectId}/${i}`,
+                    { cache: "no-store" }
+                )
+                    .then(async response => {
+                        if (!response.ok) return null;
 
-                console.error(
-                    "MCQ HTML load error:",
-                    classNumber,
-                    subjectId,
-                    i,
-                    error
-                );
-            }
+                        const result = await response.json();
 
-            /* =====================================
-               Saved JSON MCQ
-            ===================================== */
-
-            try {
-
-                const response =
-                    await fetch(
-                        `/api/mcqs/${classNumber}/${subjectId}/${i}`,
-                        {
-                            cache: "no-store"
+                        if (
+                            result &&
+                            result.success &&
+                            result.exists &&
+                            result.data &&
+                            Array.isArray(result.data.questions)
+                        ) {
+                            return result.data;
                         }
-                    );
 
-                if (response.ok) {
+                        return null;
+                    })
+                    .catch(() => null);
 
-                    const result =
-                        await response.json();
+                const [notesData, htmlItems, mcqData] =
+                    await Promise.all([
+                        notesPromise,
+                        htmlPromise,
+                        jsonPromise
+                    ]);
 
-                    if (
-                        result &&
-                        result.success &&
-                        result.exists &&
-                        result.data &&
-                        Array.isArray(result.data.questions)
-                    ) {
-
-                        mcqData =
-                            result.data;
-                    }
+                if (
+                    !notesData &&
+                    !mcqData &&
+                    htmlItems.length === 0
+                ) {
+                    return null;
                 }
 
-            } catch (error) {
-
-                console.error(
-                    "MCQ JSON load error:",
-                    classNumber,
-                    subjectId,
-                    i,
-                    error
-                );
-            }
-
-            if (
-                !notesData &&
-                !mcqData &&
-                htmlItems.length === 0
-            ) {
-                continue;
-            }
-
-            const jsonSet =
-                mcqData
+                const jsonSet = mcqData
                     ? [{
                         id: "saved-json-mcq",
                         name:
@@ -1243,216 +1254,92 @@ async function renderChapterList(
                     }]
                     : [];
 
-            chapters.push({
-
-                number: i,
-
-                title:
-                    notesData?.title ||
-                    mcqData?.title ||
-                    mcqData?.chapterTitle ||
-                    htmlItems[0]?.name ||
-                    `Chapter ${i}`,
-
-                notes:
-                    notesData,
-
-                mcq:
-                    mcqData,
-
-                mcqSets:
-                    [
+                return {
+                    number: i,
+                    title:
+                        notesData?.title ||
+                        mcqData?.title ||
+                        mcqData?.chapterTitle ||
+                        htmlItems[0]?.name ||
+                        `Chapter ${i}`,
+                    notes: notesData,
+                    mcq: mcqData,
+                    mcqSets: [
                         ...htmlItems,
                         ...jsonSet
                     ]
-
-            });
-        }
-    }
-
-
-    const loading =
-        document.getElementById(
-            "chapterLoading"
+                };
+            })
         );
 
+        chapterResults.forEach(chapter => {
+            if (chapter) chapters.push(chapter);
+        });
+    }
 
-    if (!chapters.length) {
+    /* =========================================
+       3) Save fresh data and replace the cached UI.
+    ========================================= */
+    saveChapterCache(
+        classNumber,
+        subjectId,
+        chapters
+    );
 
-        loading.innerHTML = `
+    /* Route may have changed while requests were running. */
+    const currentParts =
+        (window.location.hash || "#home")
+            .substring(1)
+            .split("/");
 
-            <h2>
-                No Chapters Found
-            </h2>
-
-            <p>
-                इस subject के chapters अभी उपलब्ध नहीं हैं।
-            </p>
-
-        `;
-
+    if (
+        currentParts[0] !== "subject" ||
+        Number(currentParts[1]) !== Number(classNumber) ||
+        currentParts[2] !== subjectId
+    ) {
         return;
     }
 
-
-    loading.remove();
-
-
-    const chapterContainer =
-        document.createElement(
-            "div"
-        );
-
-
-    chapterContainer.className =
-        "chapter-list";
-
-
-    chapters.forEach(
-        chapter => {
-
-            const notes =
-                chapter.notes;
-
-            const mcq =
-                chapter.mcq;
-
-            const mcqSets =
-                Array.isArray(
-                    chapter.mcqSets
-                )
-                    ? chapter.mcqSets
-                    : [];
-
-
-            const chapterTitle =
-                chapter.title ||
-                notes?.title ||
-                mcq?.title ||
-                `Chapter ${chapter.number}`;
-
-
-            const row =
-                document.createElement(
-                    "div"
-                );
-
-
-            row.className =
-                "chapter-item";
-
-
-            const left =
-                document.createElement(
-                    "div"
-                );
-
-
-            left.className =
-                "chapter-name";
-
-
-            left.innerHTML = `
-
-                <strong>
-                    Chapter ${chapter.number}
-                </strong>
-
-                <span>
-                    ${escapeHtml(
-                        chapterTitle
-                    )}
-                </span>
-
-            `;
-
-
-            const actions =
-                document.createElement(
-                    "div"
-                );
-
-
-            actions.className =
-                "chapter-actions";
-
-
-            /* =================================
-               ALL GENERAL SCIENCE
-               MULTIPLE MCQ SETS
-            ================================= */
-
-            const hasMCQSets =
-                mcqSets.length > 0;
-
-            if (hasMCQSets) {
-
-                const mcqButton =
-                    document.createElement(
-                        "button"
-                    );
-
-                mcqButton.className =
-                    "btn btn-green";
-
-                mcqButton.type =
-                    "button";
-
-                mcqButton.textContent =
-                    `📝 MCQ (${mcqSets.length} Set${mcqSets.length === 1 ? "" : "s"})`;
-
-                mcqButton.onclick =
-                    function () {
-
-                        location.hash =
-                            `mcq-sets/${classNumber}/${subjectId}/${chapter.number}`;
-
-                    };
-
-                actions.appendChild(
-                    mcqButton
-                );
-
-            } else {
-
-                const noMCQ =
-                    document.createElement(
-                        "span"
-                    );
-
-                noMCQ.style.cssText =
-                    "color:#777;font-size:15px;";
-
-                noMCQ.textContent =
-                    "MCQ अभी उपलब्ध नहीं";
-
-                actions.appendChild(
-                    noMCQ
-                );
-            }
-
-            row.appendChild(
-                left
-            );
-
-
-            row.appendChild(
-                actions
-            );
-
-
-            chapterContainer.appendChild(
-                row
-            );
-
-        }
-    );
-
-
-    app.appendChild(
-        chapterContainer
+    renderChapterRows(
+        classNumber,
+        subjectId,
+        chapters
     );
 }
+
+/* =========================================
+   ADMIN CACHE INVALIDATION
+   Admin writes this key after upload/rename/delete.
+========================================= */
+
+window.addEventListener("storage", function (event) {
+    if (event.key !== CHAPTER_CACHE_BUSTER_KEY) {
+        return;
+    }
+
+    const parts =
+        (window.location.hash || "#home")
+            .substring(1)
+            .split("/");
+
+    if (parts[0] !== "subject") {
+        return;
+    }
+
+    const classNumber = Number(parts[1]);
+    const subjectId = parts[2];
+
+    if (!classNumber || !subjectId) {
+        return;
+    }
+
+    /* Cache remains visible immediately; renderChapterList
+       refreshes it in the background. */
+    renderChapterList(
+        classNumber,
+        subjectId
+    );
+});
 
 
 /* =========================================

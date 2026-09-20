@@ -16,6 +16,19 @@ let currentChapter = null;
 let importedQuestions = [];
 let importedData = null;
 
+const CHAPTER_CACHE_BUSTER_KEY = "ncertChapterList:buster";
+
+function notifyChapterListChanged() {
+    try {
+        localStorage.setItem(
+            CHAPTER_CACHE_BUSTER_KEY,
+            String(Date.now())
+        );
+    } catch (error) {
+        console.warn("Chapter list cache notification skipped:", error);
+    }
+}
+
 const subjectIdMap = {
     "Physics": "physics",
     "Chemistry": "chemistry",
@@ -411,6 +424,7 @@ async function uploadMCQ() {
         fileInput.value = "";
         getElement("htmlFileName").textContent = "No file selected";
 
+        notifyChapterListChanged();
         loadQuizzes();
     } catch (error) {
         console.error(error);
@@ -475,6 +489,7 @@ async function renameQuiz(id, oldName) {
             return;
         }
 
+        notifyChapterListChanged();
         loadQuizzes();
     } catch (error) {
         console.error(error);
@@ -532,6 +547,7 @@ async function deleteQuiz(id) {
             return;
         }
 
+        notifyChapterListChanged();
         loadQuizzes();
     } catch (error) {
         console.error(error);
@@ -576,6 +592,7 @@ async function renameJSONQuiz(oldName) {
             return;
         }
 
+        notifyChapterListChanged();
         loadQuizzes();
     } catch (error) {
         console.error("JSON rename error:", error);
@@ -620,6 +637,7 @@ async function deleteJSONQuiz() {
         }
 
         alert("✅ JSON MCQ delete ho gaya.");
+        notifyChapterListChanged();
         loadQuizzes();
     } catch (error) {
         console.error("JSON delete error:", error);
@@ -1050,6 +1068,8 @@ async function savePermanently() {
             "✅ 150 MCQs permanently save हो गए!";
 
         getElement("resultCard").classList.remove("hidden");
+
+        notifyChapterListChanged();
 
         getElement("resultText").innerHTML = `
             <div class="status-row">
