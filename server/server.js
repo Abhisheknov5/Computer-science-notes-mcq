@@ -5,6 +5,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -17,6 +18,7 @@ const FIREBASE_LOCAL_PATH =
     path.join(ROOT_DIR, "firebase-service-account.json");
 
 let db = null;
+let storageBucket = null;
 let firebaseEnabled = false;
 
 function initializeFirebase() {
@@ -49,6 +51,27 @@ function initializeFirebase() {
         });
 
         db = getFirestore();
+
+        // Firebase Storage bucket. Prefer an explicit bucket name from
+        // FIREBASE_STORAGE_BUCKET; otherwise use the standard App Engine
+        // bucket name for the Firebase project.
+        const bucketName =
+            process.env.FIREBASE_STORAGE_BUCKET ||
+            `${serviceAccount.project_id}.appspot.com`;
+
+        try {
+            storageBucket = getStorage().bucket(bucketName);
+            console.log(
+                `Firebase Storage: configured (${bucketName})`
+            );
+        } catch (storageError) {
+            storageBucket = null;
+            console.error(
+                "Firebase Storage initialization failed:",
+                storageError.message
+            );
+        }
+
         firebaseEnabled = true;
 
         console.log(
@@ -88,6 +111,172 @@ function firestoreQuizRef(classNumber, subject, chapterNumber) {
                 chapterNumber
             )
         );
+}
+
+function firestoreHTMLRef(id) {
+    if (!firebaseEnabled || !db) return null;
+
+    return db.collection("mcqHtml").doc(String(id));
+}
+
+function firestoreHTMLDocId(info, id) {
+    return `class${info.classNumber}_${info.subject}_${info.chapterNumber}_${id}`;
+}
+
+function firestoreHTMLRef(id) {
+    if (!firebaseEnabled || !db) return null;
+    return db.collection("mcqHtml").doc(String(id));
+}
+
+async function saveHTMLToFirebase(info, item, html) {
+    if (!firebaseEnabled || !db) return false;
+
+    if (!storageBucket) {
+        throw new Error(
+            "Firebase Storage bucket configured nahi hai. Firebase Console mein Storage enable karo ya Render mein FIREBASE_STORAGE_BUCKET set karo."
+        );
+    }
+
+    const storagePath =
+        `mcq-html/class${info.classNumber}/${info.subject}/chapter-${String(info.chapterNumber).padStart(2, "0")}/${item.fileName}`;
+
+    const file = storageBucket.file(storagePath);
+
+    await file.save(Buffer.from(html, "utf8"), {
+        resumable: false,
+        contentType: "text/html; charset=utf-8",
+        metadata: {
+            cacheControl: "public,max-age=3600",
+            metadata: {
+                mcqId: item.id,
+                classNumber: String(info.classNumber),
+                subject: info.subject,
+                chapterNumber: String(info.chapterNumber)
+            }
+        }
+    });
+
+    const ref = firestoreHTMLRef(item.id);
+
+    await ref.set({
+        ...item,
+        classNumber: Number(info.classNumber),
+        subject: String(info.subject).toLowerCase(),
+        chapterNumber: Number(info.chapterNumber),
+        storagePath,
+        updatedAt: new Date().toISOString()
+    });
+
+    return true;
+}
+
+async function getHTMLFromFirebase(id) {
+    const ref = firestoreHTMLRef(id);
+    if (!ref) return null;
+
+    const snapshot = await ref.get();
+    if (!snapshot.exists) return null;
+
+    const data = snapshot.data();
+
+    if (!data.storagePath || !storageBucket) {
+        return data;
+    }
+
+    const [buffer] = await storageBucket
+        .file(data.storagePath)
+        .download();
+
+    return {
+        ...data,
+        html: buffer.toString("utf8")
+    };
+}
+
+async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
+    if (!firebaseEnabled || !db) return [];
+
+    const snapshot = await db
+        .collection("mcqHtml")
+        .where("classNumber", "==", Number(classNumber))
+        .where("subject", "==", String(subject).toLowerCase())
+        .where("chapterNumber", "==", Number(chapterNumber))
+        .get();
+
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            fileName: data.fileName,
+            originalName: data.originalName,
+            name: data.name,
+            questionCount: data.questionCount,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt,
+            url: `/api/mcq-html/file/${encodeURIComponent(doc.id)}`,
+            source: "firebase-storage"
+        };
+    });
+}
+
+async function renameHTMLInFirebase(info, id, newFileName, newName) {
+    const ref = firestoreHTMLRef(id);
+    if (!ref) return false;
+
+    const snapshot = await ref.get();
+    if (!snapshot.exists) return false;
+
+    const data = snapshot.data();
+    let storagePath = data.storagePath || "";
+
+    if (storagePath && storageBucket) {
+        const oldFile = storageBucket.file(storagePath);
+        const newStoragePath =
+            path.posix.join(
+                path.posix.dirname(storagePath),
+                newFileName
+            );
+
+        if (storagePath !== newStoragePath) {
+            await oldFile.copy(
+                storageBucket.file(newStoragePath)
+            );
+            await oldFile.delete().catch(() => {});
+            storagePath = newStoragePath;
+        }
+    }
+
+    await ref.set({
+        fileName: newFileName,
+        name: newName,
+        storagePath,
+        updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    return true;
+}
+
+async function deleteHTMLFromFirebase(id) {
+    const ref = firestoreHTMLRef(id);
+    if (!ref) return false;
+
+    const snapshot = await ref.get();
+    if (!snapshot.exists) return false;
+
+    const data = snapshot.data();
+
+    if (data.storagePath && storageBucket) {
+        await storageBucket
+            .file(data.storagePath)
+            .delete()
+            .catch(error => {
+                // File may already be gone; Firestore metadata should still be removed.
+                if (error.code !== 404) throw error;
+            });
+    }
+
+    await ref.delete();
+    return true;
 }
 
 async function saveQuizToFirestore(
@@ -553,7 +742,7 @@ function publicItems(
             ...item,
 
             url:
-                `/data/class${Number(classNumber)}/MCQ/${subjectFolder(subject)}/chapter-${String(chapterNumber).padStart(2, "0")}/${encodeURIComponent(item.fileName)}`
+                `/api/mcq-html/file/${encodeURIComponent(item.id)}`
         }));
 }
 
@@ -783,7 +972,7 @@ app.post(
 
 app.get(
     "/api/mcq-html/:classNumber/:subject/:chapterNumber",
-    (req, res) => {
+    async (req, res) => {
         try {
             const info =
                 validateMCQLocation(
@@ -792,15 +981,28 @@ app.get(
                     req.params.chapterNumber
                 );
 
+            const localItems = publicItems(
+                info.classNumber,
+                info.subject,
+                info.chapterNumber
+            );
+
+            const firebaseItems = firebaseEnabled
+                ? await listHTMLFromFirestore(
+                    info.classNumber,
+                    info.subject,
+                    info.chapterNumber
+                )
+                : [];
+
+            const merged = new Map();
+
+            localItems.forEach(item => merged.set(item.id, item));
+            firebaseItems.forEach(item => merged.set(item.id, item));
+
             res.json({
                 success: true,
-
-                items:
-                    publicItems(
-                        info.classNumber,
-                        info.subject,
-                        info.chapterNumber
-                    )
+                items: Array.from(merged.values())
             });
         } catch (error) {
             res.status(400).json({
@@ -808,6 +1010,84 @@ app.get(
                 message:
                     error.message
             });
+        }
+    }
+);
+
+/* ======================================================
+   HTML MCQ FILE VIEW / FIREBASE FALLBACK
+====================================================== */
+
+app.get(
+    "/api/mcq-html/file/:id",
+    async (req, res) => {
+        try {
+            const id = String(req.params.id || "").trim();
+
+            if (!id) {
+                return res.status(400).send("MCQ file id required.");
+            }
+
+            const firebaseItem = firebaseEnabled
+                ? await getHTMLFromFirebase(id)
+                : null;
+
+            if (firebaseItem && typeof firebaseItem.html === "string") {
+                res.type("html").send(firebaseItem.html);
+                return;
+            }
+
+            const classNumber = Number(firebaseItem?.classNumber);
+            const subject = String(firebaseItem?.subject || "");
+            const chapterNumber = Number(firebaseItem?.chapterNumber);
+
+            if (
+                Number.isInteger(classNumber) &&
+                subject &&
+                Number.isInteger(chapterNumber)
+            ) {
+                const dir = chapterDir(
+                    classNumber,
+                    subject,
+                    chapterNumber
+                );
+                const filePath = path.join(
+                    dir,
+                    firebaseItem.fileName
+                );
+
+                if (fs.existsSync(filePath)) {
+                    return res.sendFile(filePath);
+                }
+            }
+
+            // Local metadata fallback when Firebase is unavailable.
+            const classDirs = fs.existsSync(DATA_DIR)
+                ? fs.readdirSync(DATA_DIR).filter(name => /^class\d+$/.test(name))
+                : [];
+
+            for (const classDirName of classDirs) {
+                const cls = Number(classDirName.replace("class", ""));
+                if (!Number.isInteger(cls)) continue;
+
+                for (const sub of ["Physics", "Chemistry", "Biology", "Environmental-Science"]) {
+                    for (let ch = 1; ch <= 100; ch++) {
+                        const dir = chapterDir(cls, sub, ch);
+                        const item = readMetadata(dir).find(x => x.id === id);
+                        if (!item) continue;
+
+                        const filePath = path.join(dir, item.fileName);
+                        if (fs.existsSync(filePath)) {
+                            return res.sendFile(filePath);
+                        }
+                    }
+                }
+            }
+
+            return res.status(404).send("MCQ file nahi mila.");
+        } catch (error) {
+            console.error("MCQ HTML file error:", error);
+            res.status(500).send(error.message || "MCQ file error.");
         }
     }
 );
@@ -859,7 +1139,7 @@ app.post(
     requireOwner,
     mcqHTMLUpload.single("mcqFile"),
 
-    (req, res) => {
+    async (req, res) => {
         try {
             if (!req.file) {
                 return res.status(400).json({
@@ -903,51 +1183,16 @@ app.post(
                     )
                 );
 
-            const dir =
-                chapterDir(
-                    info.classNumber,
-                    info.subject,
-                    info.chapterNumber
-                );
-
-            fs.mkdirSync(
-                dir,
-                { recursive: true }
-            );
-
             const id =
                 `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
 
             const fileName =
                 `mcq-${id}.html`;
 
-            const filePath =
-                path.join(
-                    dir,
-                    fileName
-                );
-
-            const tempPath =
-                `${filePath}.tmp`;
-
-            fs.writeFileSync(
-                tempPath,
-                html,
-                "utf8"
-            );
-
-            fs.renameSync(
-                tempPath,
-                filePath
-            );
-
-            const items =
-                readMetadata(dir);
-
             const now =
                 new Date().toISOString();
 
-            items.push({
+            const item = {
                 id,
                 fileName,
                 originalName:
@@ -955,28 +1200,49 @@ app.post(
                 name: title,
                 questionCount,
                 createdAt: now,
-                updatedAt: now
-            });
+                updatedAt: now,
+                url:
+                    `/api/mcq-html/file/${encodeURIComponent(id)}`
+            };
 
-            writeMetadata(
-                dir,
-                items
+            // HTML ka permanent copy Firebase Storage mein aur metadata
+            // Firestore mein save hota hai.
+            let firebaseSaved = false;
+
+            if (firebaseEnabled) {
+                firebaseSaved = await saveHTMLToFirebase(
+                    info,
+                    item,
+                    html
+                );
+            }
+
+            // Local copy bhi rakho, taaki current server par existing workflow same rahe.
+            const dir = chapterDir(
+                info.classNumber,
+                info.subject,
+                info.chapterNumber
             );
 
-            const item =
-                publicItems(
-                    info.classNumber,
-                    info.subject,
-                    info.chapterNumber
-                ).find(
-                    x => x.id === id
-                );
+            fs.mkdirSync(dir, { recursive: true });
+
+            const filePath = path.join(dir, fileName);
+            const tempPath = `${filePath}.tmp`;
+
+            fs.writeFileSync(tempPath, html, "utf8");
+            fs.renameSync(tempPath, filePath);
+
+            const items = readMetadata(dir);
+            items.push({ ...item });
+            writeMetadata(dir, items);
 
             res.json({
                 success: true,
-                message:
-                    `${questionCount} MCQ upload ho gaye.`,
-                item
+                message: firebaseSaved
+                    ? `${questionCount} MCQ upload ho gaye aur Firebase Firestore mein permanently save ho gaye.`
+                    : `${questionCount} MCQ upload ho gaye. Firebase credentials available nahi hain.`,
+                item,
+                firebaseSaved
             });
         } catch (error) {
             console.error(
@@ -1001,7 +1267,7 @@ app.patch(
     "/api/mcq-html/rename",
     requireOwner,
 
-    (req, res) => {
+    async (req, res) => {
         try {
             const info =
                 validateMCQLocation(
@@ -1037,13 +1303,36 @@ app.patch(
                 );
 
             if (index === -1) {
-                return res
-                    .status(404)
-                    .json({
-                        success: false,
-                        message:
-                            "MCQ file nahi mila."
-                    });
+                if (firebaseEnabled) {
+                    const firebaseItem = await getHTMLFromFirebase(id);
+
+                    if (firebaseItem) {
+                        const updatedFileName = `${newName}.html`;
+                        await renameHTMLInFirebase(
+                            info,
+                            id,
+                            updatedFileName,
+                            newName
+                        );
+
+                        return res.json({
+                            success: true,
+                            message: "MCQ file name Firebase Storage aur Firestore mein update ho gaya.",
+                            item: {
+                                ...firebaseItem,
+                                fileName: updatedFileName,
+                                name: newName,
+                                url: `/api/mcq-html/file/${encodeURIComponent(id)}`
+                            },
+                            firebaseUpdated: true
+                        });
+                    }
+                }
+
+                return res.status(404).json({
+                    success: false,
+                    message: "MCQ file nahi mila."
+                });
             }
 
             const oldFileName =
@@ -1107,6 +1396,17 @@ app.patch(
                 items
             );
 
+            let firebaseUpdated = false;
+
+            if (firebaseEnabled) {
+                firebaseUpdated = await renameHTMLInFirebase(
+                    info,
+                    id,
+                    newFileName,
+                    newName
+                );
+            }
+
             const item =
                 publicItems(
                     info.classNumber,
@@ -1114,13 +1414,20 @@ app.patch(
                     info.chapterNumber
                 ).find(
                     x => x.id === id
-                );
+                ) || {
+                    id,
+                    fileName: newFileName,
+                    name: newName,
+                    url: `/api/mcq-html/file/${encodeURIComponent(id)}`
+                };
 
             res.json({
                 success: true,
-                message:
-                    "MCQ file name update ho gaya.",
-                item
+                message: firebaseUpdated
+                    ? "MCQ file name Firebase mein bhi update ho gaya."
+                    : "MCQ file name update ho gaya.",
+                item,
+                firebaseUpdated
             });
         } catch (error) {
             res.status(400).json({
@@ -1140,7 +1447,7 @@ app.delete(
     "/api/mcq-html",
     requireOwner,
 
-    (req, res) => {
+    async (req, res) => {
         try {
             const info =
                 validateMCQLocation(
@@ -1170,47 +1477,45 @@ app.delete(
                         item.id === id
                 );
 
-            if (index === -1) {
-                return res
-                    .status(404)
-                    .json({
-                        success: false,
-                        message:
-                            "MCQ file nahi mila."
-                    });
+            let firebaseExists = false;
+
+            if (firebaseEnabled) {
+                const ref = firestoreHTMLRef(id);
+                if (ref) {
+                    const snapshot = await ref.get();
+                    firebaseExists = snapshot.exists;
+                }
             }
 
-            const fileName =
-                items[index].fileName;
-
-            const filePath =
-                path.join(
-                    dir,
-                    fileName
-                );
-
-            if (
-                fs.existsSync(filePath)
-            ) {
-                fs.unlinkSync(
-                    filePath
-                );
+            if (index === -1 && !firebaseExists) {
+                return res.status(404).json({
+                    success: false,
+                    message: "MCQ file nahi mila."
+                });
             }
 
-            items.splice(
-                index,
-                1
-            );
+            if (index !== -1) {
+                const fileName = items[index].fileName;
+                const filePath = path.join(dir, fileName);
 
-            writeMetadata(
-                dir,
-                items
-            );
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+
+                items.splice(index, 1);
+                writeMetadata(dir, items);
+            }
+
+            if (firebaseExists) {
+                await deleteHTMLFromFirebase(id);
+            }
 
             res.json({
                 success: true,
-                message:
-                    "MCQ file delete ho gaya."
+                message: firebaseExists
+                    ? "MCQ file local storage aur Firebase dono se delete ho gaya."
+                    : "MCQ file delete ho gaya.",
+                firebaseDeleted: firebaseExists
             });
         } catch (error) {
             res.status(400).json({
