@@ -3,12 +3,131 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { initializeApp, cert } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
+const FIREBASE_SECRET_PATH = "/etc/secrets/firebase-service-account.json";
+const FIREBASE_LOCAL_PATH =
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    path.join(ROOT_DIR, "firebase-service-account.json");
+
+let db = null;
+let firebaseEnabled = false;
+
+function initializeFirebase() {
+    const credentialPath = fs.existsSync(FIREBASE_SECRET_PATH)
+        ? FIREBASE_SECRET_PATH
+        : (fs.existsSync(FIREBASE_LOCAL_PATH)
+            ? FIREBASE_LOCAL_PATH
+            : null);
+
+    if (!credentialPath) {
+        console.log("Firebase: credentials not found. Local JSON storage will be used.");
+        return;
+    }
+
+    try {
+        const serviceAccount = JSON.parse(
+            fs.readFileSync(credentialPath, "utf8")
+        );
+
+        if (!serviceAccount.project_id) {
+            throw new Error("Firebase service-account JSON is missing project_id.");
+        }
+
+        if (!serviceAccount.private_key) {
+            throw new Error("Firebase service-account JSON is missing private_key.");
+        }
+
+        initializeApp({
+            credential: cert(serviceAccount)
+        });
+
+        db = getFirestore();
+        firebaseEnabled = true;
+
+        console.log(
+            `Firebase Firestore: connected (${serviceAccount.project_id})`
+        );
+    } catch (error) {
+        console.error(
+            "Firebase initialization failed:",
+            error.message
+        );
+    }
+}
+
+initializeFirebase();
+
+function firestoreQuizId(classNumber, subject, chapterNumber) {
+    const info = validateMCQLocation(
+        classNumber,
+        subject,
+        chapterNumber
+    );
+
+    return `class${info.classNumber}_${info.subject}_${info.chapterNumber}`;
+}
+
+function firestoreQuizRef(classNumber, subject, chapterNumber) {
+    if (!firebaseEnabled || !db) {
+        return null;
+    }
+
+    return db
+        .collection("mcqQuizzes")
+        .doc(
+            firestoreQuizId(
+                classNumber,
+                subject,
+                chapterNumber
+            )
+        );
+}
+
+async function saveQuizToFirestore(
+    classNumber,
+    subject,
+    chapterNumber,
+    data
+) {
+    const ref = firestoreQuizRef(
+        classNumber,
+        subject,
+        chapterNumber
+    );
+
+    if (!ref) {
+        return false;
+    }
+
+    const serializedSize = Buffer.byteLength(
+        JSON.stringify(data),
+        "utf8"
+    );
+
+    if (serializedSize > 900000) {
+        throw new Error(
+            "MCQ data Firestore document limit ke bahut close hai. Is quiz ko chhote parts mein store karna hoga."
+        );
+    }
+
+    await ref.set({
+        ...data,
+        classNumber: Number(classNumber),
+        subject: String(subject).toLowerCase(),
+        chapterNumber: Number(chapterNumber),
+        updatedAt: new Date().toISOString()
+    });
+
+    return true;
+}
+
 
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
@@ -1109,7 +1228,7 @@ app.delete(
 
 app.post(
     "/api/save-mcqs",
-    (req, res) => {
+    async (req, res) => {
         try {
             const {
                 classNumber,
@@ -1142,20 +1261,50 @@ app.post(
                 });
             }
 
-            const chapter =
-                safeChapter(
+            const info =
+                validateMCQLocation(
+                    classNumber,
+                    subject,
                     chapterNumber
                 );
 
+            const chapter =
+                info.chapterNumber;
+
             const folder =
                 subjectFolder(
-                    subject
+                    info.subject
                 );
+
+            const data = {
+                title:
+                    chapterTitle ||
+                    `Chapter ${chapter}`,
+
+                chapterTitle:
+                    chapterTitle ||
+                    `Chapter ${chapter}`,
+
+                class:
+                    info.classNumber,
+
+                subject: folder,
+
+                chapter,
+
+                totalQuestions:
+                    questions.length,
+
+                generatedAt:
+                    new Date().toISOString(),
+
+                questions
+            };
 
             const dir =
                 path.join(
                     DATA_DIR,
-                    `class${Number(classNumber)}`,
+                    `class${info.classNumber}`,
                     "MCQ",
                     folder
                 );
@@ -1185,46 +1334,43 @@ app.post(
 
             fs.writeFileSync(
                 filePath,
-
                 JSON.stringify(
-                    {
-                        title:
-                            chapterTitle ||
-                            `Chapter ${chapter}`,
-
-                        class:
-                            Number(
-                                classNumber
-                            ),
-
-                        subject: folder,
-
-                        chapter,
-
-                        totalQuestions:
-                            questions.length,
-
-                        generatedAt:
-                            new Date().toISOString(),
-
-                        questions
-                    },
+                    data,
                     null,
                     2
                 ),
-
                 "utf8"
             );
+
+            let firebaseSaved = false;
+
+            if (firebaseEnabled) {
+                firebaseSaved =
+                    await saveQuizToFirestore(
+                        info.classNumber,
+                        info.subject,
+                        info.chapterNumber,
+                        data
+                    );
+            }
 
             res.json({
                 success: true,
                 message:
-                    `${questions.length} MCQs permanently save ho gaye.`,
+                    firebaseSaved
+                        ? `${questions.length} MCQs Firebase Firestore mein permanently save ho gaye.`
+                        : `${questions.length} MCQs local JSON mein save ho gaye. Firebase credentials available nahi hain.`,
                 totalQuestions:
                     questions.length,
-                fileName
+                fileName,
+                firebaseSaved
             });
         } catch (error) {
+            console.error(
+                "MCQ save error:",
+                error
+            );
+
             res.status(500).json({
                 success: false,
                 message:
@@ -1241,7 +1387,7 @@ app.post(
 app.patch(
     "/api/mcqs/rename",
     requireOwner,
-    (req, res) => {
+    async (req, res) => {
         try {
             const info = validateMCQLocation(
                 req.body.classNumber,
@@ -1249,7 +1395,10 @@ app.patch(
                 req.body.chapterNumber
             );
 
-            const newTitle = sanitizeFileBaseName(req.body.newName);
+            const newTitle =
+                sanitizeFileBaseName(
+                    req.body.newName
+                );
 
             const dir = path.join(
                 DATA_DIR,
@@ -1260,33 +1409,93 @@ app.patch(
 
             const fileName =
                 `chapter-${String(info.chapterNumber).padStart(2, "0")}.json`;
-            const filePath = path.join(dir, fileName);
+
+            const filePath =
+                path.join(
+                    dir,
+                    fileName
+                );
 
             if (!fs.existsSync(filePath)) {
                 return res.status(404).json({
                     success: false,
-                    message: "Saved JSON MCQ nahi mila."
+                    message:
+                        "Saved JSON MCQ nahi mila."
                 });
             }
 
-            const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+            const data =
+                JSON.parse(
+                    fs.readFileSync(
+                        filePath,
+                        "utf8"
+                    )
+                );
+
             data.title = newTitle;
             data.chapterTitle = newTitle;
-            data.updatedAt = new Date().toISOString();
+            data.updatedAt =
+                new Date().toISOString();
 
-            const tempPath = `${filePath}.tmp`;
-            fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), "utf8");
-            fs.renameSync(tempPath, filePath);
+            const tempPath =
+                `${filePath}.tmp`;
+
+            fs.writeFileSync(
+                tempPath,
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                ),
+                "utf8"
+            );
+
+            fs.renameSync(
+                tempPath,
+                filePath
+            );
+
+            let firebaseUpdated = false;
+
+            if (firebaseEnabled) {
+                const ref =
+                    firestoreQuizRef(
+                        info.classNumber,
+                        info.subject,
+                        info.chapterNumber
+                    );
+
+                await ref.set({
+                    title: newTitle,
+                    chapterTitle: newTitle,
+                    updatedAt:
+                        new Date().toISOString()
+                }, {
+                    merge: true
+                });
+
+                firebaseUpdated = true;
+            }
 
             res.json({
                 success: true,
-                message: "JSON MCQ name update ho gaya.",
-                title: newTitle
+                message:
+                    firebaseUpdated
+                        ? "JSON MCQ name Firebase mein bhi update ho gaya."
+                        : "JSON MCQ name update ho gaya.",
+                title: newTitle,
+                firebaseUpdated
             });
         } catch (error) {
+            console.error(
+                "JSON rename error:",
+                error
+            );
+
             res.status(400).json({
                 success: false,
-                message: error.message
+                message:
+                    error.message
             });
         }
     }
@@ -1299,7 +1508,7 @@ app.patch(
 app.post(
     "/api/mcqs/delete",
     requireOwner,
-    (req, res) => {
+    async (req, res) => {
         try {
             const info = validateMCQLocation(
                 req.body.classNumber,
@@ -1316,27 +1525,68 @@ app.post(
 
             const fileName =
                 `chapter-${String(info.chapterNumber).padStart(2, "0")}.json`;
-            const filePath = path.join(dir, fileName);
 
-            if (!fs.existsSync(filePath)) {
+            const filePath =
+                path.join(
+                    dir,
+                    fileName
+                );
+
+            const localExists =
+                fs.existsSync(filePath);
+
+            const ref =
+                firestoreQuizRef(
+                    info.classNumber,
+                    info.subject,
+                    info.chapterNumber
+                );
+
+            let firebaseExists = false;
+
+            if (firebaseEnabled && ref) {
+                const snapshot =
+                    await ref.get();
+
+                firebaseExists =
+                    snapshot.exists;
+            }
+
+            if (!localExists && !firebaseExists) {
                 return res.status(404).json({
                     success: false,
-                    message: "Saved JSON MCQ nahi mila."
+                    message:
+                        "Saved JSON MCQ nahi mila."
                 });
             }
 
-            fs.unlinkSync(filePath);
+            if (localExists) {
+                fs.unlinkSync(filePath);
+            }
+
+            if (firebaseEnabled && ref && firebaseExists) {
+                await ref.delete();
+            }
 
             res.json({
                 success: true,
-                message: "Saved JSON MCQ delete ho gaya.",
-                deletedFile: fileName
+                message:
+                    firebaseExists
+                        ? "Saved JSON MCQ local storage aur Firebase dono se delete ho gaya."
+                        : "Saved JSON MCQ delete ho gaya.",
+                deletedFile: fileName,
+                firebaseDeleted: firebaseExists
             });
         } catch (error) {
-            console.error("JSON delete error:", error);
+            console.error(
+                "JSON delete error:",
+                error
+            );
+
             res.status(400).json({
                 success: false,
-                message: error.message
+                message:
+                    error.message
             });
         }
     }
@@ -1349,25 +1599,49 @@ app.post(
 app.get(
     "/api/mcqs/:classNumber/:subject/:chapterNumber",
 
-    (req, res) => {
+    async (req, res) => {
         try {
-            const chapter =
-                safeChapter(
+            const info =
+                validateMCQLocation(
+                    req.params.classNumber,
+                    req.params.subject,
                     req.params.chapterNumber
                 );
 
+            if (firebaseEnabled) {
+                const ref =
+                    firestoreQuizRef(
+                        info.classNumber,
+                        info.subject,
+                        info.chapterNumber
+                    );
+
+                const snapshot =
+                    await ref.get();
+
+                if (snapshot.exists) {
+                    return res.json({
+                        success: true,
+                        exists: true,
+                        source: "firebase",
+                        data:
+                            snapshot.data()
+                    });
+                }
+            }
+
             const folder =
                 subjectFolder(
-                    req.params.subject
+                    info.subject
                 );
 
             const filePath =
                 path.join(
                     DATA_DIR,
-                    `class${Number(req.params.classNumber)}`,
+                    `class${info.classNumber}`,
                     "MCQ",
                     folder,
-                    `chapter-${String(chapter).padStart(2, "0")}.json`
+                    `chapter-${String(info.chapterNumber).padStart(2, "0")}.json`
                 );
 
             if (
@@ -1394,9 +1668,15 @@ app.get(
             res.json({
                 success: true,
                 exists: true,
+                source: "local",
                 data
             });
         } catch (error) {
+            console.error(
+                "JSON get error:",
+                error
+            );
+
             res.status(500).json({
                 success: false,
                 message:
@@ -1485,7 +1765,7 @@ app.listen(
             "=============================================="
         );
         console.log(
-            `Server: http://localhost:${PORT}`
+            `Server listening on port ${PORT}`
         );
         console.log(
             `Data:   ${DATA_DIR}`
