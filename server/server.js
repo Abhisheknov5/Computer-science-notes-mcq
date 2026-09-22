@@ -387,6 +387,249 @@ function validateMCQLocation(
 }
 
 /* ======================================================
+   SUBJECT NOTES LINK MAPPING
+   One Google Drive / Google Docs folder link per Class + Subject.
+====================================================== */
+
+const SUBJECT_NOTES_FILE = path.join(DATA_DIR, "subject-notes.json");
+
+function normalizeSubject(subject) {
+    const sub = String(subject || "").trim().toLowerCase();
+    const allowedSubjects = [
+        "physics",
+        "chemistry",
+        "biology",
+        "environmental-science"
+    ];
+    if (!allowedSubjects.includes(sub)) {
+        throw new Error("General Science subject valid nahi hai.");
+    }
+    return sub;
+}
+
+function subjectNotesDocId(classNumber, subject) {
+    const cls = Number(classNumber);
+    const sub = normalizeSubject(subject);
+    if (!Number.isInteger(cls) || cls < 6 || cls > 12 || !sub) {
+        throw new Error("Invalid Class / Subject.");
+    }
+    return `class${cls}_${sub}`;
+}
+
+function readLocalSubjectNotes() {
+    if (!fs.existsSync(SUBJECT_NOTES_FILE)) return [];
+    try {
+        const data = JSON.parse(fs.readFileSync(SUBJECT_NOTES_FILE, "utf8"));
+        return Array.isArray(data.items) ? data.items : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeLocalSubjectNotes(items) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const temp = `${SUBJECT_NOTES_FILE}.tmp`;
+    fs.writeFileSync(temp, JSON.stringify({ items }, null, 2), "utf8");
+    fs.renameSync(temp, SUBJECT_NOTES_FILE);
+}
+
+async function getFirebaseSubjectNotes(classNumber, subject) {
+    if (!firebaseEnabled || !db) return null;
+    const id = subjectNotesDocId(classNumber, subject);
+    const snapshot = await db.collection("subjectNotes").doc(id).get();
+    return snapshot.exists ? { ...snapshot.data(), id } : null;
+}
+
+async function saveSubjectNotes(classNumber, subject, notesUrl) {
+    const cls = Number(classNumber);
+    const sub = normalizeSubject(subject);
+    const id = subjectNotesDocId(cls, sub);
+    const now = new Date().toISOString();
+
+    const item = {
+        id,
+        classNumber: cls,
+        subject: sub,
+        notesUrl,
+        updatedAt: now,
+        source: "admin"
+    };
+
+    const local = readLocalSubjectNotes();
+    const index = local.findIndex(x => x.id === id);
+    if (index >= 0) local[index] = { ...local[index], ...item };
+    else local.push({ ...item, createdAt: now });
+    writeLocalSubjectNotes(local);
+
+    let firebaseSaved = false;
+    if (firebaseEnabled && db) {
+        await db.collection("subjectNotes").doc(id).set(
+            { ...item, createdAt: local.find(x => x.id === id)?.createdAt || now },
+            { merge: true }
+        );
+        firebaseSaved = true;
+    }
+
+    return { item, firebaseSaved };
+}
+
+async function deleteSubjectNotes(classNumber, subject) {
+    const id = subjectNotesDocId(classNumber, subject);
+    const local = readLocalSubjectNotes();
+    writeLocalSubjectNotes(local.filter(item => item.id !== id));
+
+    let firebaseDeleted = false;
+    if (firebaseEnabled && db) {
+        const ref = db.collection("subjectNotes").doc(id);
+        const snapshot = await ref.get();
+        if (snapshot.exists) {
+            await ref.delete();
+            firebaseDeleted = true;
+        }
+    }
+
+    return { id, firebaseDeleted };
+}
+
+/* ======================================================
+   CHAPTER REGISTRY
+   IMPORTANT:
+   Public chapter list mein sirf wahi chapters aayenge
+   jo Admin se Save Chapter kiye gaye hain.
+
+   Existing MCQ/Notes folders ko automatically discover
+   karke public list mein add nahi kiya jayega.
+====================================================== */
+
+const CHAPTERS_FILE = path.join(
+    DATA_DIR,
+    "chapters.json"
+);
+
+function chapterDocId(classNumber, subject, chapterNumber) {
+    const info = validateMCQLocation(
+        classNumber,
+        subject,
+        chapterNumber
+    );
+
+    return `class${info.classNumber}_${info.subject}_${info.chapterNumber}`;
+}
+
+function readLocalChapters() {
+    if (!fs.existsSync(CHAPTERS_FILE)) return [];
+
+    try {
+        const data = JSON.parse(
+            fs.readFileSync(CHAPTERS_FILE, "utf8")
+        );
+
+        return Array.isArray(data.items)
+            ? data.items
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function writeLocalChapters(items) {
+    fs.mkdirSync(DATA_DIR, {
+        recursive: true
+    });
+
+    const temp =
+        `${CHAPTERS_FILE}.tmp`;
+
+    fs.writeFileSync(
+        temp,
+        JSON.stringify(
+            { items },
+            null,
+            2
+        ),
+        "utf8"
+    );
+
+    fs.renameSync(
+        temp,
+        CHAPTERS_FILE
+    );
+}
+
+async function getFirebaseChapters() {
+    if (!firebaseEnabled || !db) {
+        return [];
+    }
+
+    const snapshot =
+        await db
+            .collection("chapters")
+            .get();
+
+    return snapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
+    }));
+}
+
+async function listChapters(
+    classNumber,
+    subject
+) {
+    const info =
+        validateMCQLocation(
+            classNumber,
+            subject,
+            1
+        );
+
+    const merged =
+        new Map();
+
+    // ONLY Admin-created local chapters.
+    readLocalChapters()
+        .filter(item =>
+            Number(item.classNumber) ===
+                info.classNumber &&
+            String(item.subject).toLowerCase() ===
+                info.subject
+        )
+        .forEach(item => {
+            merged.set(
+                `${info.classNumber}_${info.subject}_${item.number}`,
+                item
+            );
+        });
+
+    // ONLY Admin-created Firebase chapters.
+    const firebaseItems =
+        await getFirebaseChapters();
+
+    firebaseItems
+        .filter(item =>
+            Number(item.classNumber) ===
+                info.classNumber &&
+            String(item.subject).toLowerCase() ===
+                info.subject
+        )
+        .forEach(item => {
+            merged.set(
+                `${info.classNumber}_${info.subject}_${item.number}`,
+                item
+            );
+        });
+
+    return Array.from(
+        merged.values()
+    ).sort(
+        (a, b) =>
+            Number(a.number) -
+            Number(b.number)
+    );
+}
+
+
+/* ======================================================
    DIRECTORY
 ====================================================== */
 
@@ -889,6 +1132,301 @@ app.post(
 );
 
 /* ======================================================
+   SUBJECT NOTES API
+====================================================== */
+
+app.get(
+    "/api/subject-notes/:classNumber/:subject",
+    async (req, res) => {
+        try {
+            const classNumber = Number(req.params.classNumber);
+            const subject = normalizeSubject(req.params.subject);
+            const id = subjectNotesDocId(classNumber, subject);
+
+            const firebaseItem = await getFirebaseSubjectNotes(classNumber, subject);
+            const localItem = readLocalSubjectNotes().find(item => item.id === id) || null;
+            const item = firebaseItem || localItem;
+
+            res.json({
+                success: true,
+                exists: Boolean(item),
+                notesUrl: item?.notesUrl || "",
+                item
+            });
+        } catch (error) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    }
+);
+
+app.post(
+    "/api/subject-notes",
+    requireOwner,
+    async (req, res) => {
+        try {
+            const classNumber = Number(req.body.classNumber);
+            const subject = normalizeSubject(req.body.subject);
+            subjectNotesDocId(classNumber, subject);
+
+            const notesUrl = String(req.body.notesUrl || "").trim();
+            if (!notesUrl) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Google Drive folder link required hai."
+                });
+            }
+
+            if (!/^https:\/\/(drive\.google\.com|docs\.google\.com)\//i.test(notesUrl)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Valid Google Drive ya Google Docs link dijiye."
+                });
+            }
+
+            if (notesUrl.length > 2000) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Notes link bahut lamba hai."
+                });
+            }
+
+            const result = await saveSubjectNotes(classNumber, subject, notesUrl);
+
+            res.json({
+                success: true,
+                message: result.firebaseSaved
+                    ? "Notes folder link Firebase Firestore mein save ho gaya."
+                    : "Notes folder link local storage mein save ho gaya.",
+                item: result.item,
+                firebaseSaved: result.firebaseSaved
+            });
+        } catch (error) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    }
+);
+
+app.delete(
+    "/api/subject-notes",
+    requireOwner,
+    async (req, res) => {
+        try {
+            const classNumber = Number(req.body.classNumber);
+            const subject = normalizeSubject(req.body.subject);
+            const id = subjectNotesDocId(classNumber, subject);
+
+            const firebaseItem = await getFirebaseSubjectNotes(classNumber, subject);
+            const localItem = readLocalSubjectNotes().find(item => item.id === id);
+
+            if (!firebaseItem && !localItem) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Is Class + Subject ke liye Notes link saved nahi hai."
+                });
+            }
+
+            const result = await deleteSubjectNotes(classNumber, subject);
+
+            res.json({
+                success: true,
+                message: result.firebaseDeleted
+                    ? "Notes folder link Firestore aur local storage dono se delete ho gaya."
+                    : "Notes folder link local storage se delete ho gaya.",
+                firebaseDeleted: result.firebaseDeleted
+            });
+        } catch (error) {
+            res.status(400).json({ success: false, message: error.message });
+        }
+    }
+);
+
+/* ======================================================
+   CHAPTER LIST / CREATE API
+====================================================== */
+
+app.get(
+    "/api/chapters/:classNumber/:subject",
+    async (req, res) => {
+        try {
+            const items = await listChapters(
+                req.params.classNumber,
+                req.params.subject
+            );
+
+            res.json({
+                success: true,
+                items
+            });
+        } catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+app.post(
+    "/api/chapters",
+    requireOwner,
+    async (req, res) => {
+        try {
+            const info = validateMCQLocation(
+                req.body.classNumber,
+                req.body.subject,
+                req.body.chapterNumber
+            );
+
+            const title = String(
+                req.body.chapterTitle || ""
+            ).trim();
+
+            if (!title) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Chapter Title required hai."
+                });
+            }
+
+            if (title.length > 200) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Chapter Title bahut lamba hai."
+                });
+            }
+
+            const id = chapterDocId(
+                info.classNumber,
+                info.subject,
+                info.chapterNumber
+            );
+
+            const item = {
+                id,
+                classNumber: info.classNumber,
+                subject: info.subject,
+                number: info.chapterNumber,
+                title,
+                updatedAt: new Date().toISOString(),
+                source: "admin"
+            };
+
+            const local = readLocalChapters();
+            const index = local.findIndex(x => x.id === id);
+
+            if (index >= 0) {
+                local[index] = { ...local[index], ...item };
+            } else {
+                local.push({ ...item, createdAt: new Date().toISOString() });
+            }
+
+            writeLocalChapters(local);
+
+            let firebaseSaved = false;
+            if (firebaseEnabled && db) {
+                await db.collection("chapters").doc(id).set(
+                    { ...item, createdAt: new Date().toISOString() },
+                    { merge: true }
+                );
+                firebaseSaved = true;
+            }
+
+            res.json({
+                success: true,
+                message: firebaseSaved
+                    ? "Chapter Firebase Firestore mein save ho gaya."
+                    : "Chapter local storage mein save ho gaya.",
+                item,
+                firebaseSaved
+            });
+        } catch (error) {
+            res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+
+/* ======================================================
+   CHAPTER DELETE API
+====================================================== */
+
+app.delete(
+    "/api/chapters",
+    requireOwner,
+    async (req, res) => {
+        try {
+            const info = validateMCQLocation(
+                req.body.classNumber,
+                req.body.subject,
+                req.body.chapterNumber
+            );
+
+            const id = chapterDocId(
+                info.classNumber,
+                info.subject,
+                info.chapterNumber
+            );
+
+            const local = readLocalChapters();
+            const localExists = local.some(item => item.id === id);
+
+            const firebaseExists =
+                firebaseEnabled &&
+                db
+                    ? (
+                        await db
+                            .collection("chapters")
+                            .doc(id)
+                            .get()
+                    ).exists
+                    : false;
+
+            if (!localExists && !firebaseExists) {
+                return res.status(404).json({
+                    success: false,
+                    message: `Chapter ${info.chapterNumber} saved nahi hai.`
+                });
+            }
+
+            if (localExists) {
+                writeLocalChapters(
+                    local.filter(item => item.id !== id)
+                );
+            }
+
+            let firebaseDeleted = false;
+
+            if (firebaseExists) {
+                await db
+                    .collection("chapters")
+                    .doc(id)
+                    .delete();
+
+                firebaseDeleted = true;
+            }
+
+            res.json({
+                success: true,
+                message: firebaseDeleted
+                    ? `Chapter ${info.chapterNumber} Firebase Firestore aur local registry se delete ho gaya.`
+                    : `Chapter ${info.chapterNumber} local registry se delete ho gaya.`,
+                firebaseDeleted
+            });
+        } catch (error) {
+            console.error("Chapter delete error:", error);
+
+            res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+);
+
+/* ======================================================
    MCQ LIST API
 ====================================================== */
 
@@ -922,9 +1460,26 @@ app.get(
             localItems.forEach(item => merged.set(item.id, item));
             firebaseItems.forEach(item => merged.set(item.id, item));
 
+            // Old Local + Firebase copies can have different IDs but the
+            // same visible quiz. Keep only one copy in Admin.
+            const unique = new Map();
+            Array.from(merged.values()).forEach(item => {
+                const signature = [
+                    String(item.name || item.originalName || item.fileName || "")
+                        .trim()
+                        .toLowerCase(),
+                    Number(item.questionCount || 0)
+                ].join("|");
+
+                const existing = unique.get(signature);
+                if (!existing || item.source === "firebase-firestore") {
+                    unique.set(signature, item);
+                }
+            });
+
             res.json({
                 success: true,
-                items: Array.from(merged.values())
+                items: Array.from(unique.values())
             });
         } catch (error) {
             res.status(400).json({
@@ -1303,6 +1858,9 @@ app.patch(
                 newPath
             );
 
+            const oldName = String(items[index].name || "").trim();
+            const oldQuestionCount = Number(items[index].questionCount || 0);
+
             items[index].fileName =
                 newFileName;
 
@@ -1326,6 +1884,27 @@ app.patch(
                     newFileName,
                     newName
                 );
+            }
+
+            // If an old local duplicate represents the same Firebase quiz,
+            // keep the Admin list clean after rename as well.
+            const refreshedItems = readMetadata(dir);
+            let duplicateChanged = false;
+
+            refreshedItems.forEach(item => {
+                if (
+                    item.id !== id &&
+                    String(item.name || "").trim() === String(oldName || "").trim() &&
+                    Number(item.questionCount || 0) === oldQuestionCount
+                ) {
+                    item.name = newName;
+                    item.updatedAt = new Date().toISOString();
+                    duplicateChanged = true;
+                }
+            });
+
+            if (duplicateChanged) {
+                writeMetadata(dir, refreshedItems);
             }
 
             const item =
@@ -1399,12 +1978,21 @@ app.delete(
                 );
 
             let firebaseExists = false;
+            let firebaseDeletedName = "";
+            let firebaseDeletedQuestionCount = 0;
 
             if (firebaseEnabled) {
                 const ref = firestoreHTMLRef(id);
                 if (ref) {
                     const snapshot = await ref.get();
                     firebaseExists = snapshot.exists;
+                    if (snapshot.exists) {
+                        const firebaseData = snapshot.data() || {};
+                        firebaseDeletedName = String(
+                            firebaseData.name || firebaseData.originalName || firebaseData.fileName || ""
+                        ).trim();
+                        firebaseDeletedQuestionCount = Number(firebaseData.questionCount || 0);
+                    }
                 }
             }
 
@@ -1414,6 +2002,13 @@ app.delete(
                     message: "MCQ file nahi mila."
                 });
             }
+
+            const deletedName = index !== -1
+                ? String(items[index].name || "").trim()
+                : "";
+            const deletedQuestionCount = index !== -1
+                ? Number(items[index].questionCount || 0)
+                : 0;
 
             if (index !== -1) {
                 const fileName = items[index].fileName;
@@ -1429,6 +2024,36 @@ app.delete(
 
             if (firebaseExists) {
                 await deleteHTMLFromFirebase(id);
+            }
+
+            // Remove any old local duplicate of the same quiz too.
+            const duplicateName = deletedName || firebaseDeletedName;
+            const duplicateQuestionCount = deletedName
+                ? deletedQuestionCount
+                : firebaseDeletedQuestionCount;
+
+            if (duplicateName) {
+                const latest = readMetadata(dir);
+                const duplicateItems = latest.filter(item =>
+                    String(item.name || "").trim() === duplicateName &&
+                    Number(item.questionCount || 0) === duplicateQuestionCount
+                );
+
+                for (const duplicate of duplicateItems) {
+                    const duplicatePath = path.join(dir, duplicate.fileName);
+                    if (fs.existsSync(duplicatePath)) {
+                        fs.unlinkSync(duplicatePath);
+                    }
+                }
+
+                if (duplicateItems.length) {
+                    writeMetadata(
+                        dir,
+                        latest.filter(item =>
+                            !duplicateItems.some(duplicate => duplicate.id === item.id)
+                        )
+                    );
+                }
             }
 
             res.json({
