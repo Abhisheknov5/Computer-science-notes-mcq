@@ -41,15 +41,6 @@ const app = document.getElementById("app");
 
 /* =========================================
    CLASS 6 PHYSICS
-   COMMON NOTES GOOGLE DOC
-========================================= */
-
-const COMMON_NOTES_URL =
-    "https://docs.google.com/document/d/1krZ9Puyn1JuFtiaTeyxNtXRbFJWSAFhcCeSdpi0j22Y/edit?tab=t.0#heading=h.c7ziergcxtih";
-
-
-/* =========================================
-   CLASS 6 PHYSICS
    ACTUAL NCERT CHAPTERS
 ========================================= */
 
@@ -870,7 +861,7 @@ function renderClassPage(
    when the user opens it.
 ========================================= */
 
-const CHAPTER_CACHE_PREFIX = "ncertChapterList:v2:";
+const CHAPTER_CACHE_PREFIX = "ncertChapterList:v3:";
 const CHAPTER_CACHE_BUSTER_KEY = "ncertChapterList:buster";
 
 function getChapterCacheKey(classNumber, subjectId) {
@@ -921,9 +912,69 @@ function saveChapterCache(classNumber, subjectId, chapters) {
     }
 }
 
+
+/* =========================================
+   NOTES PATH RESOLVER
+   Supports both:
+   chapter-01.json
+   and
+   chapter-1.json
+========================================= */
+
+function getNotesCandidatePaths(classNumber, subjectId, chapterNumber) {
+    const subjectFolder = subjectFolderMap[subjectId];
+
+    if (!subjectFolder) return [];
+
+    const n = Number(chapterNumber);
+
+    return [
+        `data/class${classNumber}/Notes/${subjectFolder}/chapter-${String(n).padStart(2, "0")}.json`,
+        `data/class${classNumber}/Notes/${subjectFolder}/chapter-${n}.json`
+    ];
+}
+
+async function loadNotesForChapter(classNumber, subjectId, chapterNumber) {
+    // Primary source: Admin-saved direct Google Drive / Google Docs link.
+    try {
+        const response = await fetch(
+            `/api/chapter-notes/${classNumber}/${subjectId}/${chapterNumber}`,
+            { cache: "no-store" }
+        );
+
+        if (response.ok) {
+            const data = await response.json();
+
+            if (data?.success && data?.exists && data?.notesUrl) {
+                return {
+                    notesUrl: data.notesUrl,
+                    chapterNumber: Number(chapterNumber),
+                    classNumber: Number(classNumber),
+                    subject: subjectId
+                };
+            }
+        }
+    } catch (error) {
+        console.warn("Chapter Google Notes API load failed:", error);
+    }
+
+    // Backward compatibility: old local Notes JSON still works if present.
+    const paths = getNotesCandidatePaths(
+        classNumber,
+        subjectId,
+        chapterNumber
+    );
+
+    for (const path of paths) {
+        const notes = await loadJSON(path);
+        if (notes) return notes;
+    }
+
+    return null;
+}
+
 function renderChapterRows(classNumber, subjectId, chapters) {
-    const loading =
-        document.getElementById("chapterLoading");
+    const loading = document.getElementById("chapterLoading");
 
     if (!chapters.length) {
         if (loading) {
@@ -935,76 +986,49 @@ function renderChapterRows(classNumber, subjectId, chapters) {
         return;
     }
 
-    if (loading) {
-        loading.remove();
-    }
+    if (loading) loading.remove();
 
-    const oldContainer =
-        app.querySelector(".chapter-list");
+    const oldContainer = app.querySelector(".chapter-list");
+    if (oldContainer) oldContainer.remove();
 
-    if (oldContainer) {
-        oldContainer.remove();
-    }
-
-    const chapterContainer =
-        document.createElement("div");
-
+    const chapterContainer = document.createElement("div");
     chapterContainer.className = "chapter-list";
 
     chapters.forEach(chapter => {
-        const notes = chapter.notes;
-        const mcq = chapter.mcq;
-        const mcqSets = Array.isArray(chapter.mcqSets)
-            ? chapter.mcqSets
-            : [];
+        const mcqSets = Array.isArray(chapter.mcqSets) ? chapter.mcqSets : [];
 
         const chapterTitle =
             chapter.title ||
-            notes?.title ||
-            mcq?.title ||
+            chapter.mcq?.title ||
             `Chapter ${chapter.number}`;
 
-        const row =
-            document.createElement("div");
-
+        const row = document.createElement("div");
         row.className = "chapter-item";
 
-        const left =
-            document.createElement("div");
-
+        const left = document.createElement("div");
         left.className = "chapter-name";
-
         left.innerHTML = `
             <strong>Chapter ${chapter.number}</strong>
             <span>${escapeHtml(chapterTitle)}</span>
         `;
 
-        const actions =
-            document.createElement("div");
-
+        const actions = document.createElement("div");
         actions.className = "chapter-actions";
 
-        const hasMCQSets = mcqSets.length > 0;
-
-        if (hasMCQSets) {
-            const mcqButton =
-                document.createElement("button");
-
+        if (mcqSets.length > 0) {
+            const mcqButton = document.createElement("button");
             mcqButton.className = "btn btn-green";
             mcqButton.type = "button";
             mcqButton.textContent =
                 `📝 MCQ (${mcqSets.length} Set${mcqSets.length === 1 ? "" : "s"})`;
-
             mcqButton.onclick = function () {
                 location.hash =
                     `mcq-sets/${classNumber}/${subjectId}/${chapter.number}`;
             };
-
             actions.appendChild(mcqButton);
         } else {
             const noMCQ = document.createElement("span");
-            noMCQ.style.cssText =
-                "color:#777;font-size:15px;";
+            noMCQ.style.cssText = "color:#777;font-size:15px;";
             noMCQ.textContent = "MCQ अभी उपलब्ध नहीं";
             actions.appendChild(noMCQ);
         }
@@ -1018,21 +1042,42 @@ function renderChapterRows(classNumber, subjectId, chapters) {
 }
 
 /* =========================================
-   CHAPTER LIST
-   Cache-first + background refresh.
+   SUBJECT NOTES
+   One common Google Drive folder per Class + Subject.
 ========================================= */
 
-async function renderChapterList(
-    classNumber,
-    subjectId
-) {
-    const subject =
-        subjects.find(item => item.id === subjectId);
+async function loadSubjectNotes(classNumber, subjectId) {
+    try {
+        const response = await fetch(
+            `/api/subject-notes/${classNumber}/${subjectId}`,
+            { cache: "no-store" }
+        );
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data?.success && data?.exists && data?.notesUrl
+            ? data
+            : null;
+    } catch (error) {
+        console.warn("Subject Notes API load failed:", error);
+        return null;
+    }
+}
+
+/* =========================================
+   CHAPTER LIST
+   Dynamic registry + Notes + MCQ.
+   No 1..100 chapter scan.
+========================================= */
+
+async function renderChapterList(classNumber, subjectId) {
+    const subject = subjects.find(item => item.id === subjectId);
 
     if (!subject) {
         renderScience();
         return;
     }
+
+    const subjectNotes = await loadSubjectNotes(classNumber, subjectId);
 
     app.innerHTML = `
         <button
@@ -1043,29 +1088,15 @@ async function renderChapterList(
         </button>
 
         <div class="page-header">
-            <h1>
-                ${subject.icon}
-                Class ${classNumber} ${subject.name}
-            </h1>
+            <h1>${subject.icon} Class ${classNumber} ${subject.name}</h1>
             <p>NCERT Chapters, Notes and MCQ Practice</p>
         </div>
 
-        ${
-            classNumber === 6 && subjectId === "physics"
-                ? `
-                    <div style="text-align:center;margin:0 0 18px 0;">
-                        <a
-                            class="btn btn-blue"
-                            href="${COMMON_NOTES_URL}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            📖 Notes
-                        </a>
-                    </div>
-                `
-                : ""
-        }
+        ${subjectNotes?.notesUrl ? `
+            <div style="display:flex;justify-content:center;align-items:center;margin:16px 0 20px;">
+                <button id="commonSubjectNotesBtn" class="btn btn-blue" type="button">📖 ${escapeHtml(subject.name)} Notes</button>
+            </div>
+        ` : ""}
 
         <div id="chapterLoading" class="card">
             <h2>Loading Chapters...</h2>
@@ -1073,220 +1104,111 @@ async function renderChapterList(
         </div>
     `;
 
-    /* =========================================
-       1) Show cached chapter list immediately.
-    ========================================= */
-    const cachedChapters =
-        readChapterCache(classNumber, subjectId);
+    const commonSubjectNotesBtn = document.getElementById("commonSubjectNotesBtn");
+    if (commonSubjectNotesBtn && subjectNotes?.notesUrl) {
+        commonSubjectNotesBtn.onclick = function () {
+            window.open(subjectNotes.notesUrl, "_blank", "noopener,noreferrer");
+        };
+    }
 
+    const cachedChapters = readChapterCache(classNumber, subjectId);
     if (cachedChapters && cachedChapters.length) {
-        renderChapterRows(
-            classNumber,
-            subjectId,
-            cachedChapters
-        );
+        renderChapterRows(classNumber, subjectId, cachedChapters);
     }
 
-    /* =========================================
-       2) Always refresh in background so newly
-          uploaded/renamed/deleted MCQs appear.
-    ========================================= */
-    const chapters = [];
+    let registry = [];
 
-    if (
-        classNumber === 6 &&
-        subjectId === "physics"
-    ) {
-        const chapterResults = await Promise.all(
-            CLASS6_PHYSICS_CHAPTERS.map(async chapter => {
-                let items = [];
-
-                try {
-                    const response = await fetch(
-                        `/api/mcq-html/6/physics/${chapter.number}`,
-                        { cache: "no-store" }
-                    );
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        items = Array.isArray(data)
-                            ? data
-                            : (Array.isArray(data.items) ? data.items : []);
-                    }
-                } catch (error) {
-                    console.error(
-                        "MCQ HTML list load error:",
-                        chapter.number,
-                        error
-                    );
-                }
-
-                try {
-                    const jsonResponse = await fetch(
-                        `/api/mcqs/6/physics/${chapter.number}`,
-                        { cache: "no-store" }
-                    );
-
-                    if (jsonResponse.ok) {
-                        const jsonData = await jsonResponse.json();
-
-                        if (
-                            jsonData &&
-                            jsonData.success &&
-                            jsonData.exists &&
-                            jsonData.data &&
-                            Array.isArray(jsonData.data.questions)
-                        ) {
-                            items.push({
-                                id: "saved-json-mcq",
-                                name:
-                                    jsonData.data.title ||
-                                    `Chapter ${chapter.number} JSON MCQ`,
-                                questionCount:
-                                    jsonData.data.questions.length,
-                                isJSON: true,
-                                url:
-                                    `/#quiz/6/physics/${chapter.number}/json/direct`
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.error(
-                        "Saved JSON MCQ load error:",
-                        chapter.number,
-                        error
-                    );
-                }
-
-                return {
-                    number: chapter.number,
-                    title: chapter.title,
-                    notes: null,
-                    mcqSets: items
-                };
-            })
+    try {
+        const response = await fetch(
+            `/api/chapters/${classNumber}/${subjectId}`,
+            { cache: "no-store" }
         );
 
-        chapters.push(...chapterResults);
-    } else {
-        const chapterNumbers = Array.from(
-            { length: 100 },
-            (_, index) => index + 1
-        );
+        if (response.ok) {
+            const data = await response.json();
+            registry = Array.isArray(data)
+                ? data
+                : (Array.isArray(data.items) ? data.items : []);
+        }
+    } catch (error) {
+        console.error("Chapter registry load error:", error);
+    }
 
-        const chapterResults = await Promise.all(
-            chapterNumbers.map(async i => {
-                const notesPath = getJSONPath(
-                    classNumber,
-                    subjectId,
-                    i,
-                    "notes"
-                );
+    // For every admin-created chapter, load Notes + HTML MCQ + JSON MCQ together.
+    const chapters = await Promise.all(
+        registry.map(async item => {
+            const number = Number(item.number);
+            if (!Number.isInteger(number)) return null;
 
-                const notesPromise = loadJSON(notesPath);
+            const htmlPromise = fetch(
+                `/api/mcq-html/${classNumber}/${subjectId}/${number}`,
+                { cache: "no-store" }
+            )
+                .then(async response => {
+                    if (!response.ok) return [];
+                    const data = await response.json();
+                    return Array.isArray(data)
+                        ? data
+                        : (Array.isArray(data.items) ? data.items : []);
+                })
+                .catch(() => []);
 
-                const htmlPromise = fetch(
-                    `/api/mcq-html/${classNumber}/${subjectId}/${i}`,
-                    { cache: "no-store" }
-                )
-                    .then(async response => {
-                        if (!response.ok) return [];
-
-                        const data = await response.json();
-                        return Array.isArray(data)
-                            ? data
-                            : (Array.isArray(data.items) ? data.items : []);
-                    })
-                    .catch(() => []);
-
-                const jsonPromise = fetch(
-                    `/api/mcqs/${classNumber}/${subjectId}/${i}`,
-                    { cache: "no-store" }
-                )
-                    .then(async response => {
-                        if (!response.ok) return null;
-
-                        const result = await response.json();
-
-                        if (
-                            result &&
-                            result.success &&
-                            result.exists &&
-                            result.data &&
-                            Array.isArray(result.data.questions)
-                        ) {
-                            return result.data;
-                        }
-
-                        return null;
-                    })
-                    .catch(() => null);
-
-                const [notesData, htmlItems, mcqData] =
-                    await Promise.all([
-                        notesPromise,
-                        htmlPromise,
-                        jsonPromise
-                    ]);
-
-                if (
-                    !notesData &&
-                    !mcqData &&
-                    htmlItems.length === 0
-                ) {
+            const jsonPromise = fetch(
+                `/api/mcqs/${classNumber}/${subjectId}/${number}`,
+                { cache: "no-store" }
+            )
+                .then(async response => {
+                    if (!response.ok) return null;
+                    const result = await response.json();
+                    if (
+                        result?.success &&
+                        result?.exists &&
+                        result?.data &&
+                        Array.isArray(result.data.questions)
+                    ) {
+                        return result.data;
+                    }
                     return null;
-                }
+                })
+                .catch(() => null);
 
-                const jsonSet = mcqData
-                    ? [{
-                        id: "saved-json-mcq",
-                        name:
-                            mcqData.title ||
-                            mcqData.chapterTitle ||
-                            `Chapter ${i} JSON MCQ`,
-                        questionCount:
-                            Array.isArray(mcqData.questions)
-                                ? mcqData.questions.length
-                                : 0,
-                        isJSON: true,
-                        url:
-                            `/#quiz/${classNumber}/${subjectId}/${i}/json/direct`
-                    }]
-                    : [];
+            const [htmlItems, mcqData] =
+                await Promise.all([htmlPromise, jsonPromise]);
 
-                return {
-                    number: i,
-                    title:
-                        notesData?.title ||
-                        mcqData?.title ||
-                        mcqData?.chapterTitle ||
-                        htmlItems[0]?.name ||
-                        `Chapter ${i}`,
-                    notes: notesData,
-                    mcq: mcqData,
-                    mcqSets: [
-                        ...htmlItems,
-                        ...jsonSet
-                    ]
-                };
-            })
-        );
+            const jsonSet = mcqData
+                ? [{
+                    id: "saved-json-mcq",
+                    name:
+                        mcqData.title ||
+                        mcqData.chapterTitle ||
+                        `Chapter ${number} JSON MCQ`,
+                    questionCount: Array.isArray(mcqData.questions)
+                        ? mcqData.questions.length
+                        : 0,
+                    isJSON: true,
+                    url:
+                        `/#quiz/${classNumber}/${subjectId}/${number}/json/direct`
+                }]
+                : [];
 
-        chapterResults.forEach(chapter => {
-            if (chapter) chapters.push(chapter);
-        });
-    }
-
-    /* =========================================
-       3) Save fresh data and replace the cached UI.
-    ========================================= */
-    saveChapterCache(
-        classNumber,
-        subjectId,
-        chapters
+            return {
+                number,
+                title:
+                    item.title ||
+                    mcqData?.title ||
+                    mcqData?.chapterTitle ||
+                    htmlItems[0]?.name ||
+                    `Chapter ${number}`,
+                mcq: mcqData,
+                mcqSets: [...htmlItems, ...jsonSet]
+            };
+        })
     );
 
-    /* Route may have changed while requests were running. */
+    const validChapters = chapters.filter(Boolean);
+
+    saveChapterCache(classNumber, subjectId, validChapters);
+
     const currentParts =
         (window.location.hash || "#home")
             .substring(1)
@@ -1300,11 +1222,7 @@ async function renderChapterList(
         return;
     }
 
-    renderChapterRows(
-        classNumber,
-        subjectId,
-        chapters
-    );
+    renderChapterRows(classNumber, subjectId, validChapters);
 }
 
 /* =========================================
@@ -1640,18 +1558,25 @@ async function renderNotes(
         );
 
 
+    const notesPaths = getNotesCandidatePaths(
+        classNumber,
+        subjectId,
+        chapterNumber
+    );
+
+    const notes =
+        await loadNotesForChapter(
+            classNumber,
+            subjectId,
+            chapterNumber
+        );
+
     const notesPath =
-        getJSONPath(
+        notesPaths[0] || getJSONPath(
             classNumber,
             subjectId,
             chapterNumber,
             "notes"
-        );
-
-
-    const notes =
-        await loadJSON(
-            notesPath
         );
 
 
@@ -1685,7 +1610,9 @@ async function renderNotes(
 
                     <strong>
                         ${escapeHtml(
-                            notesPath
+                            notesPaths && notesPaths.length
+                                ? notesPaths.join(" OR ")
+                                : notesPath
                         )}
                     </strong>
 
@@ -1699,18 +1626,9 @@ async function renderNotes(
     }
 
 
-    /*
-       अगर Google Docs URL है,
-       तो Google Docs directly open होगा.
-    */
-
-    if (
-        notes.googleDocsUrl
-    ) {
-
-        window.location.href =
-            notes.googleDocsUrl;
-
+    /* Direct Live Google Drive / Google Docs link. */
+    if (notes.notesUrl) {
+        window.location.href = notes.notesUrl;
         return;
     }
 

@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "id": "class6_physics_4",
+      "classNumber": 6,
+      "subject": "physics",
+      "number": 4,
+      "title": "(7) गति एवं दूरियों का मापन (Motion and Measurement of Distances)",
+      "updatedAt": "2026-09-22T11:43:51.561Z",
+      "source": "admin",
+      "createdAt": "2026-09-22T11:43:51.563Z"
+    },
+    {
+      "id": "class6_physics_8",
+      "classNumber": 6,
+      "subject": "physics",
+      "number": 8,
+      "title": "(8) प्रकाश–छायाएँ एवं परावर्तन (Light, Shadows and Reflections)",
+      "updatedAt": "2026-09-22T11:53:57.742Z",
+      "source": "admin",
+      "createdAt": "2026-09-22T11:53:57.743Z"
+    }
+  ]
+}

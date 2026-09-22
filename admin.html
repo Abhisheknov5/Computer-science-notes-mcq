@@ -29,6 +29,28 @@
         .home-btn:hover {
             background: #bfdbfe;
         }
+
+        .file-select-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .cancel-file-btn {
+            border: none;
+            border-radius: 7px;
+            padding: 8px 14px;
+            background: #dc2626;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .cancel-file-btn:hover {
+            background: #b91c1c;
+        }
     </style>
 </head>
 
@@ -45,7 +67,6 @@
 
         <div class="topbar-actions">
 
-            <!-- MAIN WEBSITE HOME -->
             <a
                 class="home-btn"
                 href="index.html"
@@ -56,7 +77,6 @@
                 🏠 Home
             </a>
 
-            <!-- LOGOUT -->
             <button
                 class="logout-btn"
                 onclick="logout()"
@@ -166,7 +186,7 @@
                 <div class="subject-grid">
 
                     <button
-                        class="subject-card active"
+                        class="subject-card"
                         data-subject="Physics"
                         onclick="selectSubject('Physics')"
                     >
@@ -253,7 +273,7 @@
                     <div>
 
                         <h2 id="currentSubjectTitle">
-                            Physics
+                            Select Subject
                         </h2>
 
                         <p>
@@ -266,7 +286,7 @@
                         id="selectionBadge"
                         class="selection-badge"
                     >
-                        Class 6 • Chapter 7
+                        Select Class • Chapter
                     </span>
 
                 </div>
@@ -281,6 +301,10 @@
                         </label>
 
                         <select id="classNumber">
+
+                            <option value="" selected>
+                                Select Class
+                            </option>
 
                             <option value="6">
                                 Class 6
@@ -324,9 +348,10 @@
                         <input
                             id="chapterNumber"
                             type="number"
-                            min="1"
+                            min="0"
                             placeholder="e.g. 7"
-                            value="7"
+                            value="0"
+                            autocomplete="off"
                         >
 
                     </div>
@@ -339,7 +364,7 @@
                             Chapter Title
 
                             <span>
-                                (JSON save ke liye)
+                                (Admin se chapter save karne ke liye)
                             </span>
 
                         </label>
@@ -353,12 +378,33 @@
                     </div>
 
 
-                    <button
-                        class="secondary-btn load-btn"
-                        onclick="loadQuizzes()"
-                    >
-                        🔄 Load MCQ
-                    </button>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+
+                        <button
+                            class="primary-btn"
+                            type="button"
+                            onclick="saveChapter()"
+                        >
+                            ➕ Save Chapter
+                        </button>
+
+                        <button
+                            class="secondary-btn load-btn"
+                            type="button"
+                            onclick="loadQuizzes()"
+                        >
+                            🔄 Load MCQ
+                        </button>
+
+                        <button
+                            class="delete-btn"
+                            type="button"
+                            onclick="deleteChapter()"
+                        >
+                            🗑️ Delete Chapter
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -367,6 +413,20 @@
                     id="chapterMessage"
                     class="message"
                 ></div>
+
+
+                <!-- Loaded MCQ -->
+                <div id="quizList">
+
+                    <div class="empty">
+
+                        Chapter select karke
+                        <strong>Load MCQ</strong>
+                        dabaiye.
+
+                    </div>
+
+                </div>
 
             </section>
 
@@ -394,21 +454,6 @@
                     >
                         0 MCQ Sets
                     </span>
-
-                </div>
-
-
-                <div id="quizList">
-
-                    <div class="empty">
-
-                        Chapter select karke
-                        <strong>
-                            Load MCQ
-                        </strong>
-                        dabaiye.
-
-                    </div>
 
                 </div>
 
@@ -448,11 +493,24 @@
                             MCQ HTML file select karein
                         </strong>
 
-                        <input
-                            type="file"
-                            id="mcqFile"
-                            accept=".html,.htm"
-                        >
+                        <div class="file-select-row">
+
+                            <input
+                                type="file"
+                                id="mcqFile"
+                                accept=".html,.htm"
+                            >
+
+                            <button
+                                type="button"
+                                id="cancelMCQFileBtn"
+                                class="cancel-file-btn"
+                                style="display:none;"
+                            >
+                                ✖ Cancel
+                            </button>
+
+                        </div>
 
                         <div
                             id="htmlFileName"
@@ -475,7 +533,7 @@
                                 </span>
 
                                 <strong id="uploadClassText">
-                                    6
+                                    —
                                 </strong>
 
                             </div>
@@ -488,7 +546,7 @@
                                 </span>
 
                                 <strong id="uploadSubjectText">
-                                    Physics
+                                    —
                                 </strong>
 
                             </div>
@@ -501,7 +559,7 @@
                                 </span>
 
                                 <strong id="uploadChapterText">
-                                    7
+                                    —
                                 </strong>
 
                             </div>
@@ -525,6 +583,101 @@
                     </div>
 
                 </div>
+
+            </section>
+
+
+            <!-- NOTES MAPPING -->
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📖 Notes Google Drive Folder Mapping
+                        </h2>
+
+                        <p>
+                            Selected Class + Subject ke liye ek common Google Drive folder link save karein.
+                            Har chapter ke liye alag Notes link paste karne ki zaroorat nahi hai.
+                        </p>
+
+                        <p style="margin-top:8px;font-size:14px;">
+
+                            💡 Drive folder ko
+                            <strong>
+                                Anyone with the link → Viewer
+                            </strong>
+                            rakhein, phir folder link paste karein.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="field wide">
+
+                    <label for="notesUrl">
+                        Selected Class + Subject ka Live Google Drive Notes Folder Link
+                    </label>
+
+                    <input
+                        id="notesUrl"
+                        type="url"
+                        placeholder="https://drive.google.com/drive/folders/..."
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px;">
+
+                    <button
+                        class="secondary-btn"
+                        type="button"
+                        onclick="openDriveForNotes()"
+                    >
+                        📂 Open Google Drive
+                    </button>
+
+
+                    <button
+                        class="primary-btn"
+                        type="button"
+                        onclick="saveNotesLink()"
+                    >
+                        💾 Save Notes Link
+                    </button>
+
+
+                    <button
+                        class="secondary-btn"
+                        type="button"
+                        onclick="loadNotesLink()"
+                    >
+                        🔄 Load Saved Notes
+                    </button>
+
+
+                    <button
+                        class="delete-btn"
+                        type="button"
+                        onclick="deleteNotesLink()"
+                    >
+                        🗑️ Delete Notes Link
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="notesMessage"
+                    class="message"
+                ></div>
 
             </section>
 
@@ -699,6 +852,70 @@
 
 
 <script src="js/admin.js"></script>
+
+
+<script>
+    (function () {
+
+        const fileInput =
+            document.getElementById("mcqFile");
+
+        const cancelBtn =
+            document.getElementById("cancelMCQFileBtn");
+
+        const fileName =
+            document.getElementById("htmlFileName");
+
+
+        if (!fileInput || !cancelBtn) {
+            return;
+        }
+
+
+        function updateCancelButton() {
+
+            cancelBtn.style.display =
+                fileInput.files &&
+                fileInput.files.length
+                    ? "inline-block"
+                    : "none";
+
+        }
+
+
+        fileInput.addEventListener(
+            "change",
+            updateCancelButton
+        );
+
+
+        cancelBtn.addEventListener(
+            "click",
+            function () {
+
+                fileInput.value = "";
+
+
+                if (fileName) {
+
+                    fileName.textContent =
+                        "No file selected";
+
+                }
+
+
+                cancelBtn.style.display =
+                    "none";
+
+            }
+        );
+
+
+        updateCancelButton();
+
+    })();
+</script>
+
 
 </body>
 </html>
