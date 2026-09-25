@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "id": "cn-1",
+      "subject": "cn",
+      "number": 1,
+      "title": "basic of ai",
+      "chapterTitle": "basic of ai",
+      "updatedAt": "2026-09-25T07:59:46.827Z"
+    },
+    {
+      "id": "e-commerce-1",
+      "subject": "e-commerce",
+      "number": 1,
+      "title": "basic of e commerce",
+      "chapterTitle": "basic of e commerce",
+      "updatedAt": "2026-09-25T11:16:49.444Z"
+    },
+    {
+      "id": "dbms-1",
+      "subject": "dbms",
+      "number": 1,
+      "title": "DBMS Tutorial - Learn Database Management System",
+      "chapterTitle": "DBMS Tutorial - Learn Database Management System",
+      "updatedAt": "2026-09-25T13:41:32.541Z"
+    },
+    {
+      "id": "dbms-2",
+      "subject": "dbms",
+      "number": 2,
+      "title": "What is a Database? Definition, Types, Examples",
+      "chapterTitle": "What is a Database? Definition, Types, Examples",
+      "updatedAt": "2026-09-25T13:44:21.171Z"
+    },
+    {
+      "id": "ai-1",
+      "subject": "ai",
+      "number": 1,
+      "title": "hfjdbfjabfsjf",
+      "chapterTitle": "hfjdbfjabfsjf",
+      "updatedAt": "2026-09-25T13:57:21.159Z"
+    }
+  ]
+}

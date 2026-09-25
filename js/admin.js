@@ -1,989 +1,464 @@
 "use strict";
 
-/*
-========================================================
- NCERT GK-GS NOTES + MCQ ADMIN
- ONE PAGE ADMIN
- Existing MCQ APIs preserved.
- Quiz files are not modified.
-========================================================
-*/
-
 let currentSubject = "";
-let currentClass = null;
 let currentChapter = null;
-
 let importedQuestions = [];
 let importedData = null;
 
-const CHAPTER_CACHE_BUSTER_KEY = "ncertChapterList:buster";
-
-function notifyChapterListChanged() {
-    try {
-        localStorage.setItem(
-            CHAPTER_CACHE_BUSTER_KEY,
-            String(Date.now())
-        );
-    } catch (error) {
-        console.warn("Chapter list cache notification skipped:", error);
-    }
-}
+const CHAPTER_CACHE_BUSTER_KEY = "csChapterList:buster";
 
 const subjectIdMap = {
-    "Physics": "physics",
-    "Chemistry": "chemistry",
-    "Biology": "biology",
-    "Environmental-Science": "environmental-science",
-    "History": "history",
-    "Geography": "geography",
-    "Political-Science": "political-science",
-    "Economics": "economics"
+    "AI": "ai",
+    "CN": "cn",
+    "DSA": "dsa",
+    "DBMS": "dbms",
+    "DE": "de",
+    "E-Commerce": "e-commerce",
+    "IoT": "iot",
+    "Multimedia": "multimedia",
+    "OOPS": "oops",
+    "OS": "os",
+    "Software-Engineering": "software-engineering",
+    "TOC": "toc"
+};
+
+const subjectNameMap = {
+    "AI": "Artificial Intelligence (AI)",
+    "CN": "Computer Networks (CN)",
+    "DSA": "Data Structures & Algorithms (DSA)",
+    "DBMS": "Database Management System (DBMS)",
+    "DE": "Digital Electronics (DE)",
+    "E-Commerce": "E-Commerce",
+    "IoT": "Internet of Things (IoT)",
+    "Multimedia": "Multimedia",
+    "OOPS": "Object-Oriented Programming (OOPS)",
+    "OS": "Operating System (OS)",
+    "Software-Engineering": "Software Engineering",
+    "TOC": "Theory of Computation (TOC)"
 };
 
 function getElement(id) {
-    const element = document.getElementById(id);
+    const el=document.getElementById(id);
+    if(!el) throw new Error(`HTML में "${id}" element नहीं मिला।`);
+    return el;
+}
+function showMessage(id,text,type){const box=getElement(id);box.textContent=text;box.className="message "+type;box.style.display="block";}
+function escapeHTML(value){return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");}
+function escapeJS(value){return String(value).replaceAll("\\","\\\\").replaceAll("'","\\'").replaceAll("\n","\\n").replaceAll("\r","\\r");}
+function notifyChapterListChanged(){try{localStorage.setItem(CHAPTER_CACHE_BUSTER_KEY,String(Date.now()));}catch{}}
 
-    if (!element) {
-        throw new Error(`HTML में "${id}" element नहीं मिला।`);
-    }
-
-    return element;
+function getElementOptional(id){
+    return document.getElementById(id);
 }
 
-function showMessage(elementId, text, type) {
-    const box = getElement(elementId);
-    box.textContent = text;
-    box.className = "message " + type;
-    box.style.display = "block";
-}
+function selectSubject(subject){
+    currentSubject=subject;
 
-function escapeHTML(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function escapeJS(value) {
-    return String(value)
-        .replaceAll("\\", "\\\\")
-        .replaceAll("'", "\\'")
-        .replaceAll("\n", "\\n")
-        .replaceAll("\r", "\\r");
-}
-
-/* ======================================================
-   ONE PAGE SELECTION
-====================================================== */
-
-function selectSubject(subject) {
-    currentSubject = subject;
-
-    document.querySelectorAll(".subject-card").forEach(function (card) {
-        card.classList.toggle(
-            "active",
-            card.dataset.subject === subject
-        );
+    document.querySelectorAll(".subject-card").forEach(card=>{
+        card.classList.toggle("active",card.dataset.subject===subject);
     });
 
-    getElement("currentSubjectTitle").textContent =
-        subject === "Environmental-Science"
-            ? "Environmental Science"
-            : subject;
+    const subjectText=subjectNameMap[subject]||subject;
 
-    updateSelectionUI();
+    const title=getElementOptional("currentSubjectTitle");
+    if(title) title.textContent=subjectText;
 
-    // Subject select karne par MCQ automatically load nahi hoga.
-    getElement("quizList").innerHTML = `
-        <div class="empty">
-            Class aur Chapter select karke
-            <strong>Load MCQ</strong> dabaiye.
-        </div>
-    `;
-    getElement("mcqCountBadge").textContent = "0 MCQ Sets";
-}
+    const badge=getElementOptional("selectionBadge");
+    if(badge) badge.textContent=subjectText;
 
-function updateSelectionUI() {
-    const classValue = getElement("classNumber").value.trim();
-    currentClass = classValue ? Number(classValue) : null;
-
-    const chapterValue = getElement("chapterNumber").value.trim();
-    currentChapter = chapterValue ? Number(chapterValue) : null;
-
-    const subjectText =
-        currentSubject === "Environmental-Science"
-            ? "Environmental Science"
-            : (currentSubject || "Select Subject");
-
-    const classText = currentClass
-        ? `Class ${currentClass}`
-        : "Select Class";
-
-    const chapterText = currentChapter && currentChapter > 0
-        ? `Chapter ${currentChapter}`
-        : "Chapter";
-
-    getElement("currentSubjectTitle").textContent = subjectText;
-
-    getElement("selectionBadge").textContent =
-        `${classText} • ${chapterText}`;
-
-    getElement("uploadClassText").textContent =
-        currentClass || "—";
-
-    getElement("uploadSubjectText").textContent =
-        currentSubject ? subjectText : "—";
-
-    getElement("uploadChapterText").textContent =
-        currentChapter || "—";
-
-    getElement("listDescription").textContent =
-        currentSubject && currentClass && currentChapter
-            ? `${subjectText} • Class ${currentClass} • Chapter ${currentChapter}`
-            : "Selected chapter ke uploaded MCQ yahan dikhenge.";
-}
-
-getElement("classNumber").addEventListener("change", function () {
-    updateSelectionUI();
-
-    getElement("quizList").innerHTML = `
-        <div class="empty">
-            Chapter select karke
-            <strong>Load MCQ</strong> dabaiye.
-        </div>
-    `;
-    getElement("mcqCountBadge").textContent = "0 MCQ Sets";
-    getElement("notesUrl").value = "";
-    getElement("notesMessage").style.display = "none";
-});
-
-getElement("chapterNumber").addEventListener("input", function () {
-    updateSelectionUI();
-
-    getElement("quizList").innerHTML = `
-        <div class="empty">
-            <strong>Load MCQ</strong> dabaiye.
-        </div>
-    `;
-    getElement("mcqCountBadge").textContent = "0 MCQ Sets";
-});
-
-getElement("mcqFile").addEventListener("change", function () {
-    const file = this.files[0];
-
-    getElement("htmlFileName").textContent =
-        file ? file.name : "No file selected";
-});
-
-getElement("jsonFile").addEventListener("change", function () {
-    const file = this.files[0];
-
-    if (!file) {
-        getElement("fileName").textContent =
-            "Koi JSON file select nahi ki gayi";
-        return;
+    const quizList=getElementOptional("quizList");
+    if(quizList){
+        quizList.innerHTML=`<div class="empty">Chapter select karke <strong>Load MCQ</strong> dabaiye.</div>`;
     }
 
-    if (!file.name.toLowerCase().endsWith(".json")) {
-        this.value = "";
-        getElement("fileName").textContent =
-            "Koi JSON file select nahi ki gayi";
-        alert("❌ केवल JSON file select करें।");
-        return;
+    const mcqCount=getElementOptional("mcqCountBadge");
+    if(mcqCount) mcqCount.textContent="0 MCQ Sets";
+
+    const notesUrl=getElementOptional("notesUrl");
+    if(notesUrl) notesUrl.value="";
+
+    const notesMessage=getElementOptional("notesMessage");
+    if(notesMessage) notesMessage.style.display="none";
+
+    updateSelectionUI();
+}
+
+/* HTML subject cards call this exact function name. */
+window.selectSubjectCard=function(subject){
+    selectSubject(subject);
+};
+
+window.selectSubject=selectSubject;
+
+function updateSelectionUI(){
+    const chapterInput=getElementOptional("chapterNumber");
+
+    /*
+     * Current CS Admin UI no longer has a Chapter Number input.
+     * The server assigns chapter numbers automatically.
+     */
+    if(chapterInput){
+        const chapterValue=chapterInput.value.trim();
+        currentChapter=chapterValue?Number(chapterValue):null;
     }
 
-    getElement("fileName").textContent =
-        `Selected: ${file.name}`;
-});
+    const subjectText=currentSubject
+        ? (subjectNameMap[currentSubject]||currentSubject)
+        : "Select Subject";
 
-/* ======================================================
-   LOGIN
-====================================================== */
+    const chapterText=currentChapter&&currentChapter>0
+        ? `Topic ${currentChapter}`
+        : "";
 
-async function checkLogin() {
-    try {
-        const response = await fetch("/api/owner/status");
-        const data = await response.json();
+    const title=getElementOptional("currentSubjectTitle");
+    if(title) title.textContent=subjectText;
 
-        if (data && data.authenticated) {
-            getElement("loginCard").classList.add("hidden");
-            getElement("adminPanel").classList.remove("hidden");
-            updateSelectionUI();
-        }
-    } catch (error) {
-        console.error("Login status error:", error);
+    const badge=getElementOptional("selectionBadge");
+    if(badge) badge.textContent=chapterText
+        ? `${subjectText} • ${chapterText}`
+        : subjectText;
+
+    const uploadSubject=getElementOptional("uploadSubjectText");
+    if(uploadSubject) uploadSubject.textContent=currentSubject?subjectText:"—";
+
+    const uploadChapter=getElementOptional("uploadChapterText");
+    if(uploadChapter) uploadChapter.textContent=currentChapter||"—";
+
+    const description=getElementOptional("listDescription");
+    if(description){
+        description.textContent=currentSubject&&currentChapter
+            ? `${subjectText} • Topic ${currentChapter}`
+            : "Selected subject ke uploaded MCQ yahan dikhenge.";
     }
 }
 
-async function login() {
-    const password = getElement("password").value.trim();
+const chapterNumberInput=getElementOptional("chapterNumber");
+if(chapterNumberInput){
+    chapterNumberInput.addEventListener("input",()=>{
+        updateSelectionUI();
+        const quizList=getElementOptional("quizList");
+        if(quizList) quizList.innerHTML=`<div class="empty"><strong>Load MCQ</strong> dabaiye.</div>`;
+        const mcqCount=getElementOptional("mcqCountBadge");
+        if(mcqCount) mcqCount.textContent="0 MCQ Sets";
+    });
+}
 
-    if (!password) {
-        showMessage("loginMessage", "Password daaliye.", "error");
-        return;
-    }
+const mcqFileInput=getElementOptional("mcqFile");
+if(mcqFileInput){
+    mcqFileInput.addEventListener("change",function(){
+        const file=this.files[0];
+        const name=getElementOptional("htmlFileName");
+        const cancelButton=getElementOptional("cancelMCQFile");
+        if(name) name.textContent=file?file.name:"No file selected";
+        if(cancelButton) cancelButton.style.display=file?"inline-flex":"none";
+    });
+}
 
-    try {
-        const response = await fetch("/api/owner/login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ password })
-        });
+window.cancelMCQFile=function(){
+    const fileInput=getElementOptional("mcqFile");
+    const name=getElementOptional("htmlFileName");
+    const cancelButton=getElementOptional("cancelMCQFile");
 
-        const data = await response.json();
+    if(fileInput) fileInput.value="";
+    if(name) name.textContent="No file selected";
+    if(cancelButton) cancelButton.style.display="none";
+};
 
-        if (!response.ok) {
-            showMessage(
-                "loginMessage",
-                data.message || "Login failed.",
-                "error"
-            );
+const jsonFileInput=getElementOptional("jsonFile");
+if(jsonFileInput){
+    jsonFileInput.addEventListener("change",function(){
+        const file=this.files[0];
+        const name=getElementOptional("fileName");
+        if(!file){
+            if(name) name.textContent="Koi JSON file select nahi ki gayi";
             return;
         }
-
-        getElement("loginCard").classList.add("hidden");
-        getElement("adminPanel").classList.remove("hidden");
-        getElement("password").value = "";
-
-        updateSelectionUI();
-    } catch (error) {
-        showMessage(
-            "loginMessage",
-            "Server se connection nahi ho raha.",
-            "error"
-        );
-    }
+        if(!file.name.toLowerCase().endsWith(".json")){
+            this.value="";
+            if(name) name.textContent="Koi JSON file select nahi ki gayi";
+            alert("❌ केवल JSON file select करें।");
+            return;
+        }
+        if(name) name.textContent=`Selected: ${file.name}`;
+    });
 }
 
-async function logout() {
-    try {
-        await fetch("/api/owner/logout", {
-            method: "POST"
-        });
-    } catch (error) {
-        console.error(error);
-    }
+async function checkLogin(){try{const r=await fetch("/api/owner/status");const d=await r.json();if(d&&d.authenticated){getElement("loginCard").classList.add("hidden");getElement("adminPanel").classList.remove("hidden");updateSelectionUI();}}catch(e){console.error(e);}}
+async function login(){const password=getElement("password").value.trim();if(!password){showMessage("loginMessage","Password daaliye.","error");return;}try{const r=await fetch("/api/owner/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password})});const d=await r.json();if(!r.ok){showMessage("loginMessage",d.message||"Login failed.","error");return;}getElement("loginCard").classList.add("hidden");getElement("adminPanel").classList.remove("hidden");getElement("password").value="";updateSelectionUI();}catch{showMessage("loginMessage","Server se connection nahi ho raha.","error");}}
+async function logout(){try{await fetch("/api/owner/logout",{method:"POST"});}catch{}getElement("adminPanel").classList.add("hidden");getElement("loginCard").classList.remove("hidden");}
 
-    getElement("adminPanel").classList.add("hidden");
-    getElement("loginCard").classList.remove("hidden");
+function getManagementInputs(){
+    if(!currentSubject||!subjectIdMap[currentSubject]) throw new Error("Pehle Subject select karein.");
+    if(!currentChapter||currentChapter<1) throw new Error("Pehle Topic save/select karein.");
+    return {subject:subjectIdMap[currentSubject],chapterNumber:currentChapter};
 }
 
-
-/* ======================================================
-   CHAPTER SAVE / DELETE
-====================================================== */
-
-async function saveChapter() {
-    let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        alert(error.message);
+async function saveChapter(){
+    if(!currentSubject||!subjectIdMap[currentSubject]){
+        alert("Pehle Subject select karein.");
         return;
     }
 
-    const chapterTitle = getElement("chapterTitle").value.trim();
-
-    if (!chapterTitle) {
-        alert("Chapter Title daaliye.");
+    const chapterTitle=getElement("chapterTitle").value.trim();
+    if(!chapterTitle){
+        alert("Topic Title daaliye.");
         return;
     }
 
-    try {
-        const response = await fetch("/api/chapters", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                classNumber: inputs.classNumber,
-                subject: inputs.subject,
-                chapterNumber: inputs.chapterNumber,
+    try{
+        const r=await fetch("/api/cs/chapters",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
                 chapterTitle
             })
         });
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            alert(
-                data.message ||
-                data.error ||
-                "Chapter save nahi hua."
-            );
+        const d=await r.json();
+        if(!r.ok||!d.success){
+            alert(d.message||"Topic save nahi hua.");
             return;
         }
+
+        currentChapter=Number(d.chapter?.number)||null;
+        updateSelectionUI();
 
         showMessage(
             "chapterMessage",
-            "✅ Chapter successfully save ho gaya.",
+            `✅ Topic ${currentChapter} successfully save ho gaya.`,
             "success"
         );
 
+        getElement("chapterTitle").value="";
         notifyChapterListChanged();
-    } catch (error) {
-        console.error("Chapter save error:", error);
-        alert("Server error. Chapter save nahi hua.");
+    }catch(e){
+        console.error(e);
+        alert("Server error. Topic save nahi hua.");
     }
 }
+async function deleteChapter(){let inputs;try{inputs=getManagementInputs();}catch(e){alert(e.message);return;}if(!confirm(`Kya aap ${currentSubject} ka Topic ${inputs.chapterNumber} delete karna chahte hain?`))return;try{const r=await fetch("/api/cs/chapters",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)});const d=await r.json();if(!r.ok||!d.success){alert(d.message||"Chapter delete nahi hua.");return;}showMessage("chapterMessage","✅ Topic delete ho gaya.","success");getElement("quizList").innerHTML=`<div class="empty">Topic ${inputs.chapterNumber} delete ho gaya.</div>`;getElement("mcqCountBadge").textContent="0 MCQ Sets";getElement("chapterTitle").value="";notifyChapterListChanged();}catch(e){console.error(e);alert("Server error. Chapter delete nahi hua.");}}
 
-async function deleteChapter() {
-    let inputs;
+function getNotesInputs(){if(!currentSubject||!subjectIdMap[currentSubject])throw new Error("Pehle Subject select karein.");return {subject:subjectIdMap[currentSubject]};}
+function openDriveForNotes(){window.open("https://drive.google.com/drive/my-drive","_blank","noopener,noreferrer");}
+async function saveNotesLink(){let inputs;try{inputs=getNotesInputs();}catch(e){showMessage("notesMessage",e.message,"error");return;}const notesUrl=getElement("notesUrl").value.trim();if(!notesUrl){showMessage("notesMessage","Google Drive folder ka link paste karein.","error");return;}if(!/^https:\/\/(drive\.google\.com|docs\.google\.com)\//i.test(notesUrl)){showMessage("notesMessage","Valid Google Drive ya Google Docs link dijiye.","error");return;}try{const r=await fetch("/api/cs/subject-notes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...inputs,notesUrl})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success){showMessage("notesMessage",d.message||`Notes save failed. HTTP ${r.status}`,"error");return;}showMessage("notesMessage",`✅ ${currentSubject} ka Notes folder link save ho gaya.` ,"success");notifyChapterListChanged();}catch(e){showMessage("notesMessage","Server se connection nahi ho raha.","error");}}
+async function loadNotesLink(){let inputs;try{inputs=getNotesInputs();}catch(e){showMessage("notesMessage",e.message,"error");return;}try{const r=await fetch(`/api/cs/subject-notes/${inputs.subject}`,{cache:"no-store"});const d=await r.json();if(!r.ok||!d.success){showMessage("notesMessage",d.message||`Notes load failed. HTTP ${r.status}`,"error");return;}getElement("notesUrl").value=d.notesUrl||"";showMessage("notesMessage",d.exists?"✅ Saved Notes folder link load ho gaya.":"Is Subject ke liye Notes link saved nahi hai.",d.exists?"success":"error");}catch{showMessage("notesMessage","Notes API se connection nahi ho raha.","error");}}
+async function deleteNotesLink(){let inputs;try{inputs=getNotesInputs();}catch(e){showMessage("notesMessage",e.message,"error");return;}if(!confirm(`Kya aap ${currentSubject} ka Notes folder link delete karna chahte hain?`))return;try{const r=await fetch("/api/cs/subject-notes",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)});const d=await r.json();if(!r.ok||!d.success){showMessage("notesMessage",d.message||"Notes delete failed.","error");return;}getElement("notesUrl").value="";showMessage("notesMessage","✅ Notes folder link delete ho gaya.","success");notifyChapterListChanged();}catch{showMessage("notesMessage","Server se connection nahi ho raha.","error");}}
 
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        alert(error.message);
+async function loadQuizzes(){
+    if(!currentSubject||!subjectIdMap[currentSubject]){
+        getElement("quizList").innerHTML=
+            `<div class="empty">Pehle Subject select karein.</div>`;
+        getElement("mcqCountBadge").textContent="0 MCQ Sets";
         return;
     }
 
-    const confirmDelete = confirm(
-        `Kya aap Chapter ${inputs.chapterNumber} ko delete karna chahte hain?`
-    );
+    const list=getElement("quizList");
+    list.innerHTML="<div class='empty'>Loading Topics and MCQ...</div>";
+    getElement("mcqCountBadge").textContent="0 MCQ Sets";
 
-    if (!confirmDelete) {
-        return;
-    }
+    try{
+        const subjectId=subjectIdMap[currentSubject];
 
-    try {
-        const response = await fetch("/api/chapters", {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                classNumber: inputs.classNumber,
-                subject: inputs.subject,
-                chapterNumber: inputs.chapterNumber
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            alert(
-                data.message ||
-                data.error ||
-                "Chapter delete nahi hua."
-            );
-            return;
-        }
-
-        getElement("chapterMessage").textContent =
-            "✅ Chapter delete ho gaya.";
-        getElement("chapterMessage").className =
-            "message success";
-        getElement("chapterMessage").style.display = "block";
-
-        getElement("quizList").innerHTML =
-            `<div class="empty">Chapter ${inputs.chapterNumber} delete ho gaya. Ab MCQ load nahi kiya gaya hai.</div>`;
-
-        getElement("mcqCountBadge").textContent = "0 MCQ Sets";
-        getElement("chapterTitle").value = "";
-
-        notifyChapterListChanged();
-    } catch (error) {
-        console.error("Chapter delete error:", error);
-        alert("Server error. Chapter delete nahi hua.");
-    }
-}
-
-/* ======================================================
-   SUBJECT NOTES — ONE GOOGLE DRIVE FOLDER PER CLASS + SUBJECT
-====================================================== */
-
-function getNotesInputs() {
-    if (!currentSubject || !subjectIdMap[currentSubject]) {
-        throw new Error("Pehle Subject select karein.");
-    }
-
-    const classValue = getElement("classNumber").value.trim();
-    const classNumber = Number(classValue);
-
-    if (!classValue || classNumber < 6 || classNumber > 12) {
-        throw new Error("Pehle Class select karein.");
-    }
-
-    return {
-        classNumber,
-        subject: subjectIdMap[currentSubject]
-    };
-}
-
-function openDriveForNotes() {
-    window.open(
-        "https://drive.google.com/drive/my-drive",
-        "_blank",
-        "noopener,noreferrer"
-    );
-}
-
-async function saveNotesLink() {
-    let inputs;
-    try {
-        inputs = getNotesInputs();
-    } catch (error) {
-        showMessage("notesMessage", error.message, "error");
-        return;
-    }
-
-    const notesUrl = getElement("notesUrl").value.trim();
-
-    if (!notesUrl) {
-        showMessage("notesMessage", "Google Drive folder ka link paste karein.", "error");
-        return;
-    }
-
-    if (!/^https:\/\/(drive\.google\.com|docs\.google\.com)\//i.test(notesUrl)) {
-        showMessage("notesMessage", "Valid Google Drive ya Google Docs link dijiye.", "error");
-        return;
-    }
-
-    try {
-        const response = await fetch("/api/subject-notes", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                classNumber: inputs.classNumber,
-                subject: inputs.subject,
-                notesUrl
-            })
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || !data.success) {
-            showMessage(
-                "notesMessage",
-                data.message || `Notes save failed. HTTP ${response.status}`,
-                "error"
-            );
-            return;
-        }
-
-        showMessage(
-            "notesMessage",
-            `✅ Class ${inputs.classNumber} ${currentSubject} ka Notes folder link save ho gaya.`,
-            "success"
+        const r=await fetch(
+            `/api/cs/chapters/${encodeURIComponent(subjectId)}`,
+            {cache:"no-store"}
         );
-        notifyChapterListChanged();
-    } catch (error) {
-        console.error("Subject notes save error:", error);
-        showMessage("notesMessage", "Server se connection nahi ho raha.", "error");
-    }
-}
+        const d=await r.json();
 
-async function loadNotesLink() {
-    let inputs;
-    try {
-        inputs = getNotesInputs();
-    } catch (error) {
-        showMessage("notesMessage", error.message, "error");
-        return;
-    }
+        if(!r.ok||!d.success){
+            throw new Error(d.message||"Topics load nahi hue.");
+        }
 
-    try {
-        const response = await fetch(
-            `/api/subject-notes/${inputs.classNumber}/${inputs.subject}`,
-            { cache: "no-store" }
-        );
-        const data = await response.json().catch(() => ({}));
+        const chapters=Array.isArray(d.items)?d.items:[];
 
-        if (!response.ok || !data.success) {
-            showMessage(
-                "notesMessage",
-                data.message || `Notes load failed. HTTP ${response.status}`,
-                "error"
-            );
+        if(!chapters.length){
+            list.innerHTML=
+                `<div class="empty">Is Subject ke liye abhi koi Topic saved nahi hai.</div>`;
             return;
         }
 
-        getElement("notesUrl").value = data.notesUrl || "";
+        const rows=[];
+        let totalQuestions=0;
 
-        showMessage(
-            "notesMessage",
-            data.exists
-                ? "✅ Saved Notes folder link load ho gaya."
-                : "Is Class + Subject ke liye Notes link saved nahi hai.",
-            data.exists ? "success" : "error"
-        );
-    } catch (error) {
-        console.error("Subject notes load error:", error);
-        showMessage("notesMessage", "Notes API se connection nahi ho raha.", "error");
-    }
-}
+        for(const chapter of chapters){
+            const number=Number(chapter.number);
+            if(!number) continue;
 
-async function deleteNotesLink() {
-    let inputs;
-    try {
-        inputs = getNotesInputs();
-    } catch (error) {
-        showMessage("notesMessage", error.message, "error");
-        return;
-    }
-
-    if (!confirm(`Kya aap Class ${inputs.classNumber} ${currentSubject} ka Notes folder link delete karna chahte hain?`)) {
-        return;
-    }
-
-    try {
-        const response = await fetch("/api/subject-notes", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(inputs)
-        });
-
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || !data.success) {
-            showMessage(
-                "notesMessage",
-                data.message || `Notes delete failed. HTTP ${response.status}`,
-                "error"
-            );
-            return;
-        }
-
-        getElement("notesUrl").value = "";
-        showMessage("notesMessage", "✅ Notes folder link delete ho gaya.", "success");
-        notifyChapterListChanged();
-    } catch (error) {
-        console.error("Subject notes delete error:", error);
-        showMessage("notesMessage", "Server se connection nahi ho raha.", "error");
-    }
-}
-
-/* ======================================================
-   MCQ HTML LIST
-====================================================== */
-
-function getManagementInputs() {
-    if (!currentSubject || !subjectIdMap[currentSubject]) {
-        throw new Error("Pehle Subject select karein.");
-    }
-
-    const classValue = getElement("classNumber").value.trim();
-    const classNumber = Number(classValue);
-    const chapterNumber = Number(getElement("chapterNumber").value);
-
-    if (!classValue || classNumber < 6 || classNumber > 12) {
-        throw new Error("Class 6 से 12 के बीच होनी चाहिए।");
-    }
-
-    if (!chapterNumber || chapterNumber < 1) {
-        throw new Error("Chapter Number डालें।");
-    }
-
-    currentClass = classNumber;
-    currentChapter = chapterNumber;
-
-    return {
-        classNumber,
-        subject: subjectIdMap[currentSubject],
-        chapterNumber
-    };
-}
-
-async function loadQuizzes() {
-    let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        getElement("quizList").innerHTML = `<div class="empty">${escapeHTML(error.message)}</div>`;
-        getElement("mcqCountBadge").textContent = "0 MCQ Sets";
-        return;
-    }
-
-    updateSelectionUI();
-    const list = getElement("quizList");
-    list.innerHTML = "<div class='empty'>Loading...</div>";
-
-    try {
-        const subjectId = subjectIdMap[currentSubject];
-        const htmlResponse = await fetch(`/api/mcq-html/${inputs.classNumber}/${inputs.subject}/${inputs.chapterNumber}`);
-        const htmlData = await htmlResponse.json();
-        let htmlItems = htmlResponse.ok ? (Array.isArray(htmlData) ? htmlData : (htmlData.items || [])) : [];
-
-        let jsonItem = null;
-        try {
-            const jsonResponse = await fetch(`/api/mcqs/${inputs.classNumber}/${subjectId}/${inputs.chapterNumber}`, { cache: "no-store" });
-            if (jsonResponse.ok) {
-                const jsonData = await jsonResponse.json();
-                if (jsonData?.success && jsonData?.exists && jsonData?.data && Array.isArray(jsonData.data.questions)) {
-                    jsonItem = {
-                        id: "saved-json-mcq",
-                        name: jsonData.data.title || `Chapter ${inputs.chapterNumber} JSON MCQ`,
-                        questionCount: jsonData.data.questions.length,
-                        isJSON: true,
-                        url: `/#quiz/${inputs.classNumber}/${subjectId}/${inputs.chapterNumber}/json/direct`
-                    };
+            let htmlItems=[];
+            try{
+                const hr=await fetch(
+                    `/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${number}`,
+                    {cache:"no-store"}
+                );
+                if(hr.ok){
+                    const hd=await hr.json();
+                    htmlItems=Array.isArray(hd.items)?hd.items:[];
                 }
-            }
-        } catch (jsonError) {
-            console.error("Saved JSON MCQ load error:", jsonError);
-        }
+            }catch{}
 
-        const htmlUnique = [];
-        const seenHTML = new Set();
-
-        htmlItems.forEach(function (item) {
-            const signature = [
-                String(item.name || item.originalName || item.fileName || "")
-                    .trim()
-                    .toLowerCase(),
-                Number(item.questionCount || 0)
-            ].join("|");
-
-            if (!seenHTML.has(signature)) {
-                seenHTML.add(signature);
-                htmlUnique.push(item);
-            }
-        });
-
-        const items = [...htmlUnique];
-        if (jsonItem) items.push(jsonItem);
-
-        getElement("mcqCountBadge").textContent = `${items.length} MCQ Set${items.length === 1 ? "" : "s"}`;
-
-        if (items.length === 0) {
-            list.innerHTML = "<div class='empty'>Is chapter me abhi koi MCQ upload/save nahi hai.</div>";
-            return;
-        }
-
-        list.innerHTML = "";
-        items.forEach(function (item) {
-            const div = document.createElement("div");
-            div.className = "quiz-item";
-            const name = item.name || item.originalName || item.filename || "MCQ Quiz";
-            const count = item.questionCount ?? item.questions ?? "—";
-            const jsonLabel = item.isJSON ? " 💾 JSON" : "";
-            div.innerHTML = `
-                <div class="quiz-name">${escapeHTML(name)}${jsonLabel}</div>
-                <div class="quiz-info">Questions: ${escapeHTML(count)}</div>
-                <div class="actions">
-                    <a class="open-btn" href="${escapeHTML(item.url || "#")}" target="_blank" rel="noopener">▶ Open Quiz</a>
-                    <button class="rename-btn" onclick="${item.isJSON ? `renameJSONQuiz('${escapeJS(name)}')` : `renameQuiz('${escapeJS(item.id)}', '${escapeJS(name)}')`}">✏ Rename</button>
-                    <button class="delete-btn" onclick="${item.isJSON ? `deleteJSONQuiz()` : `deleteQuiz('${escapeJS(item.id)}')`}">🗑 Delete</button>
-                </div>`;
-            list.appendChild(div);
-        });
-    } catch (error) {
-        console.error(error);
-        list.innerHTML = "<div class='empty'>Server error.</div>";
-        getElement("mcqCountBadge").textContent = "0 MCQ Sets";
-    }
-}
-
-/* ======================================================
-   HTML MCQ UPLOAD
-====================================================== */
-
-async function uploadMCQ() {
-    let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        showMessage("uploadMessage", error.message, "error");
-        return;
-    }
-
-    const fileInput = getElement("mcqFile");
-    const file = fileInput.files[0];
-
-    if (!file) {
-        showMessage(
-            "uploadMessage",
-            "Pehle HTML file select karo.",
-            "error"
-        );
-        return;
-    }
-
-    const lowerName = file.name.toLowerCase();
-
-    if (
-        !lowerName.endsWith(".html") &&
-        !lowerName.endsWith(".htm")
-    ) {
-        showMessage(
-            "uploadMessage",
-            "Sirf HTML file upload karo.",
-            "error"
-        );
-        return;
-    }
-
-    const formData = new FormData();
-
-    formData.append("mcqFile", file);
-    formData.append("classNumber", String(inputs.classNumber));
-    formData.append("subject", inputs.subject);
-    formData.append("chapterNumber", String(inputs.chapterNumber));
-
-    try {
-        showMessage(
-            "uploadMessage",
-            "Uploading...",
-            "success"
-        );
-
-        const response = await fetch(
-            "/api/mcq-html/upload",
-            {
-                method: "POST",
-                body: formData
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            showMessage(
-                "uploadMessage",
-                data.message ||
-                data.error ||
-                "Upload failed.",
-                "error"
+            const chapterQuestions=htmlItems.reduce(
+                (sum,item)=>sum+Number(item.questionCount||0),0
             );
-            return;
+            totalQuestions+=chapterQuestions;
+
+            const row=document.createElement("div");
+            row.className="quiz-item";
+
+            const title=chapter.title||chapter.chapterTitle||`Topic ${number}`;
+
+            row.innerHTML=`
+                <div class="quiz-name">
+                    Topic ${number} — ${escapeHTML(title)}
+                </div>
+                <div class="quiz-info">
+                    MCQs: ${chapterQuestions}
+                </div>
+                <div class="actions"></div>
+            `;
+
+            const actions=row.querySelector(".actions");
+
+            const selectButton=document.createElement("button");
+            selectButton.className="open-btn";
+            selectButton.textContent="📌 Select Topic";
+            selectButton.onclick=function(){
+                currentChapter=number;
+                getElement("chapterTitle").value=title;
+                updateSelectionUI();
+            };
+            actions.appendChild(selectButton);
+
+            htmlItems.forEach(item=>{
+                const open=document.createElement("a");
+                open.className="open-btn";
+                open.href=item.url||"#";
+                open.target="_blank";
+                open.rel="noopener";
+                open.textContent=`▶ ${item.name||item.originalName||"Open MCQ"}`;
+                actions.appendChild(open);
+
+                const rename=document.createElement("button");
+                rename.className="rename-btn";
+                rename.textContent="✏ Rename";
+                rename.onclick=()=>renameQuiz(subjectId,number,item.id,item.name||item.originalName||"MCQ Quiz");
+                actions.appendChild(rename);
+
+                const del=document.createElement("button");
+                del.className="delete-btn";
+                del.textContent="🗑 Delete";
+                del.onclick=()=>deleteQuizForTopic(subjectId,number,item.id);
+                actions.appendChild(del);
+            });
+
+            rows.push(row);
         }
 
-        showMessage(
-            "uploadMessage",
-            "✅ MCQ successfully upload ho gaya.",
-            "success"
-        );
+        list.innerHTML="";
+        rows.forEach(row=>list.appendChild(row));
+        getElement("mcqCountBadge").textContent=
+            `${totalQuestions} MCQ${totalQuestions===1?"":"s"}`;
 
-        fileInput.value = "";
-        getElement("htmlFileName").textContent = "No file selected";
-
-        notifyChapterListChanged();
-        loadQuizzes();
-    } catch (error) {
-        console.error(error);
-
-        showMessage(
-            "uploadMessage",
-            "Server error. Upload nahi hua.",
-            "error"
-        );
+    }catch(e){
+        console.error(e);
+        list.innerHTML=
+            `<div class="empty">Server error: ${escapeHTML(e.message)}</div>`;
+        getElement("mcqCountBadge").textContent="0 MCQ Sets";
     }
 }
 
-/* ======================================================
-   RENAME
-====================================================== */
-
-async function renameQuiz(id, oldName) {
-    let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
-
-    const newName = prompt(
-        "Naya quiz name daaliye:",
-        oldName
-    );
-
-    if (!newName || !newName.trim()) {
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            "/api/mcq-html/rename",
-            {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    classNumber: inputs.classNumber,
-                    subject: inputs.subject,
-                    chapterNumber: inputs.chapterNumber,
-                    id,
-                    newName: newName.trim()
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            alert(
-                data.message ||
-                data.error ||
-                "Rename failed."
-            );
-            return;
-        }
-
-        notifyChapterListChanged();
-        loadQuizzes();
-    } catch (error) {
-        console.error(error);
-        alert("Server error.");
-    }
-}
-
-/* ======================================================
-   DELETE
-====================================================== */
-
-async function deleteQuiz(id) {
-    let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
-
-    const confirmDelete = confirm(
-        "Kya aap is MCQ ko delete karna chahte hain?"
-    );
-
-    if (!confirmDelete) {
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            "/api/mcq-html",
-            {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    classNumber: inputs.classNumber,
-                    subject: inputs.subject,
-                    chapterNumber: inputs.chapterNumber,
-                    id
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            alert(
-                data.message ||
-                data.error ||
-                "Delete failed."
-            );
-            return;
-        }
-
-        notifyChapterListChanged();
-        loadQuizzes();
-    } catch (error) {
-        console.error(error);
-        alert("Server error.");
-    }
-}
-
-/* ======================================================
-   JSON RENAME / DELETE
-====================================================== */
-
-async function renameJSONQuiz(oldName) {
-    let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
-
-    const newName = prompt("Naya MCQ name daaliye:", oldName);
-
-    if (!newName || !newName.trim()) return;
-
-    try {
-        const response = await fetch("/api/mcqs/rename", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                classNumber: inputs.classNumber,
-                subject: inputs.subject,
-                chapterNumber: inputs.chapterNumber,
-                newName: newName.trim()
+async function deleteQuizForTopic(subjectId,chapterNumber,id){
+    if(!confirm("Kya aap is MCQ ko delete karna chahte hain?"))return;
+    try{
+        const r=await fetch("/api/cs/mcq-html",{
+            method:"DELETE",
+            headers:{"Content-Type":"application/json"},
+            credentials:"same-origin",
+            cache:"no-store",
+            body:JSON.stringify({
+                subject:subjectId,chapterNumber:Number(chapterNumber),id
             })
         });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            alert(data.message || data.error || "JSON MCQ rename failed.");
-            return;
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success){
+            alert(d.message||`Delete failed. HTTP ${r.status}`);return;
         }
-
         notifyChapterListChanged();
-        loadQuizzes();
-    } catch (error) {
-        console.error("JSON rename error:", error);
-        alert("Server error.");
+        await loadQuizzes();
+    }catch(e){
+        console.error(e);
+        alert(`Delete failed: ${e.message||"Server error."}`);
     }
 }
 
-async function deleteJSONQuiz() {
+async function uploadMCQ(){
     let inputs;
-
-    try {
-        inputs = getManagementInputs();
-    } catch (error) {
-        alert(error.message);
-        return;
+    try{inputs=getManagementInputs();}catch(e){
+        showMessage("uploadMessage",e.message,"error");return;
+    }
+    const file=getElement("mcqFile").files[0];
+    if(!file){showMessage("uploadMessage","Pehle HTML file select karo.","error");return;}
+    if(!/\.html?$/i.test(String(file.name||""))){
+        showMessage("uploadMessage","Sirf HTML file upload karo.","error");return;
     }
 
-    if (!confirm("Kya aap is saved JSON MCQ ko delete karna chahte hain?")) {
-        return;
-    }
+    const fd=new FormData();
+    fd.append("mcqFile",file,file.name);
+    fd.append("subject",String(inputs.subject));
+    fd.append("chapterNumber",String(inputs.chapterNumber));
 
-    try {
-        const response = await fetch("/api/mcqs/delete", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                classNumber: inputs.classNumber,
-                subject: inputs.subject,
-                chapterNumber: inputs.chapterNumber
+    try{
+        showMessage("uploadMessage","⏳ Uploading MCQ HTML...","success");
+        const r=await fetch("/api/cs/mcq-html/upload",{
+            method:"POST",body:fd,credentials:"same-origin",cache:"no-store"
+        });
+        const text=await r.text();
+        let d={};
+        try{d=text?JSON.parse(text):{};}catch{
+            showMessage("uploadMessage",`❌ Upload failed (HTTP ${r.status}).`,"error");return;
+        }
+        if(!r.ok||!d.success){
+            showMessage("uploadMessage",`❌ ${d.message||`Upload failed (HTTP ${r.status}).`}`,"error");return;
+        }
+        const count=Number(d.item?.questionCount||0);
+        showMessage("uploadMessage",`✅ MCQ successfully upload ho gaya. ${count} MCQs detected.`,"success");
+        getElement("mcqFile").value="";
+        getElement("htmlFileName").textContent="No file selected";
+        const c=getElementOptional("cancelMCQFile");
+        if(c)c.style.display="none";
+        notifyChapterListChanged();
+        await loadQuizzes();
+    }catch(e){
+        console.error(e);
+        showMessage("uploadMessage",`❌ Upload nahi hua: ${e.message||"Server error."}`,"error");
+    }
+}
+async function renameQuiz(subjectId,chapterNumber,id,oldName){
+    const newName=prompt("Naya quiz name daaliye:",oldName);
+    if(!newName||!newName.trim())return;
+    try{
+        const r=await fetch("/api/cs/mcq-html/rename",{
+            method:"PATCH",
+            headers:{"Content-Type":"application/json"},
+            credentials:"same-origin",
+            cache:"no-store",
+            body:JSON.stringify({
+                subject:subjectId,chapterNumber:Number(chapterNumber),
+                id,newName:newName.trim()
             })
         });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            alert(
-                data.message ||
-                data.error ||
-                `JSON MCQ delete failed. HTTP ${response.status}`
-            );
-            return;
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success){
+            alert(d.message||`Rename failed. HTTP ${r.status}`);return;
         }
-
-        alert("✅ JSON MCQ delete ho gaya.");
         notifyChapterListChanged();
-        loadQuizzes();
-    } catch (error) {
-        console.error("JSON delete error:", error);
-        alert("Server error.");
+        await loadQuizzes();
+    }catch(e){
+        console.error(e);
+        alert(`Rename failed: ${e.message||"Server error."}`);
     }
 }
+async function deleteQuiz(id){let inputs;try{inputs=getManagementInputs();}catch(e){alert(e.message);return;}if(!confirm("Kya aap is MCQ ko delete karna chahte hain?"))return;try{const r=await fetch("/api/cs/mcq-html",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({...inputs,id})});const d=await r.json();if(!r.ok||!d.success){alert(d.message||"Delete failed.");return;}notifyChapterListChanged();loadQuizzes();}catch{alert("Server error.");}}
 
 /* ======================================================
    JSON IMPORTER
@@ -1024,43 +499,20 @@ function getSection(number) {
     if (number >= 36 && number <= 70) return "B";
     if (number >= 71 && number <= 105) return "C";
     if (number >= 106 && number <= 125) return "D";
-    if (number >= 126 && number <= 150) return "E";
+    if (number >= 126) return "E";
     return "";
 }
 
 function getInputs() {
-    const classNumber = Number(getElement("classNumber").value);
+    if (!currentSubject || !subjectIdMap[currentSubject]) throw new Error("Pehle Subject select karein.");
     const chapterNumber = Number(getElement("chapterNumber").value);
     const chapterTitle = getElement("chapterTitle").value.trim();
     const jsonFile = getElement("jsonFile").files[0];
-
-    if (classNumber < 6 || classNumber > 12) {
-        throw new Error("Class 6 से 12 के बीच होनी चाहिए।");
-    }
-
-    if (!chapterNumber || chapterNumber < 1) {
-        throw new Error("Chapter Number invalid है।");
-    }
-
-    if (!chapterTitle) {
-        throw new Error("Chapter Title डालें।");
-    }
-
-    if (!jsonFile) {
-        throw new Error("पहले MCQ JSON file upload करें।");
-    }
-
-    if (!jsonFile.name.toLowerCase().endsWith(".json")) {
-        throw new Error("केवल JSON file upload करें।");
-    }
-
-    return {
-        classNumber,
-        subject: currentSubject,
-        chapterNumber,
-        chapterTitle,
-        jsonFile
-    };
+    if (!chapterNumber || chapterNumber < 1) throw new Error("Chapter Number invalid hai.");
+    if (!chapterTitle) throw new Error("Chapter Title डालें।");
+    if (!jsonFile) throw new Error("पहले MCQ JSON file upload करें।");
+    if (!jsonFile.name.toLowerCase().endsWith(".json")) throw new Error("केवल JSON file upload करें।");
+    return {subject: subjectIdMap[currentSubject], chapterNumber, chapterTitle, jsonFile};
 }
 
 function cleanQuestion(question, index) {
@@ -1192,12 +644,6 @@ function validateQuestions(questions) {
         throw new Error("Questions array invalid है।");
     }
 
-    if (questions.length !== 150) {
-        throw new Error(
-            `Exactly 150 MCQs required हैं। मिले: ${questions.length}`
-        );
-    }
-
     return questions.map(function (question, index) {
         return cleanQuestion(question, index);
     });
@@ -1206,11 +652,9 @@ function validateQuestions(questions) {
 function createOutputData(inputs, questions) {
     return {
         chapterTitle: inputs.chapterTitle,
-        classNumber: inputs.classNumber,
         subject: inputs.subject,
         chapterNumber: inputs.chapterNumber,
         title: inputs.chapterTitle,
-        class: inputs.classNumber,
         chapter: inputs.chapterNumber,
         totalQuestions: questions.length,
         generatedAt: new Date().toISOString(),
@@ -1235,7 +679,7 @@ function showSummary(questions) {
 
     getElement("summary").innerHTML = `
         <div class="status-row">
-            <strong>✅ Exactly 150 MCQs Validated</strong>
+            <strong>✅ MCQs Validated</strong>
             <br><br>
             Section A: ${counts.A}
             &nbsp; | &nbsp;
@@ -1298,7 +742,7 @@ async function importMCQs() {
 
         getElement("progressBar").style.width = "75%";
         getElement("progressText").textContent =
-            "✅ सभी 150 MCQs validate हो गए।";
+            "✅ सभी ${questions.length} MCQs validate हो गए।";
 
         importedData = createOutputData(
             inputs,
@@ -1317,7 +761,7 @@ async function importMCQs() {
 
         getElement("progressBar").style.width = "100%";
         getElement("progressText").textContent =
-            "🎉 Exactly 150 MCQs successfully imported!";
+            "🎉 ${questions.length} MCQs successfully imported!";
 
         getElement("previewCard").classList.remove("hidden");
         getElement("previewCard").scrollIntoView({
@@ -1338,11 +782,6 @@ async function importMCQs() {
         importBtn.textContent = "📥 Import JSON";
     }
 }
-
-getElement("importBtn").addEventListener(
-    "click",
-    importMCQs
-);
 
 /* ======================================================
    SAVE JSON PERMANENTLY
@@ -1372,7 +811,7 @@ async function savePermanently() {
             "💾 MCQs server पर भेजे जा रहे हैं...";
 
         const response = await fetch(
-            "/api/save-mcqs",
+            "/api/cs/save-mcqs",
             {
                 method: "POST",
                 headers: {
@@ -1405,7 +844,7 @@ async function savePermanently() {
 
         getElement("progressBar").style.width = "100%";
         getElement("progressText").textContent =
-            "✅ 150 MCQs permanently save हो गए!";
+            "✅ ${importedData.questions.length} MCQs permanently save हो गए!";
 
         getElement("resultCard").classList.remove("hidden");
 
@@ -1413,7 +852,7 @@ async function savePermanently() {
 
         getElement("resultText").innerHTML = `
             <div class="status-row">
-                <strong>✅ 150 MCQs Saved Successfully</strong>
+                <strong>✅ ${importedData.questions.length} MCQs Saved Successfully</strong>
                 <br><br>
                 📁 File:
                 ${escapeHTML(
@@ -1421,8 +860,6 @@ async function savePermanently() {
                     `chapter-${String(importedData.chapterNumber).padStart(2, "0")}.json`
                 )}
                 <br><br>
-                📚 Class: ${importedData.classNumber}
-                <br>
                 📖 Subject: ${escapeHTML(importedData.subject)}
                 <br>
                 📑 Chapter: ${importedData.chapterNumber}
@@ -1444,7 +881,7 @@ async function savePermanently() {
          * No quiz.js/app.js change is required here.
          */
         const quizUrl =
-            `/#quiz/${importedData.classNumber}/${subjectId}/${importedData.chapterNumber}/json/direct`;
+            `/#quiz/${subjectId}/${importedData.chapterNumber}/json/direct`;
 
         setTimeout(function () {
             window.location.href = quizUrl;
@@ -1464,95 +901,59 @@ async function savePermanently() {
     }
 }
 
-getElement("saveQuizBtn").addEventListener(
-    "click",
-    savePermanently
-);
+const saveQuizButton=getElementOptional("saveQuizBtn");
+if(saveQuizButton){
+    saveQuizButton.addEventListener("click",savePermanently);
+}
 
 /* ======================================================
    COPY JSON
 ====================================================== */
 
-getElement("copyBtn").addEventListener(
-    "click",
-    async function () {
-        const text = getElement("jsonPreview").value.trim();
-
-        if (!text) {
-            alert("पहले MCQs import करें।");
-            return;
-        }
-
-        try {
-            await navigator.clipboard.writeText(text);
-
-            this.textContent = "✓ Copied";
-
-            setTimeout(() => {
-                this.textContent = "📋 Copy JSON";
-            }, 1500);
-        } catch {
-            getElement("jsonPreview").select();
-            document.execCommand("copy");
-            alert("JSON copied.");
-        }
-    }
-);
-
 /* ======================================================
    DOWNLOAD JSON
 ====================================================== */
 
-getElement("downloadBtn").addEventListener(
-    "click",
-    function () {
-        const text = getElement("jsonPreview").value.trim();
+const importButton=getElementOptional("importBtn");
+if(importButton) importButton.addEventListener("click",importMCQs);
 
-        if (!text) {
-            alert("पहले MCQs import करें।");
-            return;
-        }
+if(saveQuizButton) saveQuizButton.addEventListener("click",savePermanently);
 
-        let data;
-
-        try {
-            data = JSON.parse(text);
-        } catch {
-            alert("JSON invalid है।");
-            return;
-        }
-
-        const chapterNumber =
-            Number(data.chapterNumber || data.chapter);
-
-        const filename =
-            `chapter-${String(chapterNumber).padStart(2, "0")}.json`;
-
-        const blob = new Blob(
-            [JSON.stringify(data, null, 2)],
-            { type: "application/json" }
-        );
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-
-        link.href = url;
-        link.download = filename;
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        URL.revokeObjectURL(url);
+const copyButton=getElementOptional("copyBtn");
+if(copyButton) copyButton.addEventListener("click",async function(){
+    const text=getElement("jsonPreview").value.trim();
+    if(!text){alert("पहले MCQs import करें।");return;}
+    try{
+        await navigator.clipboard.writeText(text);
+        this.textContent="✓ Copied";
+        setTimeout(()=>this.textContent="📋 Copy JSON",1500);
+    }catch{
+        getElement("jsonPreview").select();
+        document.execCommand("copy");
+        alert("JSON copied.");
     }
-);
+});
 
-/* ======================================================
-   START
-====================================================== */
+const downloadButton=getElementOptional("downloadBtn");
+if(downloadButton) downloadButton.addEventListener("click",function(){
+    const text=getElement("jsonPreview").value.trim();
+    if(!text){alert("पहले MCQs import करें।");return;}
+    let data;
+    try{data=JSON.parse(text);}
+    catch{alert("JSON invalid है।");return;}
+    const chapterNumber=Number(data.chapterNumber||data.chapter);
+    const filename=`chapter-${String(chapterNumber).padStart(2,"0")}.json`;
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+});
 
 updateSelectionUI();
 checkLogin();
-
-console.log("NCERT Admin — One Page Loaded");
-
+console.log("Computer Science Admin — One Page Loaded");

@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "cs-sub-1790341272358-ea7aa6aba3",
+      "subject": "dbms",
+      "chapterNumber": 1,
+      "title": "DBMS Tutorial - Learn Database Management System",
+      "createdAt": "2026-09-25T13:01:12.358Z",
+      "updatedAt": "2026-09-25T13:01:12.358Z"
+    },
+    {
+      "id": "cs-sub-1790341775393-b3dd847173",
+      "subject": "dbms",
+      "chapterNumber": 1,
+      "title": "What is a Database? Definition, Types, Examples",
+      "createdAt": "2026-09-25T13:09:35.393Z",
+      "updatedAt": "2026-09-25T13:09:35.393Z"
+    }
+  ]
+}

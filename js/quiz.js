@@ -396,6 +396,56 @@ function injectQuizLayoutStyles() {
         }
 
 
+        /* Quiz page header: keep enough vertical room for all 5 options */
+        .quiz-page-header {
+            padding: 24px 28px !important;
+            margin-bottom: 18px !important;
+        }
+
+        .quiz-page-header h1 {
+            font-size: 30px !important;
+            line-height: 1.25 !important;
+            margin-bottom: 8px !important;
+        }
+
+        .quiz-page-header p {
+            margin: 0 !important;
+        }
+
+        /* Question content: keep it comfortably large */
+
+        .quiz-main-column .card:first-child {
+            padding: 18px !important;
+        }
+
+        .quiz-main-column .question-text {
+            font-size: 20px !important;
+            line-height: 1.4 !important;
+            margin-bottom: 12px !important;
+        }
+
+        .quiz-main-column .options {
+            gap: 7px !important;
+        }
+
+        .quiz-main-column .option {
+            font-size: 17px !important;
+            line-height: 1.35 !important;
+            padding: 10px 14px !important;
+            min-height: 44px;
+        }
+
+        /* Navigation stays visible without covering D/E options */
+
+        .quiz-main-column .quiz-controls {
+            position: sticky;
+            bottom: 12px;
+            z-index: 20;
+            margin-top: 14px;
+            box-shadow: 0 6px 22px rgba(0,0,0,0.12);
+        }
+
+
         /* Palette */
 
         .quiz-side-column .pal-grid {

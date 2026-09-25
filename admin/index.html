@@ -1,897 +1,1733 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NCERT MCQ Admin Panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    * {
-      box-sizing: border-box;
+    <title>Computer Science Notes + MCQ — Admin</title>
+
+    <style id="admin-css">
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --blue: #2563eb;
+    --blue-dark: #1d4ed8;
+    --text: #172033;
+    --muted: #667085;
+    --border: #e4e7ec;
+    --bg: #f4f7fb;
+    --white: #ffffff;
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #f59e0b;
+}
+
+body {
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.admin-shell {
+    min-height: 100vh;
+}
+
+.topbar {
+    height: 72px;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.brand {
+    font-size: 21px;
+    font-weight: 800;
+}
+
+.brand-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 3px;
+}
+
+.logout-btn {
+    width: auto;
+    border: 0;
+    background: #fee2e2;
+    color: #b91c1c;
+    padding: 10px 17px;
+    border-radius: 9px;
+    font-weight: 700;
+}
+
+.logout-btn:hover {
+    background: #fecaca;
+}
+
+.container {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+}
+
+.card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 26px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 28px rgba(20, 35, 60, 0.06);
+}
+
+.welcome {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.welcome h1 {
+    font-size: 28px;
+    margin-bottom: 7px;
+}
+
+.welcome p,
+.section-heading p {
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.dashboard-badge,
+.selection-badge,
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.dashboard-badge {
+    background: #eff6ff;
+    color: var(--blue-dark);
+    padding: 9px 14px;
+    font-size: 12px;
+}
+
+.selection-badge {
+    background: #eef2ff;
+    color: #4338ca;
+    padding: 9px 13px;
+    font-size: 13px;
+}
+
+.count-badge {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.section-heading h2 {
+    font-size: 21px;
+    margin-bottom: 5px;
+}
+
+.subject-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.subject-card {
+    min-height: 120px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 14px;
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--text);
+    transition: .18s ease;
+}
+
+.subject-card span {
+    font-size: 30px;
+}
+
+.subject-card strong {
+    font-size: 16px;
+}
+
+.subject-card small {
+    color: var(--muted);
+}
+
+.subject-card:hover {
+    border-color: #93c5fd;
+    transform: translateY(-2px);
+}
+
+.subject-card.active {
+    border-color: var(--blue);
+    background: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+}
+
+.selector-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 17px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.field.wide {
+    grid-column: 1 / -1;
+}
+
+.field label {
+    font-size: 14px;
+    font-weight: 800;
+    color: #344054;
+}
+
+.field label span {
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.field input,
+.field select,
+.login-form input {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    padding: 0 13px;
+    background: #fff;
+    color: var(--text);
+    outline: none;
+}
+
+.field input:focus,
+.field select:focus,
+.login-form input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .11);
+}
+
+.load-btn {
+    align-self: end;
+    min-height: 46px;
+}
+
+.primary-btn,
+.secondary-btn {
+    border-radius: 10px;
+    min-height: 46px;
+    padding: 0 18px;
+    font-weight: 800;
+    border: 0;
+}
+
+.primary-btn {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: 0 5px 15px rgba(37, 99, 235, .18);
+}
+
+.primary-btn:hover {
+    background: var(--blue-dark);
+}
+
+.primary-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.secondary-btn {
+    background: #fff;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+}
+
+.secondary-btn:hover {
+    background: #f9fafb;
+}
+
+.quiz-item {
+    border: 1px solid var(--border);
+    background: #fafbfc;
+    border-radius: 13px;
+    padding: 17px;
+    margin-top: 12px;
+}
+
+.quiz-name {
+    font-size: 17px;
+    font-weight: 800;
+    word-break: break-word;
+}
+
+.quiz-info {
+    color: var(--muted);
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 13px;
+}
+
+.actions a,
+.actions button {
+    width: auto;
+    min-height: 38px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 8px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.open-btn {
+    background: var(--green);
+}
+
+.rename-btn {
+    background: var(--orange);
+}
+
+.delete-btn {
+    background: var(--red);
+}
+
+.upload-grid {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 20px;
+}
+
+.file-drop {
+    border: 2px dashed #b8c4d6;
+    border-radius: 14px;
+    padding: 25px;
+    background: #f8fafc;
+    text-align: center;
+}
+
+.file-drop:hover {
+    border-color: #93c5fd;
+    background: #f5f9ff;
+}
+
+.upload-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.file-drop input[type="file"] {
+    width: 100%;
+    margin-top: 17px;
+}
+
+.file-cancel-btn {
+    display: none;
+    margin-top: 10px;
+    width: auto;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    background: #dc2626;
+    color: #fff;
+    font-weight: 800;
+}
+
+.file-cancel-btn:hover {
+    background: #b91c1c;
+}
+
+.file-name {
+    margin-top: 9px;
+    color: var(--muted);
+    font-size: 13px;
+    word-break: break-word;
+}
+
+.upload-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.upload-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.upload-summary div {
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    border-radius: 9px;
+    padding: 10px;
+    text-align: center;
+}
+
+.upload-summary span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.upload-summary strong {
+    font-size: 14px;
+}
+
+.json-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 18px;
+    align-items: end;
+}
+
+.json-import-btn {
+    min-width: 170px;
+}
+
+.progress-card {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.progress-track {
+    width: 100%;
+    height: 11px;
+    background: #e9edf4;
+    border-radius: 50px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0;
+    height: 100%;
+    background: var(--blue);
+    border-radius: 50px;
+    transition: width .35s ease;
+}
+
+.progress-text {
+    margin-top: 9px;
+    color: #475467;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.section-status {
+    margin-top: 15px;
+}
+
+.summary {
+    margin-top: 12px;
+}
+
+.status-row {
+    padding: 13px;
+    border-radius: 10px;
+    border: 1px solid #86efac;
+    background: #f0fdf4;
+    color: #166534;
+    line-height: 1.6;
+}
+
+.preview-card {
+    margin-top: 20px;
+}
+
+.preview-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.preview-heading h3 {
+    font-size: 18px;
+}
+
+#jsonPreview {
+    width: 100%;
+    min-height: 430px;
+    resize: vertical;
+    border: 1px solid #d0d5dd;
+    border-radius: 11px;
+    padding: 16px;
+    background: #101828;
+    color: #f2f4f7;
+    font-family: "Cascadia Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    outline: none;
+}
+
+.button-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.result-card {
+    margin-top: 18px;
+}
+
+.empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--muted);
+    border: 1px dashed #b8c4d6;
+    border-radius: 11px;
+    background: #fafbfc;
+}
+
+.message {
+    display: none;
+    margin-top: 13px;
+    padding: 11px 13px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.message.success {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.message.error {
+    display: block;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.login-card {
+    max-width: 470px;
+    margin: 90px auto 0;
+    text-align: center;
+}
+
+.login-icon {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.login-card h1 {
+    font-size: 26px;
+    margin-bottom: 7px;
+}
+
+.login-card > p {
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+
+.login-form {
+    display: flex;
+    gap: 10px;
+}
+
+.login-form input {
+    flex: 1;
+}
+
+.login-form .primary-btn {
+    width: 110px;
+}
+
+@media (max-width: 850px) {
+    .subject-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f3f4f6;
-      color: #222;
+    .upload-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .json-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .json-import-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 620px) {
+    .topbar {
+        height: auto;
+        padding: 15px;
+        gap: 12px;
+    }
+
+    .brand {
+        font-size: 17px;
     }
 
     .container {
-      max-width: 1000px;
-      margin: 40px auto;
-      padding: 20px;
+        padding: 18px 12px 40px;
     }
 
     .card {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 3px 15px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
+        padding: 18px;
+        border-radius: 14px;
     }
 
-    h1 {
-      margin-top: 0;
-      text-align: center;
+    .welcome,
+    .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
-    h2 {
-      margin-top: 0;
+    .selector-grid {
+        grid-template-columns: 1fr;
     }
 
-    label {
-      display: block;
-      font-weight: bold;
-      margin-top: 15px;
-      margin-bottom: 6px;
+    .field.wide {
+        grid-column: auto;
     }
 
-    input,
-    select,
-    button {
-      width: 100%;
-      padding: 11px;
-      border-radius: 7px;
-      border: 1px solid #ccc;
-      font-size: 15px;
+    .load-btn {
+        width: 100%;
     }
 
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      cursor: pointer;
-      margin-top: 15px;
-      font-weight: bold;
+    .subject-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
-    button:hover {
-      background: #1d4ed8;
+    .subject-card {
+        min-height: 105px;
     }
 
-    .logout {
-      background: #dc2626;
-      width: auto;
-      padding: 9px 18px;
-      float: right;
-      margin-top: -45px;
+    .upload-summary {
+        grid-template-columns: 1fr;
     }
 
-    .logout:hover {
-      background: #b91c1c;
+    .login-form {
+        flex-direction: column;
     }
 
-    .hidden {
-      display: none;
+    .login-form .primary-btn {
+        width: 100%;
     }
 
-    .message {
-      padding: 10px;
-      margin-top: 15px;
-      border-radius: 7px;
-      display: none;
+    .button-row > button {
+        width: 100%;
     }
+}
 
-    .success {
-      background: #dcfce7;
-      color: #166534;
-    }
+</style>
 
-    .error {
-      background: #fee2e2;
-      color: #991b1b;
-    }
+    <style>
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    .quiz-item {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 15px;
-      margin-top: 12px;
-      background: #fafafa;
-    }
+        .home-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            padding: 10px 17px;
+            border-radius: 9px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 700;
+        }
 
-    .quiz-name {
-      font-size: 18px;
-      font-weight: bold;
-    }
+        .home-btn:hover {
+            background: #bfdbfe;
+        }
 
-    .quiz-info {
-      color: #666;
-      margin-top: 6px;
-    }
+        .cs-subject-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
 
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
+        .subject-card small {
+            display: block;
+        }
 
-    .actions button,
-    .actions a {
-      width: auto;
-      margin: 0;
-      padding: 8px 14px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-size: 14px;
-    }
+        @media (max-width: 900px) {
+            .cs-subject-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
 
-    .open-btn {
-      background: #16a34a;
-      color: white;
-    }
+        @media (max-width: 600px) {
+            .cs-subject-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 
-    .rename-btn {
-      background: #f59e0b;
-      color: white;
-      border: none;
-    }
-
-    .delete-btn {
-      background: #dc2626;
-    }
-
-    .chapter-title {
-      margin-top: 30px;
-    }
-
-    .empty {
-      padding: 20px;
-      text-align: center;
-      color: #777;
-      border: 1px dashed #bbb;
-      border-radius: 8px;
-    }
-  </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const passwordInput = document.getElementById("password");
+            if (passwordInput) {
+                passwordInput.focus();
+                passwordInput.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        login();
+                    }
+                });
+            }
+        });
+    </script>
 </head>
 
 <body>
 
-<div class="container">
+<div class="admin-shell">
 
-  <!-- LOGIN -->
-  <div id="loginCard" class="card">
-    <h1>🔐 Admin Panel</h1>
+    <!-- =========================
+         TOP BAR
+    ========================== -->
 
-    <label>Admin Password</label>
-    <input
-      type="password"
-      id="password"
-      placeholder="Password daaliye"
-    >
+    <header class="topbar">
 
-    <button onclick="login()">Login</button>
+        <div>
 
-    <div id="loginMessage" class="message"></div>
-  </div>
+            <div class="brand">
+                💻 COMPUTER SCIENCE NOTES MCQ
+            </div>
 
+            <div class="brand-sub">
+                Admin Dashboard
+            </div>
 
-  <!-- ADMIN PANEL -->
-  <div id="adminPanel" class="hidden">
-
-    <div class="card">
-      <h1>📚 NCERT MCQ Admin Panel</h1>
-
-      <button class="logout" onclick="logout()">Logout</button>
-
-      <p>
-        Yahan se Class 6 Physics ke ready-made MCQ HTML files
-        upload, rename aur delete kar sakte hain.
-      </p>
-    </div>
-
-
-    <!-- UPLOAD -->
-    <div class="card">
-
-      <h2>📤 MCQ HTML Upload</h2>
-
-      <label>Class</label>
-      <input type="text" value="Class 6" disabled>
-
-      <label>Subject</label>
-      <input type="text" value="Physics" disabled>
-
-      <label>Chapter</label>
-
-      <select id="chapter">
-        <option value="7">Chapter 7 - गति एवं दूरियों का मापन</option>
-        <option value="8">Chapter 8 - प्रकाश, छायाएँ और परावर्तन</option>
-        <option value="9">Chapter 9 - विद्युत तथा परिपथ</option>
-        <option value="10">Chapter 10 - चुंबक के साथ खेलना</option>
-      </select>
-
-      <label>MCQ HTML File</label>
-
-      <input
-        type="file"
-        id="mcqFile"
-        accept=".html,.htm"
-      >
-
-      <button onclick="uploadMCQ()">
-        📤 Upload MCQ
-      </button>
-
-      <div id="uploadMessage" class="message"></div>
-
-    </div>
-
-
-    <!-- QUIZ LIST -->
-    <div class="card">
-
-      <h2 class="chapter-title">
-        📋 Uploaded MCQ
-      </h2>
-
-      <div id="quizList">
-        <div class="empty">
-          Chapter select karne ke baad MCQ list yahan dikhegi.
         </div>
-      </div>
 
-    </div>
 
-  </div>
+        <div class="topbar-actions">
+
+            <a
+                class="home-btn"
+                href="../index.html"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                🏠 Home
+            </a>
+
+
+            <button
+                class="logout-btn"
+                onclick="logout()"
+            >
+                Logout
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <main class="container">
+
+
+        <!-- =========================
+             LOGIN
+        ========================== -->
+
+        <section
+            id="loginCard"
+            class="login-card card"
+        >
+
+            <div class="login-icon">
+                🔐
+            </div>
+
+
+            <h1>
+                Admin Login
+            </h1>
+
+
+            <p>
+                Computer Science Admin panel open karne ke liye password daaliye.
+            </p>
+
+
+            <div class="login-form">
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Admin Password"
+                    autocomplete="current-password"
+                    autofocus
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();login();}"
+                >
+
+
+                <button
+                    type="button"
+                    class="primary-btn"
+                    onclick="login()"
+                >
+                    Login
+                </button>
+
+            </div>
+
+
+            <div
+                id="loginMessage"
+                class="message"
+            ></div>
+
+        </section>
+
+
+
+        <!-- =========================
+             ADMIN PANEL
+        ========================== -->
+
+        <section
+            id="adminPanel"
+            class="hidden"
+        >
+
+
+            <!-- =========================
+                 WELCOME
+            ========================== -->
+
+            <div class="welcome card">
+
+                <div>
+
+                    <h1>
+                        Admin Dashboard
+                    </h1>
+
+
+                    <p>
+                        Computer Science ke subjects,
+                        chapters aur MCQ ek hi page se manage karein.
+                    </p>
+
+                </div>
+
+
+                <div class="dashboard-badge">
+                    OWNER
+                </div>
+
+            </div>
+
+
+
+            <!-- =========================
+                 COMPUTER SCIENCE SUBJECTS
+            ========================== -->
+
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            Computer Science
+                        </h2>
+
+
+                        <p>
+                            Subject select karke neeche Chapter manage karein.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="subject-grid cs-subject-grid">
+
+
+                    <!-- AI -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="AI"
+                        onclick="selectSubjectCard('AI')"
+                    >
+
+                        <span>
+                            🤖
+                        </span>
+
+
+                        <strong>
+                            Artificial Intelligence
+                        </strong>
+
+
+                        <small>
+                            AI
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- CN -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="CN"
+                        onclick="selectSubjectCard('CN')"
+                    >
+
+                        <span>
+                            🌐
+                        </span>
+
+
+                        <strong>
+                            Computer Networks
+                        </strong>
+
+
+                        <small>
+                            CN
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- DSA -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="DSA"
+                        onclick="selectSubjectCard('DSA')"
+                    >
+
+                        <span>
+                            🧩
+                        </span>
+
+
+                        <strong>
+                            Data Structures &amp; Algorithms
+                        </strong>
+
+
+                        <small>
+                            DSA
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- DBMS -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="DBMS"
+                        onclick="selectSubjectCard('DBMS')"
+                    >
+
+                        <span>
+                            🗄️
+                        </span>
+
+
+                        <strong>
+                            Database Management System
+                        </strong>
+
+
+                        <small>
+                            DBMS
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- DIGITAL ELECTRONICS -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="DE"
+                        onclick="selectSubjectCard('DE')"
+                    >
+
+                        <span>
+                            🔌
+                        </span>
+
+
+                        <strong>
+                            Digital Electronics
+                        </strong>
+
+
+                        <small>
+                            DE
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- E-COMMERCE -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="E-Commerce"
+                        onclick="selectSubjectCard('E-Commerce')"
+                    >
+
+                        <span>
+                            🛒
+                        </span>
+
+
+                        <strong>
+                            E-Commerce
+                        </strong>
+
+
+                        <small>
+                            E-Commerce
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- IOT -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="IoT"
+                        onclick="selectSubjectCard('IoT')"
+                    >
+
+                        <span>
+                            📡
+                        </span>
+
+
+                        <strong>
+                            Internet of Things
+                        </strong>
+
+
+                        <small>
+                            IoT
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- MULTIMEDIA -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="Multimedia"
+                        onclick="selectSubjectCard('Multimedia')"
+                    >
+
+                        <span>
+                            🎞️
+                        </span>
+
+
+                        <strong>
+                            Multimedia
+                        </strong>
+
+
+                        <small>
+                            Multimedia
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- OOPS -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="OOPS"
+                        onclick="selectSubjectCard('OOPS')"
+                    >
+
+                        <span>
+                            💻
+                        </span>
+
+
+                        <strong>
+                            Object-Oriented Programming
+                        </strong>
+
+
+                        <small>
+                            OOPS
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- OS -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="OS"
+                        onclick="selectSubjectCard('OS')"
+                    >
+
+                        <span>
+                            ⚙️
+                        </span>
+
+
+                        <strong>
+                            Operating System
+                        </strong>
+
+
+                        <small>
+                            OS
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- SOFTWARE ENGINEERING -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="Software-Engineering"
+                        onclick="selectSubjectCard('Software-Engineering')"
+                    >
+
+                        <span>
+                            🛠️
+                        </span>
+
+
+                        <strong>
+                            Software Engineering
+                        </strong>
+
+
+                        <small>
+                            Software Engineering
+                        </small>
+
+                    </button>
+
+
+
+                    <!-- TOC -->
+
+                    <button
+                        class="subject-card"
+                        data-subject="TOC"
+                        onclick="selectSubjectCard('TOC')"
+                    >
+
+                        <span>
+                            🧠
+                        </span>
+
+
+                        <strong>
+                            Theory of Computation
+                        </strong>
+
+
+                        <small>
+                            TOC
+                        </small>
+
+                    </button>
+
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =========================
+                 CHAPTER MANAGEMENT
+            ========================== -->
+
+            <section class="card">
+
+                <div class="section-heading">
+                    <div>
+                        <h2 id="currentSubjectTitle">Select Subject</h2>
+                        <p>Selected Subject ke Chapters manage karein.</p>
+                    </div>
+
+                    <span id="selectionBadge" class="selection-badge">
+                        Select Subject
+                    </span>
+                </div>
+
+                <div class="selector-grid">
+
+                    <div class="field wide">
+                        <input
+                            id="chapterTitle"
+                            type="text"
+                            placeholder="Chapter Title"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div
+                        style="
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                            align-items:center;
+                        "
+                    >
+                        <button
+                            class="primary-btn"
+                            type="button"
+                            onclick="saveChapter()"
+                        >
+                            ➕ Save Chapter
+                        </button>
+
+                        <button
+                            class="secondary-btn load-btn"
+                            type="button"
+                            onclick="loadQuizzes()"
+                        >
+                            🔄 Load MCQ
+                        </button>
+
+                        <button
+                            class="delete-btn"
+                            type="button"
+                            onclick="deleteChapter()"
+                        >
+                            🗑️ Delete Chapter
+                        </button>
+                    </div>
+                </div>
+
+                <div id="chapterMessage" class="message"></div>
+
+                <div id="quizList">
+                    <div class="empty">
+                        Subject select karke Chapter Title daaliye.
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- =========================
+                 MCQ MANAGEMENT
+            ========================== -->
+
+            <section class="card">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📋 MCQ Management
+                        </h2>
+
+
+                        <p id="listDescription">
+                            Selected chapter ke uploaded MCQ yahan dikhenge.
+                        </p>
+
+                    </div>
+
+
+                    <span
+                        id="mcqCountBadge"
+                        class="count-badge"
+                    >
+                        0 MCQ Sets
+                    </span>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =========================
+                 HTML MCQ UPLOAD
+            ========================== -->
+
+            <section class="card">
+
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📤 Ready-made MCQ HTML Upload
+                        </h2>
+
+
+                        <p>
+                            Selected Subject → Chapter mein
+                            HTML quiz upload karein.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="upload-grid">
+
+
+                    <div class="file-drop">
+
+                        <div class="upload-icon">
+                            📄
+                        </div>
+
+
+                        <strong>
+                            MCQ HTML file select karein
+                        </strong>
+
+
+                        <input
+                            type="file"
+                            id="mcqFile"
+                            accept=".html,.htm"
+                        >
+
+                        <button
+                            type="button"
+                            id="cancelMCQFile"
+                            class="file-cancel-btn"
+                            onclick="cancelMCQFile()"
+                        >
+                            ✖ Cancel
+                        </button>
+
+
+                        <div
+                            id="htmlFileName"
+                            class="file-name"
+                        >
+                            No file selected
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="upload-side">
+
+
+                        <div class="upload-summary">
+
+
+                            <div>
+
+                                <span>
+                                    Subject
+                                </span>
+
+
+                                <strong id="uploadSubjectText">
+                                    —
+                                </strong>
+
+                            </div>
+
+
+
+                            <div>
+
+                                <span>
+                                    Chapter
+                                </span>
+
+
+                                <strong id="uploadChapterText">
+                                    —
+                                </strong>
+
+                            </div>
+
+
+
+                            <!-- admin.js compatibility -->
+
+                            <div
+                                id="uploadClassText"
+                                style="display:none"
+                            >
+                                —
+                            </div>
+
+
+                        </div>
+
+
+
+                        <button
+                            class="primary-btn"
+                            onclick="uploadMCQ()"
+                        >
+                            📤 Upload MCQ HTML
+                        </button>
+
+
+
+                        <div
+                            id="uploadMessage"
+                            class="message"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =========================
+                 NOTES
+            ========================== -->
+
+            <section class="card">
+
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <h2>
+                            📖 Notes Google Drive Folder Mapping
+                        </h2>
+
+
+                        <p>
+                            Selected Subject ke liye common
+                            Google Drive Notes folder link save karein.
+                        </p>
+
+
+                        <p
+                            style="
+                                margin-top:8px;
+                                font-size:14px;
+                            "
+                        >
+
+                            💡 Drive folder ko
+
+                            <strong>
+                                Anyone with the link → Viewer
+                            </strong>
+
+                            rakhein.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="field wide">
+
+
+                    <label for="notesUrl">
+                        Selected Subject ka Google Drive Notes Folder Link
+                    </label>
+
+
+                    <input
+                        id="notesUrl"
+                        type="url"
+                        placeholder="https://drive.google.com/drive/folders/..."
+                        autocomplete="off"
+                    >
+
+                </div>
+
+
+
+                <div
+                    style="
+                        display:flex;
+                        gap:10px;
+                        flex-wrap:wrap;
+                        align-items:center;
+                        margin-top:12px;
+                    "
+                >
+
+
+                    <button
+                        class="secondary-btn"
+                        type="button"
+                        onclick="openDriveForNotes()"
+                    >
+                        📂 Open Google Drive
+                    </button>
+
+
+
+                    <button
+                        class="primary-btn"
+                        type="button"
+                        onclick="saveNotesLink()"
+                    >
+                        💾 Save Notes Link
+                    </button>
+
+
+
+                    <button
+                        class="secondary-btn"
+                        type="button"
+                        onclick="loadNotesLink()"
+                    >
+                        🔄 Load Saved Notes
+                    </button>
+
+
+
+                    <button
+                        class="delete-btn"
+                        type="button"
+                        onclick="deleteNotesLink()"
+                    >
+                        🗑️ Delete Notes Link
+                    </button>
+
+
+                </div>
+
+
+
+                <div
+                    id="notesMessage"
+                    class="message"
+                ></div>
+
+            </section>
+
+
+
+            
+
+
+        </section>
+
+
+    </main>
 
 </div>
 
 
+
+
+<script src="../js/admin.js?v=20260925-cs-all-fix-20260925"></script>
+
+
 <script>
+// Login safety handler: keeps the login button working even if the
+// external admin.js is cached or fails to expose the login function.
+window.login = async function () {
+    const passwordInput = document.getElementById("password");
+    const message = document.getElementById("loginMessage");
+    const loginCard = document.getElementById("loginCard");
+    const adminPanel = document.getElementById("adminPanel");
 
-  let currentChapter = "7";
-
-
-  // -------------------------
-  // MESSAGE
-  // -------------------------
-
-  function showMessage(elementId, text, type) {
-
-    const box = document.getElementById(elementId);
-
-    box.textContent = text;
-    box.className = "message " + type;
-    box.style.display = "block";
-  }
-
-
-  // -------------------------
-  // CHECK LOGIN
-  // -------------------------
-
-  async function checkLogin() {
-
-    try {
-
-      const response = await fetch("/api/owner/status");
-
-      const data = await response.json();
-
-      if (data && data.isOwner) {
-
-        document.getElementById("loginCard")
-          .classList.add("hidden");
-
-        document.getElementById("adminPanel")
-          .classList.remove("hidden");
-
-        loadQuizzes();
-
-      }
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-  }
-
-
-  // -------------------------
-  // LOGIN
-  // -------------------------
-
-  async function login() {
-
-    const password =
-      document.getElementById("password").value.trim();
+    const password = (passwordInput?.value || "").trim();
 
     if (!password) {
-
-      showMessage(
-        "loginMessage",
-        "Password daaliye.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    try {
-
-      const response = await fetch(
-        "/api/owner/login",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json"
-          },
-
-          body: JSON.stringify({
-            password: password
-          })
+        if (message) {
+            message.textContent = "Password daaliye.";
+            message.className = "message error";
+            message.style.display = "block";
         }
-      );
-
-
-      const data = await response.json();
-
-
-      if (!response.ok) {
-
-        showMessage(
-          "loginMessage",
-          data.message || "Login failed.",
-          "error"
-        );
-
         return;
-      }
-
-
-      document.getElementById("loginCard")
-        .classList.add("hidden");
-
-      document.getElementById("adminPanel")
-        .classList.remove("hidden");
-
-
-      document.getElementById("password").value = "";
-
-      loadQuizzes();
-
-
-    } catch (error) {
-
-      showMessage(
-        "loginMessage",
-        "Server se connection nahi ho raha.",
-        "error"
-      );
-
     }
-
-  }
-
-
-  // -------------------------
-  // LOGOUT
-  // -------------------------
-
-  async function logout() {
 
     try {
-
-      await fetch(
-        "/api/owner/logout",
-        {
-          method: "POST"
-        }
-      );
-
-    } catch (error) {
-
-      console.error(error);
-
-    }
-
-
-    document.getElementById("adminPanel")
-      .classList.add("hidden");
-
-    document.getElementById("loginCard")
-      .classList.remove("hidden");
-
-  }
-
-
-  // -------------------------
-  // CHAPTER CHANGE
-  // -------------------------
-
-  document
-    .getElementById("chapter")
-    .addEventListener(
-      "change",
-      function() {
-
-        currentChapter = this.value;
-
-        loadQuizzes();
-
-      }
-    );
-
-
-  // -------------------------
-  // LOAD QUIZZES
-  // -------------------------
-
-  async function loadQuizzes() {
-
-    currentChapter =
-      document.getElementById("chapter").value;
-
-
-    const list =
-      document.getElementById("quizList");
-
-
-    list.innerHTML =
-      "<div class='empty'>Loading...</div>";
-
-
-    try {
-
-      const response = await fetch(
-        `/api/mcq-html/6/physics/${currentChapter}`
-      );
-
-
-      const data = await response.json();
-
-
-      if (!response.ok) {
-
-        list.innerHTML =
-          "<div class='empty'>MCQ load nahi hua.</div>";
-
-        return;
-      }
-
-
-      const items =
-        Array.isArray(data)
-          ? data
-          : (data.items || []);
-
-
-      if (items.length === 0) {
-
-        list.innerHTML =
-          "<div class='empty'>Is chapter me abhi koi MCQ HTML upload nahi hai.</div>";
-
-        return;
-      }
-
-
-      list.innerHTML = "";
-
-
-      items.forEach(function(item) {
-
-        const div =
-          document.createElement("div");
-
-        div.className = "quiz-item";
-
-
-        const name =
-          item.name ||
-          item.originalName ||
-          item.filename ||
-          "MCQ Quiz";
-
-
-        const count =
-          item.questionCount ??
-          item.questions ??
-          "—";
-
-
-        div.innerHTML = `
-
-          <div class="quiz-name">
-            ${escapeHTML(name)}
-          </div>
-
-          <div class="quiz-info">
-            Questions: ${count}
-          </div>
-
-          <div class="actions">
-
-            <a
-              class="open-btn"
-              href="${item.url}"
-              target="_blank"
-            >
-              ▶ Open Quiz
-            </a>
-
-            <button
-              class="rename-btn"
-              onclick="renameQuiz('${escapeJS(item.id)}', '${escapeJS(name)}')"
-            >
-              ✏ Rename
-            </button>
-
-            <button
-              class="delete-btn"
-              onclick="deleteQuiz('${escapeJS(item.id)}')"
-            >
-              🗑 Delete
-            </button>
-
-          </div>
-
-        `;
-
-
-        list.appendChild(div);
-
-      });
-
-
-    } catch (error) {
-
-      console.error(error);
-
-      list.innerHTML =
-        "<div class='empty'>Server error.</div>";
-
-    }
-
-  }
-
-
-  // -------------------------
-  // UPLOAD
-  // -------------------------
-
-  async function uploadMCQ() {
-
-    const fileInput =
-      document.getElementById("mcqFile");
-
-    const chapter =
-      document.getElementById("chapter").value;
-
-
-    if (!fileInput.files.length) {
-
-      showMessage(
-        "uploadMessage",
-        "Pehle HTML file select karo.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    const file =
-      fileInput.files[0];
-
-
-    if (
-      !file.name.toLowerCase().endsWith(".html") &&
-      !file.name.toLowerCase().endsWith(".htm")
-    ) {
-
-      showMessage(
-        "uploadMessage",
-        "Sirf HTML file upload karo.",
-        "error"
-      );
-
-      return;
-    }
-
-
-    const formData =
-      new FormData();
-
-
-    formData.append(
-      "mcqFile",
-      file
-    );
-
-
-    formData.append(
-      "classNumber",
-      "6"
-    );
-
-
-    formData.append(
-      "subject",
-      "physics"
-    );
-
-
-    formData.append(
-      "chapterNumber",
-      chapter
-    );
-
-
-    try {
-
-      showMessage(
-        "uploadMessage",
-        "Uploading...",
-        "success"
-      );
-
-
-      const response =
-        await fetch(
-          "/api/mcq-html/upload",
-          {
+        const response = await fetch("/api/owner/login", {
             method: "POST",
-            body: formData
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        showMessage(
-          "uploadMessage",
-          data.message ||
-          data.error ||
-          "Upload failed.",
-          "error"
-        );
-
-        return;
-      }
-
-
-      showMessage(
-        "uploadMessage",
-        "✅ MCQ successfully upload ho gaya.",
-        "success"
-      );
-
-
-      fileInput.value = "";
-
-
-      loadQuizzes();
-
-
-    } catch (error) {
-
-      console.error(error);
-
-      showMessage(
-        "uploadMessage",
-        "Server error. Upload nahi hua.",
-        "error"
-      );
-
-    }
-
-  }
-
-
-  // -------------------------
-  // RENAME
-  // -------------------------
-
-  async function renameQuiz(id, oldName) {
-
-    const newName =
-      prompt(
-        "Naya quiz name daaliye:",
-        oldName
-      );
-
-
-    if (!newName) return;
-
-
-    try {
-
-      const response =
-        await fetch(
-          "/api/mcq-html/rename",
-          {
-            method: "PATCH",
-
+            credentials: "same-origin",
             headers: {
-              "Content-Type": "application/json"
+                "Content-Type": "application/json"
             },
+            body: JSON.stringify({ password })
+        });
 
-            body: JSON.stringify({
+        const data = await response.json().catch(() => ({}));
 
-              classNumber: 6,
+        if (!response.ok || !data.success) {
+            if (message) {
+                message.textContent = data.message || `Login failed. HTTP ${response.status}`;
+                message.className = "message error";
+                message.style.display = "block";
+            }
+            return;
+        }
 
-              subject: "physics",
+        loginCard?.classList.add("hidden");
+        adminPanel?.classList.remove("hidden");
+        if (passwordInput) passwordInput.value = "";
 
-              chapterNumber:
-                currentChapter,
-
-              id: id,
-
-              newName: newName
-
-            })
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        alert(
-          data.message ||
-          data.error ||
-          "Rename failed."
-        );
-
-        return;
-      }
-
-
-      loadQuizzes();
-
-
+        if (typeof updateSelectionUI === "function") {
+            updateSelectionUI();
+        }
     } catch (error) {
-
-      console.error(error);
-
-      alert("Server error.");
-
+        console.error("Admin login error:", error);
+        if (message) {
+            message.textContent = "Server se connection nahi ho raha. Server ko restart karke dobara try karein.";
+            message.className = "message error";
+            message.style.display = "block";
+        }
     }
-
-  }
-
-
-  // -------------------------
-  // DELETE
-  // -------------------------
-
-  async function deleteQuiz(id) {
-
-    const confirmDelete =
-      confirm(
-        "Kya aap is MCQ ko delete karna chahte hain?"
-      );
-
-
-    if (!confirmDelete) return;
-
-
-    try {
-
-      const response =
-        await fetch(
-          "/api/mcq-html",
-          {
-            method: "DELETE",
-
-            headers: {
-              "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-
-              classNumber: 6,
-
-              subject: "physics",
-
-              chapterNumber:
-                currentChapter,
-
-              id: id
-
-            })
-          }
-        );
-
-
-      const data =
-        await response.json();
-
-
-      if (!response.ok) {
-
-        alert(
-          data.message ||
-          data.error ||
-          "Delete failed."
-        );
-
-        return;
-      }
-
-
-      loadQuizzes();
-
-
-    } catch (error) {
-
-      console.error(error);
-
-      alert("Server error.");
-
-    }
-
-  }
-
-
-  // -------------------------
-  // SECURITY HELPERS
-  // -------------------------
-
-  function escapeHTML(value) {
-
-    return String(value)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-
-  }
-
-
-  function escapeJS(value) {
-
-    return String(value)
-      .replaceAll("\\", "\\\\")
-      .replaceAll("'", "\\'")
-      .replaceAll("\n", "\\n")
-      .replaceAll("\r", "\\r");
-
-  }
-
-
-  // -------------------------
-  // START
-  // -------------------------
-
-  checkLogin();
-
+};
 </script>
 
+<script>
+// Logout safety handler: works even if admin.js has a runtime error.
+window.logout = async function () {
+    try {
+        await fetch("/api/owner/logout", {
+            method: "POST",
+            credentials: "same-origin",
+            cache: "no-store"
+        });
+    } catch (error) {
+        console.error("Admin logout error:", error);
+    }
+
+    document.getElementById("adminPanel")?.classList.add("hidden");
+    document.getElementById("loginCard")?.classList.remove("hidden");
+
+    const passwordInput = document.getElementById("password");
+    if (passwordInput) {
+        passwordInput.value = "";
+        setTimeout(() => passwordInput.focus(), 50);
+    }
+};
+</script>
+
+<script>
+async function restoreAdminSession() {
+    try {
+        const response = await fetch("/api/owner/status", {
+            credentials: "same-origin",
+            cache: "no-store"
+        });
+        const data = await response.json().catch(() => ({}));
+        if (response.ok && data.authenticated === true) {
+            document.getElementById("loginCard")?.classList.add("hidden");
+            document.getElementById("adminPanel")?.classList.remove("hidden");
+            if (typeof window.updateSelectionUI === "function") window.updateSelectionUI();
+        }
+    } catch (error) {
+        console.error("Admin session restore failed:", error);
+    }
+}
+window.addEventListener("load", restoreAdminSession);
+</script>
 </body>
 </html>

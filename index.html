@@ -1,127 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <title>Computer Science Notes + MCQ</title>
 
-    <title>
-        NCERT Notes + MCQ
-    </title>
-
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-
+    <link rel="stylesheet" href="style.css">
 </head>
-
 
 <body>
 
+<header class="header">
 
-    <!-- =========================================
-         HEADER
-    ========================================== -->
+    <div
+        class="logo"
+        onclick="goHome()"
+    >
+        📚
+        <span>
+            Computer Science Notes + MCQ
+        </span>
+    </div>
 
-    <header class="header">
 
-        <div
-            class="logo"
+    <nav>
+
+        <a
+            href="#"
             onclick="goHome()"
         >
-
-            📚
-
-            <span>
-                NCERT Notes + MCQ
-            </span>
-
-        </div>
+            Home
+        </a>
 
 
-        <nav>
-
-            <a
-                href="#"
-                onclick="goHome()"
-            >
-                Home
-            </a>
+        <a href="#science">
+            Computer Science
+        </a>
 
 
-            <a
-                href="#science"
-            >
-                General Science
-            </a>
+        <a href="#about">
+            About
+        </a>
+
+    </nav>
 
 
-            <a
-                href="#about"
-            >
-                About
-            </a>
+    <div class="header-actions">
 
-        </nav>
-
-
-        <div class="header-actions">
-
-            <input
-                type="text"
-                id="searchInput"
-                placeholder="Search chapters, topics..."
-            >
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="Search chapters, topics..."
+        >
 
 
-            <button class="login-btn" onclick="location.href='admin.html'">
-                Login
-            </button>
+        <button
+            class="login-btn"
+            onclick="location.href='admin/index.html'"
+        >
+            Login
+        </button>
 
-        </div>
+    </div>
 
-    </header>
-
-
-    <!-- =========================================
-         MAIN APP
-    ========================================== -->
-
-    <main id="app"></main>
+</header>
 
 
-    <!-- =========================================
-         FOOTER
-    ========================================== -->
-
-    <footer class="footer">
-
-        © 2026 NCERT Notes + MCQ
-        | Learn • Practice • Improve
-
-    </footer>
+<main id="app"></main>
 
 
-    <!-- =========================================
-         JAVASCRIPT
-    ========================================== -->
+<footer class="footer">
 
-    <script
-        src="js/app.js"
-    ></script>
+    © 2026 Computer Science Notes + MCQ
+    | Learn • Practice • Improve
+
+</footer>
 
 
-    <script
-        src="js/quiz.js"
-    ></script>
+<script src="js/app.js"></script>
+
+<script src="js/quiz.js"></script>
 
 
 </body>
-
 </html>

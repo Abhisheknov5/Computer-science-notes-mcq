@@ -11,6 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const ROOT_DIR = path.join(__dirname, "..");
 const DATA_DIR = path.join(ROOT_DIR, "data");
+const CS_CHAPTERS_FILE = path.join(DATA_DIR, "cs-chapters.json");
 const FIREBASE_SECRET_PATH = "/etc/secrets/firebase-service-account.json";
 const FIREBASE_LOCAL_PATH =
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
@@ -1093,7 +1094,7 @@ app.post(
 
         res.setHeader(
             "Set-Cookie",
-            `${OWNER_COOKIE}=${encodeURIComponent(token)}; Max-Age=${SESSION_TIME / 1000}; HttpOnly; SameSite=Lax; Path=/`
+            `${OWNER_COOKIE}=${encodeURIComponent(token)}; Max-Age=31536000; HttpOnly; SameSite=Lax; Path=/`
         );
 
         res.json({
@@ -1239,6 +1240,398 @@ app.delete(
         }
     }
 );
+
+/* ======================================================
+   COMPUTER SCIENCE CHAPTER API
+   CS does not use the old Class 6-12 science registry.
+====================================================== */
+
+const CS_SUBJECTS = new Set([
+    "ai",
+    "cn",
+    "dsa",
+    "dbms",
+    "de",
+    "e-commerce",
+    "iot",
+    "multimedia",
+    "oops",
+    "os",
+    "software-engineering",
+    "toc"
+]);
+
+function normalizeCSSubject(subject){
+    const value=String(subject||"").trim().toLowerCase();
+    if(!CS_SUBJECTS.has(value)) throw new Error("Computer Science subject valid nahi hai.");
+    return value;
+}
+
+function readCSChapters(){
+    if(!fs.existsSync(CS_CHAPTERS_FILE)) return [];
+    try{
+        const data=JSON.parse(fs.readFileSync(CS_CHAPTERS_FILE,"utf8"));
+        return Array.isArray(data.items)?data.items:[];
+    }catch{return [];}
+}
+
+function writeCSChapters(items){
+    fs.mkdirSync(DATA_DIR,{recursive:true});
+    const temp=`${CS_CHAPTERS_FILE}.tmp`;
+    fs.writeFileSync(temp,JSON.stringify({items},null,2),"utf8");
+    fs.renameSync(temp,CS_CHAPTERS_FILE);
+}
+
+function getCSChapter(subject,chapterNumber){
+    const sub=normalizeCSSubject(subject);
+    const number=Number(chapterNumber);
+    if(!Number.isInteger(number)||number<1||number>100) throw new Error("Invalid chapter number.");
+    return readCSChapters().find(item=>
+        String(item.subject).toLowerCase()===sub && Number(item.number)===number
+    )||null;
+}
+
+app.get("/api/cs/chapters/:subject",async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.params.subject);
+        const items=readCSChapters()
+            .filter(item=>String(item.subject).toLowerCase()===subject)
+            .sort((a,b)=>Number(a.number)-Number(b.number));
+        res.json({success:true,items});
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
+app.get("/api/cs/chapters/:subject/:chapterNumber",async(req,res)=>{
+    try{
+        const chapter=getCSChapter(req.params.subject,req.params.chapterNumber);
+        res.json({success:true,exists:Boolean(chapter),chapter});
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
+app.post("/api/cs/chapters",requireOwner,async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.body.subject);
+        const title=String(req.body.chapterTitle||"").trim();
+        if(!title) throw new Error("Chapter Title daaliye.");
+
+        const items=readCSChapters();
+        const existingIndex=items.findIndex(item =>
+            String(item.subject).toLowerCase()===subject &&
+            String(item.title||item.chapterTitle||"").trim().toLowerCase()===title.toLowerCase()
+        );
+
+        if(existingIndex>=0){
+            return res.json({success:true,chapter:items[existingIndex]});
+        }
+
+        const used=new Set(
+            items.filter(item=>String(item.subject).toLowerCase()===subject)
+                 .map(item=>Number(item.number))
+        );
+        let number=1;
+        while(used.has(number)) number++;
+        if(number>100) throw new Error("Maximum 100 chapters allowed.");
+
+        const item={
+            id:`${subject}-${number}`,
+            subject,
+            number,
+            title,
+            chapterTitle:title,
+            updatedAt:new Date().toISOString()
+        };
+        items.push(item);
+        writeCSChapters(items);
+        res.json({success:true,chapter:item});
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
+app.delete("/api/cs/chapters",requireOwner,async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.body.subject);
+        const number=Number(req.body.chapterNumber);
+        const items=readCSChapters();
+        const next=items.filter(item=>!(String(item.subject).toLowerCase()===subject&&Number(item.number)===number));
+        if(next.length===items.length){
+            return res.status(404).json({success:false,message:"Chapter nahi mila."});
+        }
+        writeCSChapters(next);
+        res.json({success:true});
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
+
+/* ======================================================
+   COMPUTER SCIENCE MCQ HTML + NOTES
+====================================================== */
+
+const CS_MCQ_ROOT = path.join(DATA_DIR, "cs", "MCQ");
+const CS_NOTES_FILE = path.join(DATA_DIR, "cs-subject-notes.json");
+
+function csChapterDir(subject, chapterNumber) {
+    const sub = normalizeCSSubject(subject);
+    const number = Number(chapterNumber);
+    if (!Number.isInteger(number) || number < 1 || number > 100) {
+        throw new Error("Invalid chapter number.");
+    }
+    return path.join(CS_MCQ_ROOT, sub, `chapter-${String(number).padStart(2,"0")}`);
+}
+
+function readCSMCQMetadata(subject, chapterNumber) {
+    const file=path.join(csChapterDir(subject,chapterNumber),"index.json");
+    if(!fs.existsSync(file)) return [];
+    try {
+        const data=JSON.parse(fs.readFileSync(file,"utf8"));
+        return Array.isArray(data.items)?data.items:[];
+    } catch { return []; }
+}
+
+function writeCSMCQMetadata(subject, chapterNumber, items) {
+    const dir=csChapterDir(subject,chapterNumber);
+    fs.mkdirSync(dir,{recursive:true});
+    const file=path.join(dir,"index.json");
+    const temp=`${file}.tmp`;
+    fs.writeFileSync(temp,JSON.stringify({items},null,2),"utf8");
+    fs.renameSync(temp,file);
+}
+
+function readCSNotes() {
+    if(!fs.existsSync(CS_NOTES_FILE)) return {};
+    try {
+        const data=JSON.parse(fs.readFileSync(CS_NOTES_FILE,"utf8"));
+        return data && typeof data==="object" ? data : {};
+    } catch { return {}; }
+}
+
+function writeCSNotes(data) {
+    fs.mkdirSync(DATA_DIR,{recursive:true});
+    const temp=`${CS_NOTES_FILE}.tmp`;
+    fs.writeFileSync(temp,JSON.stringify(data,null,2),"utf8");
+    fs.renameSync(temp,CS_NOTES_FILE);
+}
+
+const mcqHTMLUpload =
+    multer({
+        storage:
+            multer.memoryStorage(),
+
+        limits: {
+            fileSize:
+                50 * 1024 * 1024
+        },
+
+        fileFilter:
+            (req, file, cb) => {
+                const ext =
+                    path.extname(
+                        file.originalname
+                    ).toLowerCase();
+
+                if (
+                    ![
+                        ".html",
+                        ".htm"
+                    ].includes(ext)
+                ) {
+                    return cb(
+                        new Error(
+                            "Sirf .html ya .htm MCQ file upload karo."
+                        )
+                    );
+                }
+
+                cb(null, true);
+            }
+    });
+
+
+app.post("/api/cs/mcq-html/upload",requireOwner,mcqHTMLUpload.single("mcqFile"),async(req,res)=>{
+    try{
+        if(!req.file) return res.status(400).json({success:false,message:"MCQ HTML file select karo."});
+        const subject=normalizeCSSubject(req.body.subject);
+        const chapterNumber=Number(req.body.chapterNumber);
+        const chapter=getCSChapter(subject,chapterNumber);
+        if(!chapter) return res.status(404).json({success:false,message:"Pehle chapter save/select karo."});
+
+        const html=req.file.buffer.toString("utf8");
+        if(!html.trim()) throw new Error("HTML file empty hai.");
+
+        const questionCount=questionCountFromHTML(html);
+        const title=htmlTitle(html)||path.basename(req.file.originalname,path.extname(req.file.originalname));
+        const id=`cs-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+        const fileName=`mcq-${id}.html`;
+        const now=new Date().toISOString();
+
+        const item={
+            id,fileName,originalName:req.file.originalname,name:title,questionCount,
+            createdAt:now,updatedAt:now,
+            url:`/api/cs/mcq-html/file/${encodeURIComponent(id)}`
+        };
+
+        const dir=csChapterDir(subject,chapterNumber);
+        fs.mkdirSync(dir,{recursive:true});
+        fs.writeFileSync(path.join(dir,fileName),html,"utf8");
+
+        const items=readCSMCQMetadata(subject,chapterNumber);
+        items.push(item);
+        writeCSMCQMetadata(subject,chapterNumber,items);
+
+        if(firebaseEnabled&&db){
+            try{
+                await saveHTMLToFirebase({classNumber:0,subject,chapterNumber},item,html);
+            }catch(error){
+                console.warn("CS Firestore MCQ save failed; local copy kept:",error.message);
+            }
+        }
+
+        res.json({success:true,item});
+    }catch(error){
+        console.error("CS MCQ upload error:",error);
+        res.status(400).json({success:false,message:error.message||"MCQ upload failed."});
+    }
+});
+
+app.get("/api/cs/mcq-html/file/:id",async(req,res)=>{
+    const id=String(req.params.id||"");
+    try{
+        if(firebaseEnabled&&db){
+            const data=await getHTMLFromFirebase(id);
+            if(data&&typeof data.html==="string"){
+                res.type("html").send(data.html);
+                return;
+            }
+        }
+    }catch(error){console.warn("CS Firebase MCQ read failed:",error.message);}
+
+    const root=path.resolve(CS_MCQ_ROOT);
+    if(fs.existsSync(root)){
+        const subjectDirs=fs.readdirSync(root,{withFileTypes:true});
+        for(const sd of subjectDirs){
+            if(!sd.isDirectory()) continue;
+            const subject=sd.name;
+            const subjectRoot=path.join(root,subject);
+            const chapterDirs=fs.readdirSync(subjectRoot,{withFileTypes:true});
+            for(const cd of chapterDirs){
+                if(!cd.isDirectory()) continue;
+                const n=Number(cd.name.replace("chapter-",""));
+                const items=readCSMCQMetadata(subject,n);
+                const item=items.find(x=>x.id===id);
+                if(!item) continue;
+                const file=path.join(subjectRoot,cd.name,item.fileName);
+                if(fs.existsSync(file)){
+                    res.sendFile(path.resolve(file));
+                    return;
+                }
+            }
+        }
+    }
+    res.status(404).send("MCQ file not found.");
+});
+
+app.get("/api/cs/mcq-html/:subject/:chapterNumber",async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.params.subject);
+        const chapterNumber=Number(req.params.chapterNumber);
+        const localItems=readCSMCQMetadata(subject,chapterNumber);
+        let firebaseItems=[];
+        if(firebaseEnabled&&db){
+            try{firebaseItems=await listHTMLFromFirestore(0,subject,chapterNumber);}catch{}
+        }
+        const merged=[];
+        const seen=new Set();
+        for(const item of [...localItems,...firebaseItems]){
+            if(!item||!item.id||seen.has(item.id)) continue;
+            seen.add(item.id);
+            merged.push({...item,url:`/api/cs/mcq-html/file/${encodeURIComponent(item.id)}`});
+        }
+        res.json({success:true,items:merged});
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
+app.patch("/api/cs/mcq-html/rename",requireOwner,async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.body.subject);
+        const chapterNumber=Number(req.body.chapterNumber);
+        const id=String(req.body.id||"");
+        const newName=String(req.body.newName||"").trim();
+        if(!id||!newName) throw new Error("Quiz ID aur new name required hai.");
+
+        const items=readCSMCQMetadata(subject,chapterNumber);
+        const index=items.findIndex(item=>item.id===id);
+        if(index<0) return res.status(404).json({success:false,message:"MCQ nahi mila."});
+
+        items[index].name=newName;
+        items[index].updatedAt=new Date().toISOString();
+        writeCSMCQMetadata(subject,chapterNumber,items);
+
+        if(firebaseEnabled&&db){
+            try{await renameHTMLInFirebase({classNumber:0,subject,chapterNumber},id,items[index].fileName,newName);}catch{}
+        }
+        res.json({success:true});
+    }catch(error){res.status(400).json({success:false,message:error.message});}
+});
+
+app.delete("/api/cs/mcq-html",requireOwner,async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.body.subject);
+        const chapterNumber=Number(req.body.chapterNumber);
+        const id=String(req.body.id||"");
+        const items=readCSMCQMetadata(subject,chapterNumber);
+        const item=items.find(x=>x.id===id);
+        if(!item) return res.status(404).json({success:false,message:"MCQ nahi mila."});
+
+        writeCSMCQMetadata(subject,chapterNumber,items.filter(x=>x.id!==id));
+
+        const file=path.join(csChapterDir(subject,chapterNumber),item.fileName);
+        if(fs.existsSync(file)) fs.unlinkSync(file);
+        if(firebaseEnabled&&db){try{await deleteHTMLFromFirebase(id);}catch{}}
+
+        res.json({success:true});
+    }catch(error){res.status(400).json({success:false,message:error.message});}
+});
+
+app.get("/api/cs/subject-notes/:subject",async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.params.subject);
+        const notes=readCSNotes();
+        const notesUrl=String(notes[subject]||"");
+        res.json({success:true,exists:Boolean(notesUrl),notesUrl});
+    }catch(error){res.status(400).json({success:false,message:error.message});}
+});
+
+app.post("/api/cs/subject-notes",requireOwner,async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.body.subject);
+        const notesUrl=String(req.body.notesUrl||"").trim();
+        if(!/^https:\/\/(drive\.google\.com|docs\.google\.com)\//i.test(notesUrl)){
+            throw new Error("Valid Google Drive ya Google Docs link dijiye.");
+        }
+        const notes=readCSNotes();
+        notes[subject]=notesUrl;
+        writeCSNotes(notes);
+        res.json({success:true,notesUrl});
+    }catch(error){res.status(400).json({success:false,message:error.message});}
+});
+
+app.delete("/api/cs/subject-notes",requireOwner,async(req,res)=>{
+    try{
+        const subject=normalizeCSSubject(req.body.subject);
+        const notes=readCSNotes();
+        delete notes[subject];
+        writeCSNotes(notes);
+        res.json({success:true});
+    }catch(error){res.status(400).json({success:false,message:error.message});}
+});
 
 /* ======================================================
    CHAPTER LIST / CREATE API
@@ -1573,39 +1966,6 @@ app.get(
    MULTER
 ====================================================== */
 
-const mcqHTMLUpload =
-    multer({
-        storage:
-            multer.memoryStorage(),
-
-        limits: {
-            fileSize:
-                50 * 1024 * 1024
-        },
-
-        fileFilter:
-            (req, file, cb) => {
-                const ext =
-                    path.extname(
-                        file.originalname
-                    ).toLowerCase();
-
-                if (
-                    ![
-                        ".html",
-                        ".htm"
-                    ].includes(ext)
-                ) {
-                    return cb(
-                        new Error(
-                            "Sirf .html ya .htm MCQ file upload karo."
-                        )
-                    );
-                }
-
-                cb(null, true);
-            }
-    });
 
 /* ======================================================
    NEW HTML MCQ UPLOAD
