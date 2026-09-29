@@ -1531,13 +1531,6 @@ async function deleteCSSubtopic(id){
         const icon=String(document.getElementById("newSubjectIcon")?.value||"📘").trim()||"📘";
 
         if(!name){message("Subject Name daaliye.","error");return;}
-
-        // If this Short Code was deleted earlier, explicitly tell the server that
-        // this save is a re-add. This is what separates a legitimate re-add from
-        // a normal duplicate Subject.
-        const deletedBeforeAdd=readJSON(DELETED_KEY,[]).some(
-            x=>String(x).trim().toUpperCase()===code
-        );
         if(!code){message("Short Code daaliye.","error");return;}
         if(!/^[A-Z0-9][A-Z0-9_-]{0,24}$/.test(code)){
             message("Short Code mein sirf A-Z, 0-9, _ aur - use karein.","error");return;}
@@ -1546,7 +1539,7 @@ async function deleteCSSubtopic(id){
             const response=await fetch("/api/cs/subjects",{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({name,code,icon,readd:deletedBeforeAdd}),
+                body:JSON.stringify({name,code,icon}),
                 cache:"no-store"
             });
             const data=await response.json().catch(()=>({}));
@@ -1556,14 +1549,6 @@ async function deleteCSSubtopic(id){
             message(`❌ ${error.message}`,"error");
             return;
         }
-
-        // A previously deleted Subject must be allowed to come back.
-        // Remove its old browser-local "deleted" marker before rendering/saving
-        // the new Subject, otherwise a refresh would hide the re-added card.
-        const deleted=readJSON(DELETED_KEY,[]).filter(
-            x=>String(x).toUpperCase()!==code
-        );
-        writeJSON(DELETED_KEY,deleted);
 
         // Keep a local copy only as a fast UI fallback; the server/Firestore registry is the source of truth.
         const customs=readJSON(CUSTOM_KEY,[]).filter(x=>String(x.code||"").toUpperCase()!==code);
@@ -1610,6 +1595,50 @@ async function deleteCSSubtopic(id){
         renderCustomSubjects();
     }
 
+    async function loadServerCustomSubjects(){
+        const grid=getGrid();
+        if(!grid)return;
+
+        try{
+            const response=await fetch("/api/cs/subjects",{cache:"no-store"});
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok || !data.success || !Array.isArray(data.items)) return;
+
+            const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
+            const serverCustoms=data.items.filter(item=>item && item.builtIn===false);
+
+            serverCustoms.forEach(subject=>{
+                const code=String(subject.code||"").trim();
+                if(!code || deleted.includes(code.toUpperCase())) return;
+
+                subjectIdMap[code]=subject.id;
+                subjectNameMap[code]=`${subject.name} (${code})`;
+                mainTopicPlaceholderMap[code]=`Main Topic Title (e.g. ${subject.name} Basics)`;
+
+                let card=grid.querySelector(`[data-subject="${CSS.escape(code)}"]`);
+                if(!card){
+                    card=document.createElement("button");
+                    card.type="button";
+                    card.className="subject-card admin-subject-deletable";
+                    card.dataset.subject=code;
+                    card.innerHTML=`<span>${esc(subject.icon||"📚")}</span><strong>${esc(subject.name)}</strong><small>${esc(code)}</small>`;
+                    card.addEventListener("click",()=>{
+                        if(typeof selectSubjectCard==="function")selectSubjectCard(code);
+                    });
+                    grid.appendChild(card);
+                }else{
+                    const strong=card.querySelector("strong");
+                    const small=card.querySelector("small");
+                    if(strong) strong.textContent=subject.name;
+                    if(small) small.textContent=code;
+                }
+                addDeleteButton(card);
+            });
+        }catch(error){
+            console.warn("CS custom subjects load failed:",error.message);
+        }
+    }
+
     function injectStyle(){
         const style=document.createElement("style");
         style.textContent=`
@@ -1630,4 +1659,5 @@ async function deleteCSSubtopic(id){
 
     injectStyle();
     applySubjectManagement();
+    loadServerCustomSubjects();
 })();
