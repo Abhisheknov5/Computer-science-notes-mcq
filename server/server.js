@@ -308,6 +308,274 @@ function requireOwner(req, res, next) {
 }
 
 /* ======================================================
+   COMPUTER SCIENCE SITE ACCESS
+   Whole website + API protection
+   Separate from existing Admin/Owner login
+====================================================== */
+
+const CS_SITE_USERNAME =
+    process.env.CS_SITE_USERNAME || "abhi";
+
+const CS_SITE_PASSWORD =
+    process.env.CS_SITE_PASSWORD || "admin123";
+
+const CS_SITE_SESSION_SECRET =
+    process.env.CS_SITE_SESSION_SECRET || "cs-private-session-2026-abhi";
+
+const CS_SITE_COOKIE = "cs_site_auth";
+const CS_SITE_SESSION_TIME = 30 * 24 * 60 * 60 * 1000;
+
+function createCSSiteToken() {
+    return crypto
+        .createHmac("sha256", CS_SITE_SESSION_SECRET)
+        .update(`${CS_SITE_USERNAME}:${CS_SITE_PASSWORD}`)
+        .digest("hex");
+}
+
+function isCSSiteLoggedIn(req) {
+    const token = parseCookies(req)[CS_SITE_COOKIE];
+
+    if (!token) return false;
+
+    const expected = createCSSiteToken();
+
+    if (token.length !== expected.length) return false;
+
+    return crypto.timingSafeEqual(
+        Buffer.from(token),
+        Buffer.from(expected)
+    );
+}
+
+function setCSSiteCookie(res, token, maxAge) {
+    res.setHeader(
+        "Set-Cookie",
+        `${CS_SITE_COOKIE}=${encodeURIComponent(token)}; Max-Age=${maxAge}; HttpOnly; SameSite=Lax; Path=/`
+    );
+}
+
+function csSiteLoginPage(res) {
+    return res.status(200).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Computer Science Notes + MCQ - Login</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:Arial,sans-serif;
+    background:#f4f7fb;
+}
+.login-box{
+    width:520px;
+    max-width:94%;
+    background:#fff;
+    padding:44px;
+    border-radius:16px;
+    box-shadow:0 10px 35px rgba(0,0,0,.12);
+}
+.logo{
+    text-align:center;
+    font-size:34px;
+    margin-bottom:12px;
+}
+h2{
+    margin:0 0 12px;
+    text-align:center;
+    font-size:28px;
+}
+.subtitle{
+    margin:0 0 26px;
+    text-align:center;
+    font-size:17px;
+    color:#666;
+}
+input{
+    width:100%;
+    padding:16px;
+    margin:9px 0;
+    border:1px solid #d7dce5;
+    border-radius:10px;
+    font-size:17px;
+    outline:none;
+}
+input:focus{
+    border-color:#2563eb;
+}
+button{
+    width:100%;
+    padding:16px;
+    margin-top:16px;
+    border:0;
+    border-radius:10px;
+    background:#2563eb;
+    color:#fff;
+    font-size:18px;
+    cursor:pointer;
+}
+button:disabled{
+    opacity:.65;
+    cursor:not-allowed;
+}
+#error{
+    display:none;
+    color:#dc2626;
+    text-align:center;
+    margin-top:12px;
+    font-size:14px;
+}
+</style>
+</head>
+<body>
+<div class="login-box">
+    <div class="logo">📚</div>
+    <h2>Computer Science Notes + MCQ</h2>
+    <p class="subtitle">Login required to access this website</p>
+
+    <form id="loginForm">
+        <input
+            type="text"
+            id="username"
+            placeholder="Username"
+            autocomplete="username"
+            required
+        >
+
+        <input
+            type="password"
+            id="password"
+            placeholder="Password"
+            autocomplete="current-password"
+            required
+        >
+
+        <button id="loginButton" type="submit">Login</button>
+
+        <div id="error">
+            Invalid username or password.
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById("loginForm").addEventListener("submit", async function(event){
+    event.preventDefault();
+
+    const button = document.getElementById("loginButton");
+    const error = document.getElementById("error");
+
+    error.style.display = "none";
+    button.disabled = true;
+    button.textContent = "Logging in...";
+
+    try {
+        const response = await fetch("/api/cs-site-login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username: document.getElementById("username").value,
+                password: document.getElementById("password").value
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            window.location.href = "/";
+            return;
+        }
+
+        error.textContent = data.message || "Invalid username or password.";
+        error.style.display = "block";
+    } catch (error) {
+        error.textContent = "Login failed. Please try again.";
+        error.style.display = "block";
+    }
+
+    button.disabled = false;
+    button.textContent = "Login";
+});
+</script>
+</body>
+</html>`);
+}
+
+/*
+ * Site login endpoint must be registered before the site-protection
+ * middleware so an unauthenticated visitor can authenticate.
+ */
+app.post("/api/cs-site-login", (req, res) => {
+    const username = String(req.body?.username || "");
+    const password = String(req.body?.password || "");
+
+    if (
+        username !== CS_SITE_USERNAME ||
+        password !== CS_SITE_PASSWORD
+    ) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid username or password."
+        });
+    }
+
+    const token = createCSSiteToken();
+
+    setCSSiteCookie(
+        res,
+        token,
+        Math.floor(CS_SITE_SESSION_TIME / 1000)
+    );
+
+    return res.json({
+        success: true,
+        authenticated: true
+    });
+});
+
+app.post("/api/cs-site-logout", (req, res) => {
+    setCSSiteCookie(res, "", 0);
+
+    return res.json({
+        success: true,
+        authenticated: false
+    });
+});
+
+/*
+ * Everything after this middleware requires the site login.
+ * Existing Admin/Owner authentication remains separate and unchanged.
+ */
+app.use((req, res, next) => {
+    if (
+        req.path === "/api/cs-site-login" ||
+        req.path === "/api/cs-site-logout"
+    ) {
+        return next();
+    }
+
+    if (isCSSiteLoggedIn(req)) {
+        return next();
+    }
+
+    if (req.path.startsWith("/api/")) {
+        return res.status(401).json({
+            success: false,
+            message: "Website login required."
+        });
+    }
+
+    return csSiteLoginPage(res);
+});
+
+/* ======================================================
    SUBJECT FOLDER
 ====================================================== */
 
