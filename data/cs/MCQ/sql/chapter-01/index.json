@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "id": "cs-1790686548109-74431b0e480a",
+      "fileName": "mcq-cs-1790686548109-74431b0e480a.html",
+      "originalName": "Database_DBMS_150_MCQ_Same_UI.html",
+      "name": "Database &amp; DBMS MCQ Practice",
+      "questionCount": 150,
+      "mainTopicId": "cs-main-1790686527824-bdcb83d586d1",
+      "subtopicId": "cs-sub-1790686539775-b54674ff9797",
+      "createdAt": "2026-09-29T12:55:48.109Z",
+      "updatedAt": "2026-09-29T12:55:48.109Z",
+      "url": "/api/cs/mcq-html/file/cs-1790686548109-74431b0e480a"
+    },
+    {
+      "id": "cs-1790687601562-5986ff92ca2e",
+      "fileName": "mcq-cs-1790687601562-5986ff92ca2e.html",
+      "originalName": "Database_DBMS_150_MCQ_Same_UI.html",
+      "name": "Database &amp; DBMS MCQ Practice",
+      "questionCount": 150,
+      "mainTopicId": "cs-main-1790686527824-bdcb83d586d1",
+      "subtopicId": "cs-sub-1790687583131-895a254fd745",
+      "createdAt": "2026-09-29T13:13:21.562Z",
+      "updatedAt": "2026-09-29T13:13:21.562Z",
+      "url": "/api/cs/mcq-html/file/cs-1790687601562-5986ff92ca2e"
+    }
+  ]
+}

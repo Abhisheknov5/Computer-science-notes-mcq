@@ -211,6 +211,59 @@ button {
     border-color: var(--blue);
     background: #eff6ff;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+    position: relative;
+}
+
+.custom-subject-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:7px;
+}
+.custom-subject-wrap .subject-card{
+    width:100%;
+}
+.subject-delete-btn{
+    border:1px solid #fecaca;
+    background:#fff1f2;
+    color:#b91c1c;
+    border-radius:9px;
+    padding:7px 10px;
+    cursor:pointer;
+    font-weight:700;
+}
+.subject-delete-btn:hover{
+    background:#fee2e2;
+}
+.subject-add-panel{
+    margin-top:16px;
+    padding:16px;
+    border:1px dashed var(--border);
+    border-radius:12px;
+    background:#f8fafc;
+}
+.subject-add-grid{
+    display:grid;
+    grid-template-columns:1.4fr .8fr .45fr auto;
+    gap:10px;
+    align-items:end;
+}
+.subject-add-grid input{
+    width:100%;
+    box-sizing:border-box;
+}
+@media(max-width:800px){.subject-add-grid{grid-template-columns:1fr}.subject-add-grid button{width:100%}}
+
+.subject-card.active::after {
+    content: "✓ Selected";
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 .selector-grid {
@@ -683,6 +736,20 @@ button {
     }
 }
 
+
+        .hierarchy-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;margin:8px 0;border:1px solid #d9e2f2;border-radius:10px;background:#fff}
+        .hierarchy-title{display:flex;align-items:center;gap:10px;min-width:0}
+        .hierarchy-title strong{overflow-wrap:anywhere}
+        .topic-number{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:#eef3ff;color:#2458d6;font-weight:700;flex:0 0 auto}
+        .hierarchy-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+        @media(max-width:700px){.hierarchy-row{align-items:flex-start;flex-direction:column}.hierarchy-actions{width:100%;justify-content:flex-start}}
+
+
+        .workflow-card[hidden]{display:none!important}
+        .workflow-hint{margin:8px 0 0;padding:8px 12px;border-radius:9px;background:#f4f7fb;color:#526173;font-size:13px}
+        .hierarchy-row{border-radius:10px}
+        .hierarchy-actions button{min-height:32px}
+
 </style>
 
     <style>
@@ -744,6 +811,32 @@ button {
             }
         });
     </script>
+
+<style id="cs-subtopic-admin-style">
+.cs-subtopic-list{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.cs-subtopic-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
+.cs-subtopic-item .subtopic-name{flex:1;min-width:220px;font-weight:600;color:#173b7a}
+.cs-subtopic-item button{border:0;border-radius:7px;padding:7px 11px;cursor:pointer;font-weight:600}
+.cs-subtopic-item .subtopic-select{background:#eef4ff;color:#1557b0}
+.cs-subtopic-empty{padding:14px;border-radius:10px;background:#f8fafc;color:#64748b}
+</style>
+
+
+<style id="final-hierarchy-ui">
+.legacy-chapter-card{display:none!important}
+#mainTopicCard .section-heading,#subtopicCard .section-heading,#mcqCard .section-heading{margin-bottom:18px}
+.hierarchy-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #e4e7ec;border-radius:12px;background:#fff}
+.hierarchy-title{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.hierarchy-title strong{overflow-wrap:anywhere}
+.hierarchy-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.topic-number{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eff6ff;color:#1d4ed8;font-weight:800;flex:none}
+.quiz-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #e4e7ec;border-radius:12px;background:#fff;margin-bottom:10px}
+.quiz-name{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.quiz-name span{color:#667085;overflow-wrap:anywhere}
+.quiz-info{font-weight:700;color:#1d4ed8;white-space:nowrap}
+@media(max-width:800px){.hierarchy-row,.quiz-item{align-items:flex-start;flex-direction:column}.hierarchy-actions{justify-content:flex-start}}
+</style>
+
 </head>
 
 <body>
@@ -915,6 +1008,37 @@ button {
                 </div>
 
 
+
+                <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                    <button class="primary-btn" type="button" onclick="document.getElementById('addSubjectPanel').hidden=!document.getElementById('addSubjectPanel').hidden">
+                        ➕ Add Subject
+                    </button>
+                </div>
+
+                <div class="subject-add-panel" id="addSubjectPanel" hidden>
+                    <div class="section-heading" style="margin-bottom:10px;">
+                        <div>
+                            <h3 style="margin:0;">➕ Add New Subject</h3>
+                            <p style="margin:4px 0 0;">Subject Name, Short Code aur Icon daal kar save karein.</p>
+                        </div>
+                    </div>
+                    <div class="subject-add-grid">
+                        <div class="field">
+                            <label for="newSubjectName">Subject Name</label>
+                            <input id="newSubjectName" type="text" placeholder="e.g. Cyber Security" maxlength="80" autocomplete="off">
+                        </div>
+                        <div class="field">
+                            <label for="newSubjectCode">Short Code</label>
+                            <input id="newSubjectCode" type="text" placeholder="e.g. CYBER" maxlength="25" autocomplete="off">
+                        </div>
+                        <div class="field">
+                            <label for="newSubjectIcon">Icon</label>
+                            <input id="newSubjectIcon" type="text" value="📘" maxlength="8" autocomplete="off">
+                        </div>
+                        <button class="primary-btn" type="button" onclick="addCustomSubject()">Save Subject</button>
+                    </div>
+                    <div id="subjectManageMessage" class="message"></div>
+                </div>
 
                 <div class="subject-grid cs-subject-grid">
 
@@ -1240,12 +1364,12 @@ button {
                  CHAPTER MANAGEMENT
             ========================== -->
 
-            <section class="card">
+            <section class="card legacy-chapter-card">
 
                 <div class="section-heading">
                     <div>
                         <h2 id="currentSubjectTitle">Select Subject</h2>
-                        <p>Selected Subject ke Chapters manage karein.</p>
+                        <p>Selected Subject ke Main Topics manage karein.</p>
                     </div>
 
                     <span id="selectionBadge" class="selection-badge">
@@ -1300,9 +1424,106 @@ button {
 
                 <div id="chapterMessage" class="message"></div>
 
-                <div id="quizList">
-                    <div class="empty">
-                        Subject select karke Chapter Title daaliye.
+
+
+            </section>
+
+
+
+            <!-- =========================
+                 MAIN TOPIC MANAGEMENT
+            ========================== -->
+
+            <section class="card" id="mainTopicCard">
+
+                <div class="section-heading">
+                    <div>
+                        <h2>📂 Main Topic Management</h2>
+                        <p>Subject ke Main Topics yahan manage karein. Open karke Subtopics add karein.</p>
+                    </div>
+
+                    <span class="selection-badge" id="selectedMainTopicTitle">
+                        No Main Topic Selected
+                    </span>
+                </div>
+
+                <input type="hidden" id="selectedMainTopicId" value="">
+
+                <div class="selector-grid">
+                    <div class="field wide">
+                        <input
+                            id="mainTopicTitle"
+                            type="text"
+                            placeholder="Main Topic Title (e.g. DBMS Tutorial, Data modeling)"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                        <button class="primary-btn" type="button" onclick="saveCSMainTopic()">
+                            ➕ Add Main Topic
+                        </button>
+                        <button class="secondary-btn" type="button" onclick="loadCSMainTopics(currentChapter)">
+                            🔄 Load Main Topics
+                        </button>
+                    </div>
+                </div>
+
+                <div id="mainTopicMessage" class="message"></div>
+
+                <div id="mainTopicList" class="cs-subtopic-list">
+                    <div class="cs-subtopic-empty">
+                        Subject select karein. Main Topics yahan dikhenge.
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- =========================
+                 SUBTOPIC MANAGEMENT
+            ========================== -->
+
+            <section class="card workflow-card" id="subtopicCard" hidden>
+
+                <div class="section-heading">
+                    <div>
+                        <h2>📁 Subtopic Management</h2>
+                        <p>Selected Main Topic ke Subtopics yahan manage karein.</p>
+                    </div>
+
+                    <span class="selection-badge" id="selectedSubtopicTitle">
+                        No Subtopic Selected
+                    </span>
+                </div>
+
+                <input type="hidden" id="selectedSubtopicId" value="">
+
+                <div class="selector-grid">
+                    <div class="field wide">
+                        <input
+                            id="subtopicTitle"
+                            type="text"
+                            placeholder="Subtopic Title (e.g. What is a Database)"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                        <button class="primary-btn" type="button" onclick="saveCSSubtopic()">
+                            ➕ Add Subtopic
+                        </button>
+                        <button class="secondary-btn" type="button" onclick="loadCSSubtopics(currentMainTopic?.id)">
+                            🔄 Load Subtopics
+                        </button>
+                    </div>
+                </div>
+
+                <div id="subtopicMessage" class="message"></div>
+
+                <div id="subtopicList" class="cs-subtopic-list">
+                    <div class="cs-subtopic-empty">
+                        Pehle Main Topic select karein.
                     </div>
                 </div>
 
@@ -1312,7 +1533,7 @@ button {
                  MCQ MANAGEMENT
             ========================== -->
 
-            <section class="card">
+            <section class="card workflow-card" id="mcqCard" hidden>
 
                 <div class="section-heading">
 
@@ -1324,7 +1545,7 @@ button {
 
 
                         <p id="listDescription">
-                            Selected chapter ke uploaded MCQ yahan dikhenge.
+                            Selected Subtopic ke uploaded MCQ yahan dikhenge.
                         </p>
 
                     </div>
@@ -1339,6 +1560,10 @@ button {
 
                 </div>
 
+                <div id="quizList">
+                    <div class="empty">Subtopic select karke MCQ Sets yahan dikhenge.</div>
+                </div>
+
             </section>
 
 
@@ -1347,7 +1572,7 @@ button {
                  HTML MCQ UPLOAD
             ========================== -->
 
-            <section class="card">
+            <section class="card workflow-card" id="uploadCard" hidden>
 
 
                 <div class="section-heading">
@@ -1360,7 +1585,7 @@ button {
 
 
                         <p>
-                            Selected Subject → Chapter mein
+                            Selected Subject → Main Topic → Subtopic mein
                             HTML quiz upload karein.
                         </p>
 
@@ -1433,17 +1658,19 @@ button {
 
 
 
+                            <div style="display:none">
+                                <span>Chapter</span>
+                                <strong id="uploadChapterText">1</strong>
+                            </div>
+
                             <div>
+                                <span>Main Topic</span>
+                                <strong id="uploadMainTopicText">—</strong>
+                            </div>
 
-                                <span>
-                                    Chapter
-                                </span>
-
-
-                                <strong id="uploadChapterText">
-                                    —
-                                </strong>
-
+                            <div>
+                                <span>Subtopic</span>
+                                <strong id="uploadSubtopicText">—</strong>
                             </div>
 
 

@@ -9,6 +9,18 @@
       "createdAt": "2026-09-25T13:57:27.819Z",
       "updatedAt": "2026-09-25T13:57:27.819Z",
       "url": "/api/cs/mcq-html/file/cs-1790344647819-90c332e2b9e6"
+    },
+    {
+      "id": "cs-1790676544805-b67b9e1afa75",
+      "fileName": "mcq-cs-1790676544805-b67b9e1afa75.html",
+      "originalName": "Database_DBMS_150_MCQ_Same_UI.html",
+      "name": "Database &amp; DBMS MCQ Practice",
+      "questionCount": 150,
+      "mainTopicId": "cs-main-1790632093034-6d8410736528",
+      "subtopicId": "cs-sub-1790632120578-9384b92db178",
+      "createdAt": "2026-09-29T10:09:04.805Z",
+      "updatedAt": "2026-09-29T10:09:04.805Z",
+      "url": "/api/cs/mcq-html/file/cs-1790676544805-b67b9e1afa75"
     }
   ]
 }

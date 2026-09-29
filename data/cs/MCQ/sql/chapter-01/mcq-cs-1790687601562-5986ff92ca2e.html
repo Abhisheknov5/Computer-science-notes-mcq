@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Database &amp; DBMS MCQ Practice</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#172b4d;line-height:1.6}
+.container{max-width:1100px;margin:auto;padding:24px 20px}
+.card{background:#fff;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.08)}
+.hidden{display:none!important}
+h1,h2,h3{margin-top:0}
+button,select{font:inherit}
+button{border:0;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.home{padding:28px}
+.home h1{font-size:32px;margin-bottom:6px}
+.sub{color:#536579;font-size:18px}
+.section{border:1px solid #d4dae2;border-radius:12px;padding:17px 20px;margin:12px 0;cursor:pointer;background:#fafbfc}
+.section:hover{background:#f5f8fc}
+.section-title{font-size:20px;font-weight:700;color:#111}
+.section-count{color:#536579}
+.setup{padding:28px}
+.question-select-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.question-select-row label{font-size:18px;white-space:nowrap}
+.back{display:inline-block;color:#2563eb;text-decoration:none;font-weight:700;margin-bottom:18px}
+select{padding:10px 14px;border:1px solid #ccc;border-radius:8px;margin-left:8px}
+.next{background:#16a34a;color:#fff}
+.prev{background:#6b7280;color:#fff}
+.submit{background:#2563eb;color:#fff}
+.quiz-topbar{margin:0 0 14px}
+.topics-back{padding:12px 18px;border:1px solid #d1d5db;border-radius:10px;background:#f5f5f5;color:#111827;font-size:16px;cursor:pointer}
+.topics-back:hover{background:#e5e7eb}
+.quiz-header{padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}
+.quiz-header strong{font-size:18px}
+.question-card{padding:26px;margin-bottom:18px}
+.question{font-size:22px;font-weight:700;margin-bottom:20px;white-space:pre-line}
+.option{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border:2px solid #e1e5ea;background:#fff;border-radius:10px}
+.option:hover{border-color:#2563eb;background:#eff6ff}
+.option.selected{border-color:#2563eb;background:#dbeafe}
+.option.correct{border-color:#16a34a;background:#dcfce7}
+.option.wrong{border-color:#dc2626;background:#fee2e2}
+.feedback{min-height:28px;font-weight:700;margin-top:12px}
+.explanation{margin-top:14px;padding:16px 18px;border-left:5px solid #2563eb;border-radius:10px;background:#eff6ff;color:#172b4d;font-size:16px;line-height:1.65}
+.explanation-title{font-weight:700;font-size:18px;margin-bottom:6px}
+.bottom{padding:18px 24px;display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:18px}
+.palette{padding:20px 24px}
+.pal-grid{display:flex;flex-wrap:wrap;gap:8px}
+.pal{background:#fff;border:1px solid #d4dae2;width:58px;min-width:58px;height:52px;padding:8px 4px}
+.pal.active{outline:3px solid #2563eb}
+.pal.done{background:#dbeafe}
+.result{padding:32px;text-align:center}
+.stat{font-size:18px;line-height:2}
+.review-card{margin-top:16px;padding:22px;text-align:left}
+.review-q{font-size:20px;font-weight:700}
+.review-option{padding:10px 12px;margin:7px 0;border-radius:8px;border:1px solid #ddd}
+.review-option.correct{background:#dcfce7;border-color:#16a34a}
+.review-option.wrong{background:#fee2e2;border-color:#dc2626}
+@media(max-width:650px){
+.container{padding:14px}
+.home h1{font-size:26px}
+.question{font-size:19px}
+.quiz-header,.bottom{flex-direction:column;align-items:stretch}
+.bottom button{margin:4px 0}
+.pal{width:50px;min-width:50px;height:48px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div id="home" class="card home">
+<h1>📚 Database &amp; DBMS MCQ Practice</h1>
+<div class="sub">Computer Science • 150 MCQs • 5 Sections</div>
+<div id="sectionsList"></div>
+</div>
+
+<div id="setup" class="card setup hidden">
+<a href="#" class="back" onclick="goHome();return false;">← Back to Sections</a>
+<h2 id="setupTitle"></h2>
+<p class="sub" id="setupInfo"></p>
+<div class="question-select-row">
+<label><b>Questions:</b></label>
+<select id="questionCount"></select>
+</div>
+<br><br>
+<button class="next" onclick="startPractice()">🚀 Start Practice</button>
+</div>
+
+<div id="quiz" class="hidden">
+<div class="quiz-topbar">
+<button class="topics-back" onclick="goHome()">← Topics</button>
+</div>
+<div class="card quiz-header">
+<strong id="sectionName"></strong>
+<div id="counter"></div>
+<div id="attempted"></div>
+</div>
+
+<div class="card question-card">
+<div class="question" id="question"></div>
+<div id="options"></div>
+<div class="feedback" id="feedback"></div>
+<div class="explanation hidden" id="explanation"></div>
+</div>
+
+<div class="card bottom">
+<div>
+<button class="prev" id="prevBtn">← Previous</button>
+<button class="submit" id="checkBtn">Check Answer</button>
+<button class="next" id="nextBtn">Next →</button>
+</div>
+<button class="submit" id="submitBtn">Submit Test</button>
+</div>
+
+<div class="card palette">
+<h3>Question Palette</h3>
+<div class="pal-grid" id="palette"></div>
+</div>
+</div>
+
+<div id="result" class="card result hidden">
+<h2>🎯 Test Result</h2>
+<div class="stat" id="resultText"></div>
+<br>
+<button class="next" id="reviewBtn">👁️ Review Answers</button>
+<button class="prev" id="homeBtn">Choose Section</button>
+</div>
+</div>
+
+<script>
+const questions=[{"id":1,"q":"What is data?","options":["A programming language","A type of software","A collection of distinct small units of information","More than one of the above","None of the above ---"],"answer":2,"explanation":"Data refers to small individual pieces of information, such as text, numbers, and media."},{"id":2,"q":"Which of the following can be considered a form of data?","options":["Text","Numbers","Media files","More than one of the above","None of the above ---"],"answer":3,"explanation":"Data includes text, numbers, media files, etc.—all of these are valid forms of data."},{"id":3,"q":"Where can data be stored?","options":["Only in databases","Only in papers","In electronic memory or on paper","More than one of the above","None of the above ---"],"answer":3,"explanation":"Data can be stored on paper or electronically, such as in memory devices, databases, or files."},{"id":4,"q":"What is the origin of the word \"Data\"?","options":["Latin word “datae”","Greek word “datan”","Word \"datum,\" meaning a single piece of information","More than one of the above","None of the above ---"],"answer":2,"explanation":"The word \"Data\" is derived from \"datum,\" which means one piece of information."},{"id":5,"q":"What is the plural form of \"datum\"?","options":["Data","Datas","Date","More than one of the above","None of the above ---"],"answer":0,"explanation":"“Data” is the plural form of the singular term “datum.”"},{"id":6,"q":"In computing, what does data represent?","options":["Hardware parts","Non-transferable information","Information that can be translated for processing","More than one of the above","None of the above ---"],"answer":2,"explanation":"In computing, data is information in a format suitable for movement and processing."},{"id":7,"q":"Which of the following statements is true about data?","options":["Data is always in text form","Data cannot be processed","Data is interchangeable and can be processed","More than one of the above","None of the above ---"],"answer":2,"explanation":"Data can be processed, converted, or transformed depending on system requirements."},{"id":8,"q":"How is data used in computing?","options":["As instructions for hardware","For movement and processing of information","To display images only","More than one of the above","None of the above ---"],"answer":1,"explanation":"Data is handled and transferred for processing by computing systems to extract meaningful information."},{"id":9,"q":"Which of the following is NOT typically a form of data?","options":["Bytes","Audio","Smell","More than one of the above","None of the above ---"],"answer":2,"explanation":"Smell cannot be digitally stored or processed as data in usual formats like text, number, or media."},{"id":10,"q":"What does the term \"interchangeable\" mean in relation to data?","options":["Data can change into currency","Data can be converted into other useful forms","Data cannot be stored","More than one of the above","None of the above Here are **30 Multiple Choice Questions (MCQs)** (from **11 to 40**) based on the topic: **\"Properties of Data in a Database and Database Operations\"** Each question includes the option: **d) More than one of the above** **e) None of the above** --- Topic 2 - Properties & Operations of Data in a Database ### **MCQs 11–40: Properties & Operations of Data in a Database** ---"],"answer":1,"explanation":"Interchangeable means data can be changed or transformed into formats suitable for different tasks or processing. Here are the **Answers with Explanations** for MCQs **11 to 40** based on the topic **\"Properties of Data in a Database and Database Operations.\"**"},{"id":11,"q":"Which of the following is a main property of data in a database?","options":["It should be stored temporarily","It must be handwritten","It should be well organized","More than one of the above","None of the above ---"],"answer":2,"explanation":"Data in databases should follow a structured and organized format to ensure easy access, manipulation, and analysis."},{"id":12,"q":"What does it mean when data is well integrated?","options":["Data is broken into parts","Data comes from a single source only","Data from various sources is combined in a consistent manner","More than one of the above","None of the above ---"],"answer":2,"explanation":"Well-integrated data ensures that all related information is combined meaningfully from multiple sources."},{"id":13,"q":"Why is permanent storage of data important in databases?","options":["So it can be deleted quickly","To allow it to be reused later","To share with hackers","More than one of the above","None of the above ---"],"answer":1,"explanation":"Data is stored permanently in databases so it can be accessed and used whenever needed."},{"id":14,"q":"What should happen to data in case of database damage?","options":["It should be lost permanently","It should be archived manually","It should be recoverable","More than one of the above","None of the above ---"],"answer":2,"explanation":"Recoverability ensures that data can be restored in case of hardware or software failure."},{"id":15,"q":"What does resilient data mean?","options":["Data that is soft","Data that can bounce back from failure","Data stored in PDF","More than one of the above","None of the above ---"],"answer":1,"explanation":"Resilient data maintains integrity and is recoverable even after issues like crashes or corruption."},{"id":16,"q":"Data in a database should be:","options":["Accessible only to one user","Shared among different users and apps","Hidden permanently","More than one of the above","None of the above ---"],"answer":1,"explanation":"One of the strengths of a database is sharing data among multiple users and applications securely."},{"id":17,"q":"Which of the following ensures data is accessible?","options":["Printing data","Locking database","Availability when and where needed","More than one of the above","None of the above ---"],"answer":2,"explanation":"Accessibility ensures users can retrieve data on demand."},{"id":18,"q":"Which operation is used to add a new record in the database?","options":["Update","Insert","Delete","More than one of the above","None of the above ---"],"answer":1,"explanation":"Insertion is the database operation for adding new records or data entries."},{"id":19,"q":"What is an example of insertion operation?","options":["Deleting a user","Viewing a table","Adding a phone number to a directory","More than one of the above","None of the above ---"],"answer":2,"explanation":"Adding new contact info is a real-world example of data insertion."},{"id":20,"q":"Which operation is used to change existing data in a database?","options":["Selection","Updation","Deletion","More than one of the above","None of the above ---"],"answer":1,"explanation":"The update operation modifies existing records in the database."},{"id":21,"q":"In which case would an updation operation be useful?","options":["When a new student joins","When surname needs to be changed","When deleting a column","More than one of the above","None of the above ---"],"answer":1,"explanation":"Changing an already stored detail like a surname is an update operation."},{"id":22,"q":"Which operation removes data from the database?","options":["Insert","Update","Delete","More than one of the above","None of the above ---"],"answer":2,"explanation":"Delete removes specific entries or rows from a database."},{"id":23,"q":"What is an example of deletion?","options":["Updating phone number","Searching a record","Removing a person's info from a city directory","More than one of the above","None of the above ---"],"answer":2,"explanation":"This is a clear example of deleting data that is no longer needed."},{"id":24,"q":"What is the purpose of selection in database operations?","options":["Modify data","Retrieve specific data","Erase information","More than one of the above","None of the above ---"],"answer":1,"explanation":"Selection is used to fetch specific records based on criteria."},{"id":25,"q":"Selection is useful when:","options":["You want to view a person’s phone number","You want to delete data","You want to change address","More than one of the above","None of the above ---"],"answer":0,"explanation":"To look up or retrieve information, selection is the appropriate operation."},{"id":26,"q":"Which operation arranges data in a specific order?","options":["Selection","Sorting","Merging","More than one of the above","None of the above ---"],"answer":1,"explanation":"Sorting helps in organizing data in a desired order, often for better readability or retrieval."},{"id":27,"q":"Which sorting order helps in faster retrieval?","options":["Random","Alphabetical","Reverse","More than one of the above","None of the above ---"],"answer":1,"explanation":"Alphabetical order helps users locate records quickly."},{"id":28,"q":"Which of the following is a basic database operation?","options":["Painting","Insertion","Screenshot","More than one of the above","None of the above ---"],"answer":1,"explanation":"Insert, Update, Delete, and Select (CRUD) are the core database operations."},{"id":29,"q":"Which is an advanced operation besides basic CRUD?","options":["Merging","Zooming","Filtering","More than one of the above","None of the above ---"],"answer":0,"explanation":"Merging is used to combine data from multiple sources or tables, which goes beyond CRUD."},{"id":30,"q":"A database must support operations for:","options":["Deleting only","Drawing diagrams","Inserting, updating, and retrieving data","More than one of the above","None of the above ---"],"answer":2,"explanation":"These are essential operations to manage and manipulate data."},{"id":31,"q":"Which of the following is NOT a database operation?","options":["Deletion","Browsing","Sorting","More than one of the above","None of the above ---"],"answer":1,"explanation":"Browsing is a user activity, not a database-specific operation."},{"id":32,"q":"Why is sorting helpful in a database?","options":["To print charts","For faster and easier data retrieval","To add images","More than one of the above","None of the above ---"],"answer":1,"explanation":"Organized data enables quicker access and analysis."},{"id":33,"q":"Which of the following operations is often used before displaying results?","options":["Insertion","Sorting","Updation","More than one of the above","None of the above ---"],"answer":1,"explanation":"Data is often sorted before presenting it to users, such as in reports or views."},{"id":34,"q":"Data must be recoverable in case of:","options":["Successful operation","Power failure or corruption","Print operation","More than one of the above","None of the above ---"],"answer":1,"explanation":"Recovery systems protect data integrity during unexpected failures."},{"id":35,"q":"Which of these examples best represents an “update” operation?","options":["Adding a contact","Viewing call logs","Changing a user’s email","More than one of the above","None of the above ---"],"answer":2,"explanation":"Modifying a stored field like email is an update."},{"id":36,"q":"If a database fails to maintain recoverability, what might happen?","options":["More storage will be available","Data might be lost permanently","Users can access more features","More than one of the above","None of the above ---"],"answer":1,"explanation":"Recovery mechanisms are vital for protecting data."},{"id":37,"q":"What is the key requirement for organizing data in a database?","options":["Random structure","Well-organized structure","Written on paper","More than one of the above","None of the above ---"],"answer":1,"explanation":"A clear structure is essential for efficient database operations."},{"id":38,"q":"When multiple users access the same data, what feature is essential?","options":["Data hiding","Data sharing","Data deletion","More than one of the above","None of the above ---"],"answer":1,"explanation":"Multi-user access requires that the system support data sharing."},{"id":39,"q":"Which of the following actions is part of maintaining a large database?","options":["Searching manually","Performing insertion, update, delete operations","Printing records","More than one of the above","None of the above ---"],"answer":1,"explanation":"These operations are critical for maintaining accuracy and consistency."},{"id":40,"q":"How is merging useful in database operations?","options":["It prints the database","It removes duplicate software","It combines data from different sources","More than one of the above","None of the above Topic - 3 Significance of Database in Real World **MCQs 41 to 60** based on **\"Topic - 3 Significance of Database in Real World\"** ---"],"answer":2,"explanation":"Merging helps integrate data from different tables or databases into one. Here are the **Answers with Explanation** for MCQ **41 to 60** based on the topic: **\"Significance of Database in Real World\"**"},{"id":41,"q":"What was used to manage data before computers were common?","options":["Cloud storage","Manual file system","Spreadsheets","More than one of the above","None of the above ---"],"answer":1,"explanation":"Before the widespread use of computers, data was managed using physical files and folders, manually labeled and stored in cabinets."},{"id":42,"q":"What did the manual file system typically consist of?","options":["Servers and hard drives","Collection of files and folders","Centralized databases","More than one of the above","None of the above ---"],"answer":1,"explanation":"The manual system used labeled folders and physical documents stored in file cabinets."},{"id":43,"q":"How were manual files usually stored?","options":["In computer RAM","In cabinets with labels","On cloud drives","More than one of the above","None of the above ---"],"answer":1,"explanation":"Files and folders were labeled and stored in drawers/cabinets for easy retrieval."},{"id":44,"q":"Why were manual files indexed?","options":["For editing purposes","To make searching faster","For data sharing","More than one of the above","None of the above ---"],"answer":1,"explanation":"Indexing helped in quickly locating specific files in large sets of documents."},{"id":45,"q":"What kind of employee data was stored in folders?","options":["Job details","Salary and leave status","Department","More than one of the above","None of the above ---"],"answer":3,"explanation":"Manual systems stored job details, salary, leave status, etc., organized by categories."},{"id":46,"q":"What was a limitation of manual file systems as organizations grew?","options":["Inaccuracy","Difficult to track data","Cheap to maintain","More than one of the above","None of the above ---"],"answer":1,"explanation":"Manual systems became inefficient and unmanageable as the volume of data increased."},{"id":47,"q":"What became complex in large organizations using manual systems?","options":["Data sharing","Reporting requirements","Communication","More than one of the above","None of the above ---"],"answer":1,"explanation":"Managers found it difficult to generate detailed and accurate reports manually."},{"id":48,"q":"Why was generating reports difficult in manual systems?","options":["Less secure","Time-consuming and hard","Too fast","More than one of the above","None of the above ---"],"answer":1,"explanation":"Manual processes lacked automation, making report generation slow and error- prone."},{"id":49,"q":"What system replaced the manual file system?","options":["Paper registers","File-based system","Analog devices","More than one of the above","None of the above ---"],"answer":1,"explanation":"Computer-based file systems were introduced to make data handling more efficient."},{"id":50,"q":"What is a benefit of file-based systems over manual systems?","options":["Uses more space","Faster data processing","Slower updates","More than one of the above","None of the above ---"],"answer":1,"explanation":"File-based systems automate and speed up data storage, access, and processing."},{"id":51,"q":"What helped in the evolution of large databases?","options":["RAM speed","GUI development","Advanced storage devices","More than one of the above","None of the above ---"],"answer":2,"explanation":"Modern storage systems like SSDs and large-capacity HDDs made handling large data possible."},{"id":52,"q":"File-based systems improved data processing by being:","options":["Manual","Efficient","Confusing","More than one of the above","None of the above ---"],"answer":1,"explanation":"File-based systems reduce manual effort and processing time significantly."},{"id":53,"q":"How were sales department employee files grouped in manual systems?","options":["Randomly","By name only","By job category","More than one of the above","None of the above ---"],"answer":2,"explanation":"Employees were grouped based on job roles (e.g., sales department) for easy organization."},{"id":54,"q":"What was the biggest drawback of manual data management?","options":["Too modern","Costly only","Inefficient for large data","More than one of the above","None of the above ---"],"answer":2,"explanation":"Manual tracking and updating became too complex with increasing data size."},{"id":55,"q":"Why is computer-based storage preferred now?","options":["It supports small databases only","It’s complex to use","It handles large data efficiently","More than one of the above","None of the above ---"],"answer":2,"explanation":"It is scalable, faster, and more reliable than manual systems."},{"id":56,"q":"In the manual file system, what did the process of searching usually require?","options":["Searching serially","Parallel scanning","Digital index","More than one of the above","None of the above ---"],"answer":0,"explanation":"Users had to manually look through files one by one in the absence of automation."},{"id":57,"q":"What was the main reason for moving from manual to computer systems?","options":["Poor security","Lack of networking","Increased complexity in manual tracking","More than one of the above","None of the above ---"],"answer":2,"explanation":"Manual systems became too slow and disorganized for growing data needs."},{"id":58,"q":"Which system offers faster report generation?","options":["Manual system","File-based computer system","Printed logs","More than one of the above","None of the above ---"],"answer":1,"explanation":"Automation and data indexing in computer systems speed up report creation."},{"id":59,"q":"What enabled handling of larger databases over time?","options":["Lower electricity cost","Software piracy","High-capacity storage","More than one of the above","None of the above ---"],"answer":2,"explanation":"Increased storage capacity allowed efficient handling of more extensive databases."},{"id":60,"q":"Manual system works best when data is:","options":["Huge and unstructured","Very limited and simple","Encrypted and compressed","More than one of the above","None of the above Topic 4 - \"What is a Database?(61 to 90)"],"answer":1,"explanation":"Manual systems are only practical for small datasets with minimal complexity. Great! Below are the **Answers with Explanations** for the **MCQs 61 to 90** from the topic: **\"What is a Database?\"**"},{"id":61,"q":"What is a database?","options":["A type of programming language","A collection of random files","An organized collection of data","More than one of the above","None of the above ---"],"answer":2,"explanation":"A database is structured to store and manage large amounts of data efficiently."},{"id":62,"q":"What is the main purpose of a database?","options":["Designing websites","Editing photos","Storing, retrieving, and managing data","More than one of the above","None of the above ---"],"answer":2,"explanation":"Databases allow operations such as inserting, updating, and retrieving data effectively."},{"id":63,"q":"Which of the following helps in organizing data in a database?","options":["Rows","Tables","Columns","More than one of the above","None of the above ---"],"answer":3,"explanation":"Tables, rows, and columns are all essential parts of organizing data in a database."},{"id":64,"q":"What does indexing in a database help with?","options":["Faster data retrieval","Increasing file size","Slowing down queries","More than one of the above","None of the above ---"],"answer":0,"explanation":"Indexing helps locate data quickly without scanning the whole table."},{"id":65,"q":"What is used to access a database?","options":["Image editor","Video player","Database handler/software","More than one of the above","None of the above ---"],"answer":2,"explanation":"DBMS software like MySQL or Oracle is used to access and manage databases."},{"id":66,"q":"How many users can typically access the data created by database software?","options":["Only one user","Unlimited unauthorized users","Multiple authorized users","More than one of the above","None of the above ---"],"answer":2,"explanation":"DBMS allows multiple users to access data concurrently while ensuring security."},{"id":67,"q":"Which of the following is an example of a dynamic website using a database?","options":["Image gallery","Static resume site","Hotel room availability checker","More than one of the above","None of the above ---"],"answer":2,"explanation":"It updates in real-time based on database queries and user input."},{"id":68,"q":"Which language is used to operate on a database?","options":["HTML","CSS","SQL","More than one of the above","None of the above ---"],"answer":2,"explanation":"SQL (Structured Query Language) is used to query and manipulate data in a database."},{"id":69,"q":"SQL stands for:","options":["Simple Query Language","Structured Quick Logic","Structured Query Language","More than one of the above","None of the above ---"],"answer":2,"explanation":"SQL is the standard language for relational database systems."},{"id":70,"q":"Which of the following are examples of database systems?","options":["MySQL","Oracle","PostgreSQL","More than one of the above","None of the above ---"],"answer":3,"explanation":"MySQL, Oracle, and PostgreSQL are all database systems."},{"id":71,"q":"Which component manages data in modern databases?","options":["Operating System","DBMS","Compiler","More than one of the above","None of the above ---"],"answer":1,"explanation":"DBMS is responsible for storing, retrieving, and securing data in modern systems."},{"id":72,"q":"What kind of data can a database store?","options":["Text","Media","Numbers","More than one of the above","None of the above ---"],"answer":3,"explanation":"Databases can store text, numbers, images, and even media."},{"id":73,"q":"What is the full form of DBMS?","options":["Data Backup Management System","Database Management System","Database Monitor System","More than one of the above","None of the above ---"],"answer":1,"explanation":"DBMS is a system software for creating and managing databases."},{"id":74,"q":"Which of the following statements is true about SQL?","options":["It is a markup language","It is used for designing websites","It is used to operate on data in a database","More than one of the above","None of the above ---"],"answer":2,"explanation":"SQL is used for data operations like SELECT, INSERT, UPDATE, DELETE."},{"id":75,"q":"What is meant by the term “tuple” in SQL?","options":["A row in a table","A column in a table","A table","More than one of the above","None of the above ---"],"answer":0,"explanation":"A tuple refers to a single row or record in a relational database."},{"id":76,"q":"Which of these is not a popular database system?","options":["Sybase","Oracle","MongoDB","More than one of the above","None of the above ---"],"answer":4,"explanation":"All mentioned options are popular database systems."},{"id":77,"q":"What role does a database play in dynamic websites?","options":["Only for design","No role","To manage real-time content","More than one of the above","None of the above ---"],"answer":2,"explanation":"Dynamic sites use databases to serve real-time user-specific content."},{"id":78,"q":"In SQL, which clause is used to retrieve data?","options":["GET","PRINT","SELECT","More than one of the above","None of the above ---"],"answer":2,"explanation":"The SELECT statement is used to query and retrieve data from a table."},{"id":79,"q":"Which of these databases is NoSQL?","options":["MySQL","Oracle","MongoDB","More than one of the above","None of the above ---"],"answer":2,"explanation":"MongoDB is a popular NoSQL database used for storing unstructured data."},{"id":80,"q":"In a database, a table is made of:","options":["Rows","Columns","Both rows and columns","More than one of the above","None of the above ---"],"answer":3,"explanation":"Tables consist of both rows and columns."},{"id":81,"q":"The data model where data is stored in tables is called:","options":["Object-Oriented","Hierarchical","Relational","More than one of the above","None of the above ---"],"answer":2,"explanation":"The relational model stores data in tables with rows and columns."},{"id":82,"q":"What is a field in a table?","options":["A column","A row","A table name","More than one of the above","None of the above ---"],"answer":0,"explanation":"A field is a column in a database table, representing one attribute."},{"id":83,"q":"A database schema is:","options":["The name of the database","A command","The structure of the database","More than one of the above","None of the above ---"],"answer":2,"explanation":"Schema defines the structure including tables, fields, and relationships."},{"id":84,"q":"Which of these is used to store large collections of unstructured data?","options":["MongoDB","Oracle","PostgreSQL","More than one of the above","None of the above ---"],"answer":0,"explanation":"MongoDB handles large volumes of unstructured data using documents."},{"id":85,"q":"What is the unit of data in a database?","options":["File","Folder","Tuple","More than one of the above","None of the above ---"],"answer":2,"explanation":"A tuple is a single row or record, the basic unit of data in a relational DB."},{"id":86,"q":"In relational databases, data is stored as:","options":["XML","HTML","Tables","More than one of the above","None of the above ---"],"answer":2,"explanation":"Data is structured in the form of tables made up of rows and columns."},{"id":87,"q":"The term “record” in a table refers to:","options":["Column","Schema","Row","More than one of the above","None of the above ---"],"answer":2,"explanation":"A record or tuple refers to a single row in a table."},{"id":88,"q":"SQL is based on:","options":["HTML","JavaScript","Relational algebra","More than one of the above","None of the above ---"],"answer":2,"explanation":"SQL operations are derived from relational algebra and tuple calculus."},{"id":89,"q":"Which of the following is not a type of database?","options":["Relational","Object-oriented","Hierarchical","Algorithmic","None of the above ---"],"answer":3,"explanation":"Algorithmic is not a database type. Relational, Object-oriented, and Hierarchical are valid types."},{"id":90,"q":"What does DBMS help prevent?","options":["Data security","Data loss","Data redundancy","More than one of the above","None of the above Topic 5 - Evolution of Databases/ File-Based **MCQ set from 91 to 110 ---"],"answer":3,"explanation":"DBMS helps prevent data redundancy, ensures security, and reduces data loss. Great! Below are the **Answers with Explanation** for MCQs **91 to 110** based on the topic **Evolution of Databases**:"},{"id":91,"q":"What is the earliest form of database system?","options":["Relational database","Object-oriented database","File-based database","More than one of the above","None of the above ---"],"answer":2,"explanation":"The earliest database systems were file-based, where data was stored in flat files without any relation between them."},{"id":92,"q":"When were file-based databases first introduced?","options":["1950","1968","1980","More than one of the above","None of the above ---"],"answer":1,"explanation":"File-based systems emerged in 1968 as the first step in the evolution of databases."},{"id":93,"q":"In a file-based system, data is stored as:","options":["Tables","Flat files","Objects","More than one of the above","None of the above ---"],"answer":1,"explanation":"A file-based system stores data in flat files, which are simple text or binary files with no structural relationship."},{"id":94,"q":"What type of programming was needed to manage file-based databases?","options":["SQL","4GL","Third-generation languages like COBOL and BASIC","More than one of the above","None of the above ---"],"answer":2,"explanation":"These languages were widely used to write programs that could access and manipulate data in flat file systems."},{"id":95,"q":"Which of the following is an advantage of file systems?","options":["Access methods like sequential, indexed, and random","Supports complex queries","Strong security","More than one of the above","None of the above ---"],"answer":0,"explanation":"File systems supported different access techniques such as sequential, indexed, and random access for flexibility."},{"id":96,"q":"One limitation of file-based systems is:","options":["Difficult data sharing","High-level abstraction","Easy maintenance","More than one of the above","None of the above ---"],"answer":0,"explanation":"In file-based systems, sharing data among users or applications was challenging due to isolated data storage."},{"id":97,"q":"Which generation followed the file-based system?","options":["Network model","Object-oriented model","Flat-file model","More than one of the above","None of the above ---"],"answer":0,"explanation":"After file-based systems, the network database model was introduced to better manage relationships between data."},{"id":98,"q":"What do file-based systems lack?","options":["Structured format","Data redundancy","Security features","More than one of the above","None of the above ---"],"answer":3,"explanation":"File-based systems lack structured format, security features, and have redundancy issues."},{"id":99,"q":"File-based systems required:","options":["GUI-based tools","Database schema","Manual programming logic","More than one of the above","None of the above ---"],"answer":2,"explanation":"Unlike modern DBMS, file-based systems needed manual code for every data operation like storing or retrieving."},{"id":100,"q":"What is a common data access method in file-based systems?","options":["Select query","Direct linking","Sequential access","More than one of the above","None of the above ---"],"answer":2,"explanation":"Data in file systems was often accessed sequentially, reading one record after another."},{"id":101,"q":"Which of these is NOT a file access method in early databases?","options":["Sequential","Indexed","Random","Layered","None of the above ---"],"answer":3,"explanation":"Layered access is not a recognized file access method. Valid methods include sequential, indexed, and random."},{"id":102,"q":"Flat file systems can be best described as:","options":["A system with relational links","A system with minimal structure","A system with advanced security","More than one of the above","None of the above ---"],"answer":1,"explanation":"Flat file systems do not support relationships or complex data structures — they’re simple and unstructured."},{"id":103,"q":"What was a major drawback of flat file systems?","options":["Data could be easily shared","Reports were easy to generate","Data was isolated","More than one of the above","None of the above ---"],"answer":2,"explanation":"Flat file systems store data separately, making it hard to access and maintain across multiple applications."},{"id":104,"q":"Which of the following required heavy coding effort in flat file systems?","options":["GUI design","Query optimization","Report generation","More than one of the above","None of the above ---"],"answer":2,"explanation":"Without query languages or built-in tools, developers had to write long programs to generate reports."},{"id":105,"q":"What method improved data organization after flat file systems?","options":["Relational model","Hierarchical model","Object-relational model","More than one of the above","None of the above ---"],"answer":3,"explanation":"Both the relational and hierarchical models were improvements over the file- based approach."},{"id":106,"q":"Which programming languages were commonly used with file-based systems?","options":["HTML and CSS","Java and Python","COBOL and BASIC","More than one of the above","None of the above ---"],"answer":2,"explanation":"These third-generation programming languages were widely used to interact with data in file systems."},{"id":107,"q":"What was a key feature missing in file-based systems?","options":["Backup and recovery","Manual sorting","File access","More than one of the above","None of the above ---"],"answer":0,"explanation":"File-based systems lacked built-in mechanisms for automatic backup or recovery in case of failure."},{"id":108,"q":"File-based databases primarily focus on:","options":["Data interrelation","Isolated record keeping","ACID properties","More than one of the above","None of the above ---"],"answer":1,"explanation":"Data in file-based systems is usually stored independently, without relations or integration."},{"id":109,"q":"The manual file system was replaced by file-based databases mainly because:","options":["Manual systems had more storage","Flat files were error-free","File-based systems improved data search","More than one of the above","None of the above ---"],"answer":2,"explanation":"Compared to manual systems, file-based systems allowed faster and more efficient data retrieval."},{"id":110,"q":"What was one reason for transitioning from file-based to DBMS?","options":["Flat files offered high scalability","File systems were fully automated","Complex reporting was hard in file systems","More than one of the above","None of the above **MCQs 111 to 120**, ** Topic 6 - Hierarchical Data Model**, with full options: ---"],"answer":2,"explanation":"Generating reports in file-based systems was time-consuming and required complex code, which DBMS solved. Great! Here are the **answers with explanations** for **MCQ 111 to 120** based on the **Hierarchical Data Model**:"},{"id":111,"q":"What is the time period of the Hierarchical Database Model era?","options":["1950–1965","1968–1980","1980–1995","More than one of the above","None of the above ---"],"answer":1,"explanation":"The Hierarchical model became popular between 1968 and 1980, starting with IBM's IMS system."},{"id":112,"q":"Which company introduced the first hierarchical database system?","options":["Microsoft","Oracle","IBM","More than one of the above","None of the above ---"],"answer":2,"explanation":"IBM introduced the IMS (Information Management System), which was the first hierarchical database system."},{"id":113,"q":"What was the name of IBM's first hierarchical DBMS?","options":["RDBMS","IMS","MySQL","More than one of the above","None of the above ---"],"answer":1,"explanation":"IMS stands for Information Management System and was IBM’s first hierarchical DBMS."},{"id":114,"q":"What does IMS stand for?","options":["Information Mapping System","Information Modeling Structure","Information Management System","More than one of the above","None of the above ---"],"answer":2,"explanation":"IMS stands for *Information Management System*, a product developed by IBM for hierarchical databases."},{"id":115,"q":"How are files related in a hierarchical database model?","options":["In tabular form","In a mesh","In a parent/child manner","More than one of the above","None of the above ---"],"answer":2,"explanation":"Hierarchical databases organize data in a tree-like structure with parent-child relationships."},{"id":116,"q":"The hierarchical model resembles which data structure?","options":["Array","Tree","Graph","More than one of the above","None of the above ---"],"answer":1,"explanation":"It is structured like a tree, where each record has a single parent and can have multiple children."},{"id":117,"q":"What type of access does the hierarchical model support?","options":["Direct access","Random access","Sequential upward/downward access","More than one of the above","None of the above ---"],"answer":2,"explanation":"The hierarchical model requires traversing from the top (root) down through each level — making it sequential."},{"id":118,"q":"What is a limitation of the hierarchical data model?","options":["Cannot handle many-to-many relationships","Cannot store numerical data","Cannot store string data","More than one of the above","None of the above ---"],"answer":0,"explanation":"It only supports one-to-many (parent-child) relationships. Many-to-many relationships are not easily modeled."},{"id":119,"q":"In the hierarchical model, each child can have:","options":["No parent","Multiple parents","Only one parent","More than one of the above","None of the above ---"],"answer":2,"explanation":"In this model, each child node is connected to only one parent, limiting flexibility."},{"id":120,"q":"Which real-world system resembles a hierarchical model?","options":["Telephone directory","Library catalog","Organizational structure","More than one of the above","None of the above Topic 7 - Merits of Hierarchical Model Here are **MCQs 121 to 135** based on the **Merits of Hierarchical Model**,"],"answer":2,"explanation":"An organizational chart with departments, managers, and employees reflects a hierarchical structure well. Here are the **Answers with Explanations** for **MCQs 121 to 135** based on the **Merits of the Hierarchical Model**:"},{"id":121,"q":"What is one of the key advantages of the hierarchical model?","options":["Complex structure","Simplicity","No structure","More than one of the above","None of the above ---"],"answer":1,"explanation":"The parent-child structure makes it easy to understand and navigate, making operations like insertion and deletion simpler."},{"id":122,"q":"How are records linked in the hierarchical model?","options":["Randomly","In parent-child relationships","By color","More than one of the above","None of the above ---"],"answer":1,"explanation":"This model is based on a tree structure where data is connected through a hierarchy—each child has one parent."},{"id":123,"q":"In the hierarchical model, insertion and deletion operations are easy due to:","options":["Array storage","Tree-like structure","Hashing","More than one of the above","None of the above ---"],"answer":1,"explanation":"Operations are easy because of the structured and predictable parent-child relationships."},{"id":124,"q":"Which of the following is a benefit of parent-child linkage in a hierarchical model?","options":["Redundant data","Poor performance","Data integrity","More than one of the above","None of the above ---"],"answer":2,"explanation":"Parent-child linkage ensures that data is consistent and valid, supporting integrity across related records."},{"id":125,"q":"How is data integrity maintained in the hierarchical model?","options":["Through redundancy","Through parent-child links","By using logs","More than one of the above","None of the above ---"],"answer":1,"explanation":"Because each child is directly associated with a parent, data remains consistent and easier to trace."},{"id":126,"q":"In a hierarchical model, a child can be accessed through:","options":["Internet connection","Root directory","Its parent node","More than one of the above","None of the above ---"],"answer":2,"explanation":"Child records are always linked to their respective parents, making access hierarchical."},{"id":127,"q":"What must be searched first before deleting a node in the hierarchical model?","options":["Leaf node","Root node","Parent node","More than one of the above","None of the above ---"],"answer":2,"explanation":"The structure requires locating the parent before removing the child to preserve the hierarchy."},{"id":128,"q":"What is an outcome of having to find the parent before deleting a child node?","options":["Easier access","Maintains data security","Slower data entry","More than one of the above","None of the above ---"],"answer":1,"explanation":"Requiring access to the parent before deleting a child helps prevent accidental or unauthorized data loss."},{"id":129,"q":"How does the hierarchical model maintain data security?","options":["Encrypting data","Hiding the database","By controlling node access via parent","More than one of the above","None of the above ---"],"answer":2,"explanation":"Since data access flows through the parent, only authorized users can reach child data."},{"id":130,"q":"Efficiency in the hierarchical model is achieved through:","options":["1:1 relationships","1\\:N relationships","Random access","More than one of the above","None of the above ---"],"answer":1,"explanation":"These one-to-many relationships allow for fast access and better performance when dealing with large volumes of data."},{"id":131,"q":"The hierarchical model is most efficient when:","options":["There are very few records","There are many records","Records are images","More than one of the above","None of the above ---"],"answer":1,"explanation":"The model is optimized for large datasets with a clear hierarchical relationship."},{"id":132,"q":"Which feature ensures high efficiency in managing large data in the hierarchical model?","options":["Backup feature","One-to-many relationships","Data compression","More than one of the above","None of the above ---"],"answer":1,"explanation":"The hierarchical model performs well when a single parent node has many children—this speeds up access and retrieval."},{"id":133,"q":"What makes insertion easier in the hierarchical model?","options":["Sequential list","Parent-child linkage","No primary keys","More than one of the above","None of the above ---"],"answer":1,"explanation":"This direct linkage means new records can be added under a parent node without complex joins."},{"id":134,"q":"The tree-like structure in hierarchical models supports:","options":["Complex many-to-many relationships","Simple parent-child relationships","No relationships","More than one of the above","None of the above ---"],"answer":1,"explanation":"This structure is inherently hierarchical and best supports one-to-many (1\\:N) parent-child relations."},{"id":135,"q":"Which of the following is NOT a merit of the hierarchical model?","options":["Simplicity","Data integrity","Data redundancy","More than one of the above","None of the above Topic 8 - Demerits of Hierarchical Model Here are **MCQs 136 to 150** based on the **Demerits of Hierarchical Model**, ---"],"answer":2,"explanation":"Redundancy is generally a disadvantage in databases; the hierarchical model aims to reduce it through its structure. Here are the **answers with explanations** for **MCQs 136 to 150** based on the **Demerits of Hierarchical Model**:"},{"id":136,"q":"Which major limitation of the hierarchical model makes it unsuitable for real-world relationships?","options":["Cost","Speed","Flexibility","More than one of the above","None of the above ---"],"answer":3,"explanation":"Hierarchical models can only handle 1\\:N relationships and lack flexibility, making them unsuitable for real-world many-to-many relationships."},{"id":137,"q":"What type of relationship does the hierarchical model support?","options":["Many-to-Many","One-to-One","One-to-Many (1\\:N)","More than one of the above","None of the above ---"],"answer":2,"explanation":"Hierarchical databases organize data in a tree-like structure where each child has only one parent — a classic 1\\:N relationship."},{"id":138,"q":"What happens when you modify the database structure in a hierarchical model?","options":["No change needed","Only admin access is updated","Whole application must be updated","More than one of the above","None of the above ---"],"answer":2,"explanation":"Hierarchical models lack data independence, so structure changes require updating all dependent application logic."},{"id":139,"q":"What does the hierarchical model lack in terms of data handling independence?","options":["Memory access","File reading","Data independence","More than one of the above","None of the above ---"],"answer":2,"explanation":"Structural changes to the database affect the entire application, indicating a lack of data independence."},{"id":140,"q":"Why is querying complex in hierarchical databases?","options":["Simple indexing","Use of only root node","Physical link traversal","More than one of the above","None of the above ---"],"answer":2,"explanation":"To retrieve data, one must follow a specific physical path from the root node, making queries more difficult."},{"id":141,"q":"In a hierarchical model, how is data accessed?","options":["Through GUI only","Direct search in files","From root to child node","More than one of the above","None of the above ---"],"answer":2,"explanation":"Data retrieval starts at the root and follows a defined path to the desired child node."},{"id":142,"q":"Which is a major issue while inserting or deleting data in the hierarchical model?","options":["No table support","Data Manipulation Problem","No query support","More than one of the above","None of the above ---"],"answer":1,"explanation":"Operations like insertions and deletions are difficult due to rigid structure and dependency on parent-child links."},{"id":143,"q":"The lack of standards in hierarchical model design results in:","options":["Faster results","Inconsistent design","Clearer structure","More than one of the above","None of the above ---"],"answer":1,"explanation":"Without formal design standards, different implementations may vary, leading to inconsistencies and confusion."},{"id":144,"q":"Which of the following is NOT supported efficiently by hierarchical databases?","options":["Many-to-Many relationships","One-to-Many relationships","Simple lookups","More than one of the above","None of the above ---"],"answer":0,"explanation":"Hierarchical databases support only one-to-many relationships, not complex many-to-many associations."},{"id":145,"q":"What causes the hierarchical model to be inflexible?","options":["1\\:N structure only","Flat file dependencies","Standardization","More than one of the above","None of the above ---"],"answer":0,"explanation":"The rigid tree-like format of hierarchical models supports only one type of relationship, limiting flexibility."},{"id":146,"q":"Why is changing a database structure difficult in the hierarchical model?","options":["The structure is read-only","Requires new hardware","Entire application logic must change","More than one of the above","None of the above ---"],"answer":2,"explanation":"A change in the data structure impacts the whole application because of the tight coupling between data and programs."},{"id":147,"q":"Lack of structural independence in the hierarchical model affects:","options":["Code simplicity","UI design","Data updates and application logic","More than one of the above","None of the above ---"],"answer":2,"explanation":"Structural changes demand modifications in application logic, increasing development time and complexity."},{"id":148,"q":"Complex implementation in the hierarchical model is due to:","options":["Use of AI","Extensive query language","Parent-child dependency and link traversal","More than one of the above","None of the above ---"],"answer":2,"explanation":"Navigating through data requires traversal through a strict tree structure, making implementation complex."},{"id":149,"q":"In hierarchical databases, what problem arises due to lack of many-to-many relationship support?","options":["Data is stored in Excel only","Slower deletion","Redundant data and inefficiency","More than one of the above","None of the above ---"],"answer":2,"explanation":"In the absence of many-to-many support, data must be duplicated, which leads to redundancy and inefficiency."},{"id":150,"q":"What is one major drawback of data access in a hierarchical model?","options":["Random access of child node is possible","Parent node must be located first","Sorting is automatic","More than one of the above","None of the above"],"answer":1,"explanation":"Accessing a child requires traversing from the root to the parent node, making data retrieval cumbersome."}]
+const sections=[{"name":"Section A — Basic / Direct NCERT Questions","start":1,"end":35},{"name":"Section B — Concept Based Questions","start":36,"end":70},{"name":"Section C — Statement Based Questions","start":71,"end":105},{"name":"Section D — Assertion–Reason Questions","start":106,"end":125},{"name":"Section E — Case / Scenario Based Questions","start":126,"end":150}];
+
+let selectedSection=null;
+let quiz=[];
+let currentIndex=0;
+let answers={};
+let checked={};
+let reviewMode=false;
+
+function goHome(){
+ document.getElementById("home").classList.remove("hidden");
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.add("hidden");
+ selectedSection=null;quiz=[];currentIndex=0;answers={};checked={};reviewMode=false;
+ window.scrollTo(0,0);
+}
+
+function renderSections(){
+ const box=document.getElementById("sectionsList");
+ box.innerHTML="";
+ sections.forEach((s,i)=>{
+  const d=document.createElement("div");
+  d.className="section";
+  d.innerHTML=`<div class="section-title">${s.name}</div><div class="section-count">${s.end-s.start+1} Questions</div>`;
+  d.onclick=()=>startSection(i);
+  box.appendChild(d);
+ });
+}
+
+function startSection(i){
+ selectedSection=sections[i];
+ const list=questions.slice(selectedSection.start-1,selectedSection.end);
+ document.getElementById("home").classList.add("hidden");
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("setup").classList.remove("hidden");
+
+ document.getElementById("setupTitle").textContent=selectedSection.name;
+ document.getElementById("setupInfo").textContent=`${list.length} MCQs available`;
+
+ const sel=document.getElementById("questionCount");
+ sel.innerHTML="";
+ [5,10,20,list.length].forEach(n=>{
+  if(n<=list.length && !Array.from(sel.options).some(o=>Number(o.value)===n)){
+   const o=document.createElement("option");
+   o.value=n;
+   o.textContent=n===list.length?`All ${n} Questions`:`${n} Questions`;
+   sel.appendChild(o);
+  }
+ });
+ // IMPORTANT: default हमेशा पूरे section की question count रहेगी
+ sel.value=String(list.length);
+ window.scrollTo(0,0);
+}
+
+function startPractice(){
+ const list=questions.slice(selectedSection.start-1,selectedSection.end)
+   .map((q,i)=>({...q,_id:selectedSection.start+i}));
+ const count=Number(document.getElementById("questionCount").value);
+
+ quiz=list.slice(0,count);
+ currentIndex=0;
+ answers={};
+ checked={};
+ reviewMode=false;
+
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("quiz").classList.remove("hidden");
+ render();
+ window.scrollTo(0,0);
+}
+
+function render(){
+ const q=quiz[currentIndex];
+ if(!q)return;
+
+ document.getElementById("sectionName").textContent=selectedSection.name;
+ document.getElementById("counter").textContent=`Question ${currentIndex+1} of ${quiz.length}`;
+ document.getElementById("attempted").textContent=`Attempted: ${Object.keys(answers).length}/${quiz.length}`;
+ document.getElementById("question").textContent=`Q${q._id}. ${q.q}`;
+
+ const box=document.getElementById("options");
+ box.innerHTML="";
+ document.getElementById("feedback").textContent="";
+ document.getElementById("explanation").classList.add("hidden");
+ document.getElementById("explanation").innerHTML="";
+
+ q.options.forEach((opt,i)=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="option";
+  b.innerHTML=`<b>${String.fromCharCode(65+i)}.</b> ${opt}`;
+
+  const selected=answers[q._id];
+  if(selected===i)b.classList.add("selected");
+
+  if(checked[q._id] || reviewMode){
+   b.disabled=true;
+   if(i===q.answer)b.classList.add("correct");
+   if(selected===i && i!==q.answer)b.classList.add("wrong");
+  }else{
+   b.onclick=()=>{
+    answers[q._id]=i;
+    render();
+   };
+  }
+  box.appendChild(b);
+ });
+
+ if(checked[q._id] || reviewMode){
+  const f=document.getElementById("feedback");
+  if(selectedAnswerExists(q)){
+   f.textContent=answers[q._id]===q.answer
+     ?"✅ सही उत्तर!"
+     :`❌ गलत। सही उत्तर: ${String.fromCharCode(65+q.answer)}`;
+   f.style.color=answers[q._id]===q.answer?"#15803d":"#b91c1c";
+  }else{
+   f.textContent=`⚪ Unattempted. सही उत्तर: ${String.fromCharCode(65+q.answer)}`;
+   f.style.color="#536579";
+  }
+
+  document.getElementById("explanation").innerHTML=
+    `<div class="explanation-title">💡 Explanation</div>${formatExplanation(q.explanation)}`;
+  document.getElementById("explanation").classList.remove("hidden");
+ }
+
+ renderPalette();
+ document.getElementById("prevBtn").disabled=currentIndex===0;
+ document.getElementById("nextBtn").disabled=currentIndex===quiz.length-1;
+ document.getElementById("checkBtn").disabled=reviewMode || !!checked[q._id] || answers[q._id]===undefined;
+ document.getElementById("submitBtn").style.display=reviewMode?"none":"inline-block";
+}
+
+function selectedAnswerExists(q){
+ return answers[q._id]!==undefined;
+}
+
+function formatExplanation(s){
+ return s.replace(/\n/g,"<br>");
+}
+
+function renderPalette(){
+ const p=document.getElementById("palette");
+ p.innerHTML="<h3>Question Palette</h3>";
+ const g=document.createElement("div");
+ g.className="pal-grid";
+
+ quiz.forEach((q,i)=>{
+  const b=document.createElement("button");
+  b.className="pal";
+  b.type="button";
+  b.textContent=q._id;
+  if(i===currentIndex)b.classList.add("active");
+  if(answers[q._id]!==undefined)b.classList.add("done");
+  b.onclick=()=>{
+   currentIndex=i;
+   render();
+   window.scrollTo(0,0);
+  };
+  g.appendChild(b);
+ });
+ p.appendChild(g);
+}
+
+document.getElementById("prevBtn").onclick=()=>{
+ if(currentIndex>0){
+  currentIndex--;
+  render();
+  window.scrollTo(0,0);
+ }
+};
+
+document.getElementById("nextBtn").onclick=()=>{
+ if(currentIndex<quiz.length-1){
+  currentIndex++;
+  render();
+  window.scrollTo(0,0);
+ }
+};
+
+document.getElementById("checkBtn").onclick=()=>{
+ const q=quiz[currentIndex];
+ if(answers[q._id]===undefined)return;
+ checked[q._id]=true;
+ render();
+};
+
+document.getElementById("submitBtn").onclick=()=>{
+ if(confirm("क्या आप अपना test submit करना चाहते हैं?"))showResult();
+};
+
+function showResult(){
+ let correct=0,attempted=Object.keys(answers).length;
+ quiz.forEach(q=>{
+  if(answers[q._id]===q.answer)correct++;
+ });
+ let wrong=Object.keys(answers).filter(id=>{
+  const q=quiz.find(x=>String(x._id)===String(id));
+  return q && answers[id]!==q.answer;
+ }).length;
+
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+
+ document.getElementById("resultText").innerHTML=
+ `<div><b>Score:</b> ${correct} / ${quiz.length}</div>
+  <div>🟢 Correct: ${correct}</div>
+  <div>🔴 Wrong: ${wrong}</div>
+  <div>⚪ Unattempted: ${quiz.length-attempted}</div>
+  <div>📊 Attempted: ${attempted}</div>`;
+
+ window.scrollTo(0,0);
+}
+
+document.getElementById("reviewBtn").onclick=()=>{
+ reviewMode=true;
+ currentIndex=0;
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("quiz").classList.remove("hidden");
+ render();
+ window.scrollTo(0,0);
+};
+
+// Keyboard shortcuts: N = Next, P = Previous
+document.addEventListener("keydown",(e)=>{
+  const tag=document.activeElement?.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+  const key=e.key.toLowerCase();
+
+  if(key==="n" && currentIndex<quiz.length-1){
+    e.preventDefault();
+    currentIndex++;
+    render();
+    window.scrollTo(0,0);
+  }
+
+  if(key==="p" && currentIndex>0){
+    e.preventDefault();
+    currentIndex--;
+    render();
+    window.scrollTo(0,0);
+  }
+});
+
+document.getElementById("homeBtn").onclick=goHome;
+
+renderSections();
+</script>
+</body>
+</html>

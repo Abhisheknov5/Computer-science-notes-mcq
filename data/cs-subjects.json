@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "createdAt": "2026-09-29T10:28:21.652Z",
+      "code": "OPPPS",
+      "icon": "📘",
+      "name": "OPPS",
+      "id": "opps",
+      "source": "admin"
+    },
+    {
+      "createdAt": "2026-09-29T13:51:48.742Z",
+      "code": "CPP",
+      "icon": "📘",
+      "name": "Cpp",
+      "id": "cpp",
+      "source": "admin"
+    },
+    {
+      "id": "sql",
+      "name": "Sql",
+      "code": "SQL",
+      "icon": "📘",
+      "createdAt": "2026-09-29T14:24:01.669Z",
+      "source": "admin"
+    }
+  ]
+}

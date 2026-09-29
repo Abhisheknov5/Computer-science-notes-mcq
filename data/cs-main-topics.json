@@ -1,0 +1,54 @@
+{
+  "items": [
+    {
+      "id": "cs-main-1790631706564-15fec767836e",
+      "subject": "dbms",
+      "chapterNumber": 1,
+      "title": "DBMS Tutorial",
+      "order": 1,
+      "createdAt": "2026-09-28T21:41:46.564Z",
+      "updatedAt": "2026-09-28T21:41:46.564Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-main-1790632093034-6d8410736528",
+      "subject": "ai",
+      "chapterNumber": 1,
+      "title": "Artificial Intelligence",
+      "order": 1,
+      "createdAt": "2026-09-28T21:48:13.034Z",
+      "updatedAt": "2026-09-28T21:48:13.034Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-main-1790690178648-852dda668543",
+      "subject": "cpp",
+      "chapterNumber": 1,
+      "title": "C++ Tutorial",
+      "order": 1,
+      "createdAt": "2026-09-29T13:56:18.648Z",
+      "updatedAt": "2026-09-29T13:56:18.648Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-main-1790690531988-724b656a32d2",
+      "subject": "sql",
+      "chapterNumber": 1,
+      "title": "SQL Tutorial",
+      "order": 1,
+      "createdAt": "2026-09-29T14:02:11.988Z",
+      "updatedAt": "2026-09-29T14:02:11.988Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-main-1790691875069-689dec74ace7",
+      "subject": "sql",
+      "chapterNumber": 1,
+      "title": "SQL Database",
+      "order": 2,
+      "createdAt": "2026-09-29T14:24:35.069Z",
+      "updatedAt": "2026-09-29T14:24:35.069Z",
+      "source": "admin"
+    }
+  ]
+}

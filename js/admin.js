@@ -2,6 +2,10 @@
 
 let currentSubject = "";
 let currentChapter = null;
+let currentMainTopic = null;
+let currentSubtopic = null;
+let csMainTopicsCache = [];
+let csSubtopicsCache = [];
 let importedQuestions = [];
 let importedData = null;
 
@@ -37,6 +41,30 @@ const subjectNameMap = {
     "TOC": "Theory of Computation (TOC)"
 };
 
+const mainTopicPlaceholderMap = {
+    "AI": "Main Topic Title (e.g. Machine Learning, Expert Systems)",
+    "CN": "Main Topic Title (e.g. OSI Model, Network Topology)",
+    "DSA": "Main Topic Title (e.g. Arrays, Linked Lists)",
+    "DBMS": "Main Topic Title (e.g. DBMS Tutorial, Data Modeling)",
+    "DE": "Main Topic Title (e.g. Number Systems, Logic Gates)",
+    "E-Commerce": "Main Topic Title (e.g. E-Commerce Models, Online Payment)",
+    "IoT": "Main Topic Title (e.g. IoT Architecture, Sensors)",
+    "Multimedia": "Main Topic Title (e.g. Multimedia Basics, Image Processing)",
+    "OOPS": "Main Topic Title (e.g. Classes & Objects, Inheritance)",
+    "OS": "Main Topic Title (e.g. Process Management, Memory Management)",
+    "Software-Engineering": "Main Topic Title (e.g. SDLC, Software Testing)",
+    "TOC": "Main Topic Title (e.g. Finite Automata, Regular Expressions)"
+};
+
+function updateMainTopicPlaceholder(){
+    const input=getElementOptional("mainTopicTitle");
+    if(!input) return;
+
+    input.placeholder = currentSubject
+        ? (mainTopicPlaceholderMap[currentSubject] || "Main Topic Title")
+        : "Main Topic Title (select a subject first)";
+}
+
 function getElement(id) {
     const el=document.getElementById(id);
     if(!el) throw new Error(`HTML में "${id}" element नहीं मिला।`);
@@ -52,7 +80,13 @@ function getElementOptional(id){
 }
 
 function selectSubject(subject){
+    resetSimpleWorkflow();
     currentSubject=subject;
+    currentChapter=1;
+    currentMainTopic=null;
+    currentSubtopic=null;
+    csMainTopicsCache=[];
+    csSubtopicsCache=[];
 
     document.querySelectorAll(".subject-card").forEach(card=>{
         card.classList.toggle("active",card.dataset.subject===subject);
@@ -74,12 +108,16 @@ function selectSubject(subject){
     const mcqCount=getElementOptional("mcqCountBadge");
     if(mcqCount) mcqCount.textContent="0 MCQ Sets";
 
+    // Main Topics are the first level inside a Subject.
+    loadCSMainTopics(1);
+
     const notesUrl=getElementOptional("notesUrl");
     if(notesUrl) notesUrl.value="";
 
     const notesMessage=getElementOptional("notesMessage");
     if(notesMessage) notesMessage.style.display="none";
 
+    updateMainTopicPlaceholder();
     updateSelectionUI();
 }
 
@@ -91,38 +129,34 @@ window.selectSubjectCard=function(subject){
 window.selectSubject=selectSubject;
 
 function updateSelectionUI(){
-    const chapterInput=getElementOptional("chapterNumber");
-
-    /*
-     * Current CS Admin UI no longer has a Chapter Number input.
-     * The server assigns chapter numbers automatically.
-     */
-    if(chapterInput){
-        const chapterValue=chapterInput.value.trim();
-        currentChapter=chapterValue?Number(chapterValue):null;
-    }
+    // Chapter is an internal compatibility bucket only; users never manage it here.
+    currentChapter=Number(currentChapter||1);
 
     const subjectText=currentSubject
         ? (subjectNameMap[currentSubject]||currentSubject)
         : "Select Subject";
 
-    const chapterText=currentChapter&&currentChapter>0
-        ? `Topic ${currentChapter}`
-        : "";
+    updateMainTopicPlaceholder();
+
+    const chapterText="";
 
     const title=getElementOptional("currentSubjectTitle");
     if(title) title.textContent=subjectText;
 
     const badge=getElementOptional("selectionBadge");
-    if(badge) badge.textContent=chapterText
-        ? `${subjectText} • ${chapterText}`
-        : subjectText;
+    if(badge) badge.textContent=subjectText;
 
     const uploadSubject=getElementOptional("uploadSubjectText");
     if(uploadSubject) uploadSubject.textContent=currentSubject?subjectText:"—";
 
     const uploadChapter=getElementOptional("uploadChapterText");
     if(uploadChapter) uploadChapter.textContent=currentChapter||"—";
+
+    const uploadMainTopic=getElementOptional("uploadMainTopicText");
+    if(uploadMainTopic) uploadMainTopic.textContent=currentMainTopic?.title||"—";
+
+    const uploadSubtopic=getElementOptional("uploadSubtopicText");
+    if(uploadSubtopic) uploadSubtopic.textContent=currentSubtopic?.title||"—";
 
     const description=getElementOptional("listDescription");
     if(description){
@@ -132,7 +166,7 @@ function updateSelectionUI(){
     }
 }
 
-const chapterNumberInput=getElementOptional("chapterNumber");
+const chapterNumberInput=null;
 if(chapterNumberInput){
     chapterNumberInput.addEventListener("input",()=>{
         updateSelectionUI();
@@ -189,8 +223,9 @@ async function logout(){try{await fetch("/api/owner/logout",{method:"POST"});}ca
 
 function getManagementInputs(){
     if(!currentSubject||!subjectIdMap[currentSubject]) throw new Error("Pehle Subject select karein.");
-    if(!currentChapter||currentChapter<1) throw new Error("Pehle Topic save/select karein.");
-    return {subject:subjectIdMap[currentSubject],chapterNumber:currentChapter};
+    // Chapter is kept internally for backward compatibility; the admin UI does not expose it.
+    const chapterNumber=Number(currentChapter||1);
+    return {subject:subjectIdMap[currentSubject],chapterNumber};
 }
 
 async function saveChapter(){
@@ -246,124 +281,70 @@ async function loadNotesLink(){let inputs;try{inputs=getNotesInputs();}catch(e){
 async function deleteNotesLink(){let inputs;try{inputs=getNotesInputs();}catch(e){showMessage("notesMessage",e.message,"error");return;}if(!confirm(`Kya aap ${currentSubject} ka Notes folder link delete karna chahte hain?`))return;try{const r=await fetch("/api/cs/subject-notes",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)});const d=await r.json();if(!r.ok||!d.success){showMessage("notesMessage",d.message||"Notes delete failed.","error");return;}getElement("notesUrl").value="";showMessage("notesMessage","✅ Notes folder link delete ho gaya.","success");notifyChapterListChanged();}catch{showMessage("notesMessage","Server se connection nahi ho raha.","error");}}
 
 async function loadQuizzes(){
-    if(!currentSubject||!subjectIdMap[currentSubject]){
-        getElement("quizList").innerHTML=
-            `<div class="empty">Pehle Subject select karein.</div>`;
-        getElement("mcqCountBadge").textContent="0 MCQ Sets";
+    const list=getElementOptional("quizList");
+    const badge=getElementOptional("mcqCountBadge");
+    if(!list) return;
+
+    if(!currentSubject||!currentMainTopic||!currentSubtopic){
+        list.innerHTML='<div class="empty">Pehle Subtopic select karein.</div>';
+        if(badge) badge.textContent="0 MCQ Sets";
         return;
     }
 
-    const list=getElement("quizList");
-    list.innerHTML="<div class='empty'>Loading Topics and MCQ...</div>";
-    getElement("mcqCountBadge").textContent="0 MCQ Sets";
+    list.innerHTML='<div class="empty">Loading MCQ Sets...</div>';
+    if(badge) badge.textContent="0 MCQ Sets";
 
+    const subjectId=subjectIdMap[currentSubject];
+    const chapterNumber=Number(currentChapter||1);
     try{
-        const subjectId=subjectIdMap[currentSubject];
-
-        const r=await fetch(
-            `/api/cs/chapters/${encodeURIComponent(subjectId)}`,
-            {cache:"no-store"}
-        );
+        const r=await fetch(`/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${chapterNumber}?subtopicId=${encodeURIComponent(currentSubtopic.id)}`,{cache:"no-store"});
         const d=await r.json();
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
 
-        if(!r.ok||!d.success){
-            throw new Error(d.message||"Topics load nahi hue.");
-        }
+        const items=Array.isArray(d.items)?d.items:[];
+        if(badge) badge.textContent=`${items.length} MCQ Set${items.length===1?'':'s'}`;
 
-        const chapters=Array.isArray(d.items)?d.items:[];
-
-        if(!chapters.length){
-            list.innerHTML=
-                `<div class="empty">Is Subject ke liye abhi koi Topic saved nahi hai.</div>`;
+        if(!items.length){
+            list.innerHTML='<div class="empty">Is Subtopic ke andar abhi koi MCQ Set nahi hai. Neeche se HTML upload karein.</div>';
             return;
         }
 
-        const rows=[];
-        let totalQuestions=0;
-
-        for(const chapter of chapters){
-            const number=Number(chapter.number);
-            if(!number) continue;
-
-            let htmlItems=[];
-            try{
-                const hr=await fetch(
-                    `/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${number}`,
-                    {cache:"no-store"}
-                );
-                if(hr.ok){
-                    const hd=await hr.json();
-                    htmlItems=Array.isArray(hd.items)?hd.items:[];
-                }
-            }catch{}
-
-            const chapterQuestions=htmlItems.reduce(
-                (sum,item)=>sum+Number(item.questionCount||0),0
-            );
-            totalQuestions+=chapterQuestions;
-
-            const row=document.createElement("div");
-            row.className="quiz-item";
-
-            const title=chapter.title||chapter.chapterTitle||`Topic ${number}`;
-
+        list.innerHTML='';
+        items.forEach((item,index)=>{
+            const row=document.createElement('div');
+            row.className='quiz-item';
             row.innerHTML=`
-                <div class="quiz-name">
-                    Topic ${number} — ${escapeHTML(title)}
-                </div>
-                <div class="quiz-info">
-                    MCQs: ${chapterQuestions}
-                </div>
-                <div class="actions"></div>
-            `;
+                <div class="quiz-name"><strong>Set ${index+1}</strong><span>${escapeHTML(item.name||item.originalName||'MCQ Quiz')}</span></div>
+                <div class="quiz-info">${Number(item.questionCount||0)} Questions</div>
+                <div class="actions"></div>`;
+            const actions=row.querySelector('.actions');
 
-            const actions=row.querySelector(".actions");
+            const open=document.createElement('a');
+            open.className='open-btn';
+            open.href=item.url||'#';
+            open.target='_blank';
+            open.rel='noopener';
+            open.textContent='▶ Open MCQ';
+            actions.appendChild(open);
 
-            const selectButton=document.createElement("button");
-            selectButton.className="open-btn";
-            selectButton.textContent="📌 Select Topic";
-            selectButton.onclick=function(){
-                currentChapter=number;
-                getElement("chapterTitle").value=title;
-                updateSelectionUI();
-            };
-            actions.appendChild(selectButton);
+            const rename=document.createElement('button');
+            rename.className='rename-btn';
+            rename.textContent='✏ Rename';
+            rename.onclick=()=>renameQuiz(subjectId,chapterNumber,item.id,item.name||item.originalName||'MCQ Quiz');
+            actions.appendChild(rename);
 
-            htmlItems.forEach(item=>{
-                const open=document.createElement("a");
-                open.className="open-btn";
-                open.href=item.url||"#";
-                open.target="_blank";
-                open.rel="noopener";
-                open.textContent=`▶ ${item.name||item.originalName||"Open MCQ"}`;
-                actions.appendChild(open);
+            const del=document.createElement('button');
+            del.className='delete-btn';
+            del.textContent='🗑 Delete';
+            del.onclick=()=>deleteQuizForTopic(subjectId,chapterNumber,item.id);
+            actions.appendChild(del);
 
-                const rename=document.createElement("button");
-                rename.className="rename-btn";
-                rename.textContent="✏ Rename";
-                rename.onclick=()=>renameQuiz(subjectId,number,item.id,item.name||item.originalName||"MCQ Quiz");
-                actions.appendChild(rename);
-
-                const del=document.createElement("button");
-                del.className="delete-btn";
-                del.textContent="🗑 Delete";
-                del.onclick=()=>deleteQuizForTopic(subjectId,number,item.id);
-                actions.appendChild(del);
-            });
-
-            rows.push(row);
-        }
-
-        list.innerHTML="";
-        rows.forEach(row=>list.appendChild(row));
-        getElement("mcqCountBadge").textContent=
-            `${totalQuestions} MCQ${totalQuestions===1?"":"s"}`;
-
-    }catch(e){
-        console.error(e);
-        list.innerHTML=
-            `<div class="empty">Server error: ${escapeHTML(e.message)}</div>`;
-        getElement("mcqCountBadge").textContent="0 MCQ Sets";
+            list.appendChild(row);
+        });
+    }catch(error){
+        console.error(error);
+        list.innerHTML=`<div class="empty">Server error: ${escapeHTML(error.message)}</div>`;
+        if(badge) badge.textContent="0 MCQ Sets";
     }
 }
 
@@ -396,6 +377,15 @@ async function uploadMCQ(){
     try{inputs=getManagementInputs();}catch(e){
         showMessage("uploadMessage",e.message,"error");return;
     }
+    if(!currentMainTopic){
+        showMessage("uploadMessage","Main Topic open karke Subtopics manage karein.","error");
+        return;
+    }
+    if(!currentSubtopic){
+        showMessage("uploadMessage","Pehle Subtopic select karein.","error");
+        return;
+    }
+
     const file=getElement("mcqFile").files[0];
     if(!file){showMessage("uploadMessage","Pehle HTML file select karo.","error");return;}
     if(!/\.html?$/i.test(String(file.name||""))){
@@ -407,9 +397,16 @@ async function uploadMCQ(){
     fd.append("subject",String(inputs.subject));
     fd.append("chapterNumber",String(inputs.chapterNumber));
 
+    if(currentMainTopic?.id){
+        fd.append("mainTopicId",String(currentMainTopic.id));
+    }
+    if(currentSubtopic?.id){
+        fd.append("subtopicId",String(currentSubtopic.id));
+    }
+
     try{
         showMessage("uploadMessage","⏳ Uploading MCQ HTML...","success");
-        const r=await fetch("/api/cs/mcq-html/upload",{
+        const r=await fetch("/api/cs/mcq-html/upload-v2",{
             method:"POST",body:fd,credentials:"same-origin",cache:"no-store"
         });
         const text=await r.text();
@@ -957,3 +954,680 @@ if(downloadButton) downloadButton.addEventListener("click",function(){
 updateSelectionUI();
 checkLogin();
 console.log("Computer Science Admin — One Page Loaded");
+
+
+// ============================================================
+// CS HIERARCHY MANAGEMENT
+// Course/Chapter -> Main Topic -> Subtopic -> MCQ
+// ============================================================
+
+function resetHierarchySelection(){
+    currentMainTopic=null;
+    currentSubtopic=null;
+    csMainTopicsCache=[];
+    csSubtopicsCache=[];
+
+    const mainBadge=getElementOptional("selectedMainTopicTitle");
+    if(mainBadge) mainBadge.textContent="No Main Topic Selected";
+
+    const subBadge=getElementOptional("selectedSubtopicTitle");
+    if(subBadge) subBadge.textContent="No Subtopic Selected";
+
+    const subList=getElementOptional("subtopicList");
+    if(subList) subList.innerHTML='<div class="cs-subtopic-empty">Pehle Main Topic open karein.</div>';
+
+    updateSelectionUI();
+}
+
+async function loadCSMainTopics(chapterNumber=currentChapter||1){
+    if(!currentSubject||!chapterNumber){
+        csMainTopicsCache=[];
+        renderCSMainTopics();
+        return [];
+    }
+
+    try{
+        const subject=subjectIdMap[currentSubject];
+        const r=await fetch(`/api/cs/main-topics/${encodeURIComponent(subject)}/${encodeURIComponent(chapterNumber)}`,{cache:"no-store"});
+        const d=await r.json();
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        csMainTopicsCache=Array.isArray(d.items)?d.items:[];
+        resetSimpleWorkflow();
+        renderCSMainTopics();
+        return csMainTopicsCache;
+    }catch(error){
+        console.error(error);
+        csMainTopicsCache=[];
+        renderCSMainTopics();
+        return [];
+    }
+}
+
+function renderCSMainTopics(){
+    const container=getElementOptional("mainTopicList");
+    if(!container) return;
+
+    if(!csMainTopicsCache.length){
+        container.innerHTML='<div class="cs-subtopic-empty">Is Subject ke andar abhi koi Main Topic nahi hai.</div>';
+        return;
+    }
+
+    container.innerHTML=csMainTopicsCache.map((item,index)=>`
+        <div class="hierarchy-row">
+            <div class="hierarchy-title">
+                <span class="topic-number">${index+1}</span>
+                <strong>${escapeHTML(item.title||"")}</strong>
+            </div>
+            <div class="hierarchy-actions">
+                <button type="button" class="open-btn" onclick="manageCSMainTopic('${escapeJS(item.id||"")}')">📂 Open</button>
+                <button type="button" class="rename-btn" onclick="renameCSMainTopic('${escapeJS(item.id||"")}')">✏ Rename</button>
+                <button type="button" class="delete-btn" onclick="deleteCSMainTopic('${escapeJS(item.id||"")}')">🗑 Delete</button>
+            </div>
+        </div>`).join("");
+}
+
+
+function setWorkflowCard(id,show){
+    const el=getElementOptional(id);
+    if(el) el.hidden=!show;
+}
+
+function resetSimpleWorkflow(){
+    setWorkflowCard("subtopicCard",false);
+    setWorkflowCard("mcqCard",false);
+    setWorkflowCard("uploadCard",false);
+}
+
+function manageCSMainTopic(id){
+    currentMainTopic=csMainTopicsCache.find(x=>String(x.id)===String(id))||null;
+    currentSubtopic=null;
+
+    const badge=getElementOptional("selectedMainTopicTitle");
+    if(badge) badge.textContent=currentMainTopic?.title||"No Main Topic Selected";
+
+    setWorkflowCard("subtopicCard",!!currentMainTopic);
+    setWorkflowCard("mcqCard",false);
+    setWorkflowCard("uploadCard",false);
+
+    const input=getElementOptional("subtopicTitle");
+    if(input) input.value="";
+
+    updateSelectionUI();
+    loadCSSubtopics(currentMainTopic?.id);
+    document.getElementById("subtopicCard")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function manageCSSubtopic(id){
+    currentSubtopic=csSubtopicsCache.find(x=>String(x.id)===String(id))||null;
+    if(!currentSubtopic) return;
+
+    const badge=getElementOptional("selectedSubtopicTitle");
+    if(badge) badge.textContent=currentSubtopic.title||"No Subtopic Selected";
+
+    setWorkflowCard("mcqCard",true);
+    setWorkflowCard("uploadCard",true);
+    updateSelectionUI();
+    loadQuizzes();
+    document.getElementById("mcqCard")?.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function selectCSMainTopic(id){
+    manageCSMainTopic(id);
+    return;
+    currentMainTopic=csMainTopicsCache.find(x=>String(x.id)===String(id))||null;
+    currentSubtopic=null;
+
+    const badge=getElementOptional("selectedMainTopicTitle");
+    if(badge) badge.textContent=currentMainTopic?.title||"No Main Topic Selected";
+
+    const hidden=getElementOptional("selectedMainTopicId");
+    if(hidden) hidden.value=currentMainTopic?.id||"";
+
+    const input=getElementOptional("mainTopicTitle");
+    if(input) input.value=currentMainTopic?.title||"";
+
+    const subBadge=getElementOptional("selectedSubtopicTitle");
+    if(subBadge) subBadge.textContent="No Subtopic Selected";
+
+    updateSelectionUI();
+    loadCSSubtopics(currentMainTopic?.id);
+    loadQuizzes();
+}
+
+async function saveCSMainTopic(){
+    if(!currentSubject||!currentChapter){
+        showMessage("mainTopicMessage","Pehle Subject select karein.","error");
+        return;
+    }
+
+    const input=getElementOptional("mainTopicTitle");
+    const title=String(input?.value||"").trim();
+    if(!title){
+        showMessage("mainTopicMessage","Main Topic Title daaliye.","error");
+        input?.focus();
+        return;
+    }
+
+    try{
+        const r=await fetch("/api/cs/main-topics",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
+                chapterNumber:Number(currentChapter),
+                title
+            })
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        await loadCSMainTopics(currentChapter);
+        currentMainTopic=null;
+        currentSubtopic=null;
+        resetSimpleWorkflow();
+        if(input) input.value="";
+
+        showMessage("mainTopicMessage",`✅ "${d.item?.title||title}" Main Topic save ho gaya.`,"success");
+
+        if(Number(d.migratedLegacySubtopics||0)>0){
+            showMessage("subtopicMessage",`✅ ${d.migratedLegacySubtopics} old Subtopics first Main Topic se link ho gaye.`,"success");
+        }
+    }catch(error){
+        showMessage("mainTopicMessage",error.message||"Main Topic save nahi hua.","error");
+    }
+}
+
+async function renameCSMainTopic(id){
+    const item=csMainTopicsCache.find(x=>String(x.id)===String(id));
+    if(!item) return;
+
+    const value=window.prompt("Naya Main Topic name:",item.title||"");
+    if(value===null) return;
+    const newTitle=value.trim();
+    if(!newTitle) return;
+
+    try{
+        const r=await fetch("/api/cs/main-topics/rename",{
+            method:"PATCH",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
+                chapterNumber:Number(currentChapter),
+                id:item.id,
+                newTitle
+            })
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        await loadCSMainTopics(currentChapter);
+        if(currentMainTopic&&String(currentMainTopic.id)===String(id)) selectCSMainTopic(id);
+        showMessage("mainTopicMessage","Main Topic rename ho gaya.","success");
+    }catch(error){
+        showMessage("mainTopicMessage",error.message||"Rename failed.","error");
+    }
+}
+
+async function deleteCSMainTopic(id){
+    const item=csMainTopicsCache.find(x=>String(x.id)===String(id));
+    if(!item) return;
+
+    if(!confirm(`"${item.title}" Main Topic delete karna hai?\n\nSubtopics registry se delete honge. Existing MCQ files delete nahi honge.`)) return;
+
+    try{
+        const r=await fetch("/api/cs/main-topics",{
+            method:"DELETE",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
+                chapterNumber:Number(currentChapter),
+                id:item.id
+            })
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        if(currentMainTopic&&String(currentMainTopic.id)===String(id)){
+            currentMainTopic=null;
+            currentSubtopic=null;
+        }
+
+        await loadCSMainTopics(currentChapter);
+        resetSimpleWorkflow();
+        renderCSSubtopics();
+        loadQuizzes();
+        showMessage("mainTopicMessage","Main Topic delete ho gaya.","success");
+    }catch(error){
+        showMessage("mainTopicMessage",error.message||"Delete failed.","error");
+    }
+}
+
+async function loadCSSubtopics(mainTopicId=currentMainTopic?.id){
+    const container=getElementOptional("subtopicList");
+
+    if(!currentSubject||!currentChapter||!mainTopicId){
+        csSubtopicsCache=[];
+        if(container) container.innerHTML='<div class="cs-subtopic-empty">Pehle Main Topic select karein.</div>';
+        return [];
+    }
+
+    try{
+        const subject=subjectIdMap[currentSubject];
+        const r=await fetch(`/api/cs/subtopics-v2/${encodeURIComponent(subject)}/${encodeURIComponent(currentChapter)}?mainTopicId=${encodeURIComponent(mainTopicId)}`,{cache:"no-store"});
+        const d=await r.json();
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        csSubtopicsCache=Array.isArray(d.items)?d.items:[];
+        renderCSSubtopics();
+        return csSubtopicsCache;
+    }catch(error){
+        console.error(error);
+        csSubtopicsCache=[];
+        renderCSSubtopics();
+        return [];
+    }
+}
+
+function renderCSSubtopics(){
+    const container=getElementOptional("subtopicList");
+    if(!container) return;
+
+    if(!currentMainTopic){
+        container.innerHTML='<div class="cs-subtopic-empty">Pehle Main Topic select karein.</div>';
+        return;
+    }
+
+    if(!csSubtopicsCache.length){
+        container.innerHTML=`<div class="cs-subtopic-empty">"${escapeHTML(currentMainTopic.title)}" ke andar abhi koi Subtopic nahi hai.</div>`;
+        return;
+    }
+
+    container.innerHTML=csSubtopicsCache.map((item,index)=>`
+        <div class="hierarchy-row">
+            <div class="hierarchy-title">
+                <span class="topic-number">${index+1}</span>
+                <strong>${escapeHTML(item.title||"")}</strong>
+            </div>
+            <div class="hierarchy-actions">
+                <button type="button" class="open-btn" onclick="manageCSSubtopic('${escapeJS(item.id||"")}')">📋 MCQ</button>
+                <button type="button" class="rename-btn" onclick="renameCSSubtopic('${escapeJS(item.id||"")}')">✏ Rename</button>
+                <button type="button" class="delete-btn" onclick="deleteCSSubtopic('${escapeJS(item.id||"")}')">🗑 Delete</button>
+            </div>
+        </div>`).join("");
+}
+
+function selectCSSubtopic(id){
+    manageCSSubtopic(id);
+    return;
+    currentSubtopic=csSubtopicsCache.find(x=>String(x.id)===String(id))||null;
+
+    const badge=getElementOptional("selectedSubtopicTitle");
+    if(badge) badge.textContent=currentSubtopic?.title||"No Subtopic Selected";
+
+    const hidden=getElementOptional("selectedSubtopicId");
+    if(hidden) hidden.value=currentSubtopic?.id||"";
+
+    const input=getElementOptional("subtopicTitle");
+    if(input) input.value=currentSubtopic?.title||"";
+
+    updateSelectionUI();
+    loadQuizzes();
+}
+
+async function saveCSSubtopic(){
+    if(!currentSubject||!currentChapter){
+        showMessage("subtopicMessage","Pehle Subject select karein.","error");
+        return;
+    }
+
+    if(!currentMainTopic){
+        showMessage("subtopicMessage","Pehle Main Topic select karein.","error");
+        return;
+    }
+
+    const input=getElementOptional("subtopicTitle");
+    const title=String(input?.value||"").trim();
+    if(!title){
+        showMessage("subtopicMessage","Subtopic Title daaliye.","error");
+        input?.focus();
+        return;
+    }
+
+    try{
+        const r=await fetch("/api/cs/subtopics-v2",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
+                chapterNumber:Number(currentChapter),
+                mainTopicId:currentMainTopic.id,
+                title
+            })
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        if(input) input.value="";
+        await loadCSSubtopics(currentMainTopic.id);
+        showMessage("subtopicMessage","✅ Subtopic save ho gaya.","success");
+    }catch(error){
+        showMessage("subtopicMessage",error.message||"Subtopic save nahi hua.","error");
+    }
+}
+
+async function renameCSSubtopic(id){
+    const item=csSubtopicsCache.find(x=>String(x.id)===String(id));
+    if(!item) return;
+
+    const value=window.prompt("Naya Subtopic name:",item.title||"");
+    if(value===null) return;
+    const newTitle=value.trim();
+    if(!newTitle) return;
+
+    try{
+        const r=await fetch("/api/cs/subtopics-v2/rename",{
+            method:"PATCH",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
+                chapterNumber:Number(currentChapter),
+                mainTopicId:currentMainTopic?.id||item.mainTopicId||"",
+                id:item.id,
+                newTitle
+            })
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        await loadCSSubtopics(currentMainTopic?.id);
+        if(currentSubtopic&&String(currentSubtopic.id)===String(id)) selectCSSubtopic(id);
+        showMessage("subtopicMessage","Subtopic rename ho gaya.","success");
+    }catch(error){
+        showMessage("subtopicMessage",error.message||"Rename failed.","error");
+    }
+}
+
+async function deleteCSSubtopic(id){
+    const item=csSubtopicsCache.find(x=>String(x.id)===String(id));
+    if(!item) return;
+
+    if(!confirm(`"${item.title}" Subtopic delete karna hai?\n\nExisting MCQ files delete nahi honge.`)) return;
+
+    try{
+        const r=await fetch("/api/cs/subtopics-v2",{
+            method:"DELETE",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                subject:subjectIdMap[currentSubject],
+                chapterNumber:Number(currentChapter),
+                mainTopicId:currentMainTopic?.id||item.mainTopicId||"",
+                id:item.id
+            })
+        });
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
+
+        if(currentSubtopic&&String(currentSubtopic.id)===String(id)) currentSubtopic=null;
+
+        await loadCSSubtopics(currentMainTopic?.id);
+        loadQuizzes();
+        showMessage("subtopicMessage","Subtopic delete ho gaya.","success");
+    }catch(error){
+        showMessage("subtopicMessage",error.message||"Delete failed.","error");
+    }
+}
+
+
+
+
+
+/* =========================================================
+   ADMIN SUBJECT MANAGEMENT
+   - Add Subject works from the existing Add New Subject panel.
+   - Delete works for built-in + custom cards with exact-name confirmation.
+   - Uses browser-local storage only; server.js is intentionally untouched.
+========================================================= */
+(function(){
+    const DELETED_KEY = "csAdminDeletedSubjects";
+    const CUSTOM_KEY = "csAdminCustomSubjects";
+
+    function readJSON(key, fallback){
+        try{
+            const value=JSON.parse(localStorage.getItem(key)||"");
+            return Array.isArray(value) ? value : fallback;
+        }catch{return fallback;}
+    }
+    function writeJSON(key,value){
+        try{localStorage.setItem(key,JSON.stringify(value));}catch{}
+    }
+    function slug(value){
+        return String(value||"").trim().toLowerCase()
+            .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+    }
+    function esc(value){
+        return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;")
+            .replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+    function getGrid(){return document.querySelector(".cs-subject-grid");}
+    function getMessage(){return document.getElementById("subjectManageMessage");}
+    function message(text,type="success"){
+        const el=getMessage();
+        if(!el)return;
+        el.textContent=text;
+        el.className="message "+type;
+        el.style.display="block";
+    }
+    function closePanel(){
+        const p=document.getElementById("addSubjectPanel");
+        if(p)p.hidden=true;
+    }
+
+    function subjectFromCard(card){
+        const code=String(card?.dataset?.subject||"").trim();
+        if(!code)return null;
+        const strong=card.querySelector("strong");
+        const small=card.querySelector("small");
+        const iconEl=card.querySelector("span:not(.subject-delete-btn)");
+        return {
+            code,
+            name:String(strong?.textContent||code).trim(),
+            icon:String(iconEl?.textContent||"📚").trim()||"📚",
+            id:slug(String(small?.textContent||code))||slug(code)
+        };
+    }
+
+    async function openDeleteSubject(subject){
+        const typed=window.prompt(
+            `Delete "${subject.name}"?\n\nDelete karne ke liye exact Subject Name type karein:`
+        );
+        if(typed===null)return;
+        if(typed.trim()!==subject.name){
+            message("Exact Subject Name match nahi hua. Delete blocked.","error");
+            return;
+        }
+
+        try{
+            const response=await fetch("/api/cs/subjects",{
+                method:"DELETE",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({id:subject.id,name:subject.name}),
+                cache:"no-store"
+            });
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok||!data.success) throw new Error(data.message||`HTTP ${response.status}`);
+        }catch(error){
+            message(`❌ ${error.message}`,"error");
+            return;
+        }
+
+        const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
+        if(!deleted.includes(subject.code.toUpperCase())) deleted.push(subject.code.toUpperCase());
+        writeJSON(DELETED_KEY,deleted);
+
+        const customs=readJSON(CUSTOM_KEY,[]).filter(x=>
+            String(x.code||"").toUpperCase()!==subject.code.toUpperCase()
+        );
+        writeJSON(CUSTOM_KEY,customs);
+
+        document.querySelector(`.subject-card[data-subject="${CSS.escape(subject.code)}"]`)?.remove();
+        if(typeof currentSubject!=="undefined" && currentSubject===subject.code){
+            currentSubject="";
+            currentChapter=null;
+            currentMainTopic=null;
+            currentSubtopic=null;
+            if(typeof updateSelectionUI==="function")updateSelectionUI();
+        }
+        message(`✅ ${subject.name} delete ho gaya.`,"success");
+    }
+
+    function addDeleteButton(card){
+        if(!card || card.querySelector(".subject-delete-btn"))return;
+        const subject=subjectFromCard(card);
+        if(!subject)return;
+        const btn=document.createElement("span");
+        btn.className="subject-delete-btn";
+        btn.textContent="🗑️";
+        btn.title=`Delete ${subject.name}`;
+        btn.setAttribute("role","button");
+        btn.setAttribute("tabindex","0");
+        btn.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();openDeleteSubject(subject);});
+        btn.addEventListener("keydown",e=>{
+            if(e.key==="Enter"||e.key===" "){e.preventDefault();e.stopPropagation();openDeleteSubject(subject);}
+        });
+        card.appendChild(btn);
+        card.classList.add("admin-subject-deletable");
+    }
+
+    function renderCustomSubjects(){
+        const grid=getGrid();
+        if(!grid)return;
+        const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
+        const customs=readJSON(CUSTOM_KEY,[]);
+        customs.forEach(subject=>{
+            if(deleted.includes(String(subject.code).toUpperCase()))return;
+            if(grid.querySelector(`[data-subject="${CSS.escape(subject.code)}"]`))return;
+            const card=document.createElement("button");
+            card.type="button";
+            card.className="subject-card admin-subject-deletable";
+            card.dataset.subject=subject.code;
+            card.innerHTML=`<span>${esc(subject.icon||"📚")}</span><strong>${esc(subject.name)}</strong><small>${esc(subject.code)}</small>`;
+            card.addEventListener("click",()=>{
+                if(typeof selectSubjectCard==="function")selectSubjectCard(subject.code);
+            });
+            grid.appendChild(card);
+            addDeleteButton(card);
+
+            // Add runtime maps so the existing admin UI can at least select the new subject.
+            subjectIdMap[subject.code]=subject.id;
+            subjectNameMap[subject.code]=`${subject.name} (${subject.code})`;
+            mainTopicPlaceholderMap[subject.code]=`Main Topic Title (e.g. ${subject.name} Basics)`;
+        });
+    }
+
+    window.addCustomSubject=async function(){
+        const name=String(document.getElementById("newSubjectName")?.value||"").trim();
+        const code=String(document.getElementById("newSubjectCode")?.value||"").trim().toUpperCase();
+        const icon=String(document.getElementById("newSubjectIcon")?.value||"📘").trim()||"📘";
+
+        if(!name){message("Subject Name daaliye.","error");return;}
+
+        // If this Short Code was deleted earlier, explicitly tell the server that
+        // this save is a re-add. This is what separates a legitimate re-add from
+        // a normal duplicate Subject.
+        const deletedBeforeAdd=readJSON(DELETED_KEY,[]).some(
+            x=>String(x).trim().toUpperCase()===code
+        );
+        if(!code){message("Short Code daaliye.","error");return;}
+        if(!/^[A-Z0-9][A-Z0-9_-]{0,24}$/.test(code)){
+            message("Short Code mein sirf A-Z, 0-9, _ aur - use karein.","error");return;}
+        let subject;
+        try{
+            const response=await fetch("/api/cs/subjects",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({name,code,icon,readd:deletedBeforeAdd}),
+                cache:"no-store"
+            });
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok||!data.success) throw new Error(data.message||`HTTP ${response.status}`);
+            subject=data.item;
+        }catch(error){
+            message(`❌ ${error.message}`,"error");
+            return;
+        }
+
+        // A previously deleted Subject must be allowed to come back.
+        // Remove its old browser-local "deleted" marker before rendering/saving
+        // the new Subject, otherwise a refresh would hide the re-added card.
+        const deleted=readJSON(DELETED_KEY,[]).filter(
+            x=>String(x).toUpperCase()!==code
+        );
+        writeJSON(DELETED_KEY,deleted);
+
+        // Keep a local copy only as a fast UI fallback; the server/Firestore registry is the source of truth.
+        const customs=readJSON(CUSTOM_KEY,[]).filter(x=>String(x.code||"").toUpperCase()!==code);
+        customs.push(subject);
+        writeJSON(CUSTOM_KEY,customs);
+
+        subjectIdMap[code]=subject.id;
+        subjectNameMap[code]=`${subject.name} (${code})`;
+        mainTopicPlaceholderMap[code]=`Main Topic Title (e.g. ${subject.name} Basics)`;
+
+        const grid=getGrid();
+        if(grid){
+            const card=document.createElement("button");
+            card.type="button";
+            card.className="subject-card admin-subject-deletable";
+            card.dataset.subject=code;
+            card.innerHTML=`<span>${esc(subject.icon||icon)}</span><strong>${esc(subject.name)}</strong><small>${esc(subject.code)}</small>`;
+            card.addEventListener("click",()=>{
+                if(typeof selectSubjectCard==="function")selectSubjectCard(subject.code);
+            });
+            grid.appendChild(card);
+            addDeleteButton(card);
+        }
+
+        document.getElementById("newSubjectName").value="";
+        document.getElementById("newSubjectCode").value="";
+        document.getElementById("newSubjectIcon").value="📘";
+        closePanel();
+        message(`✅ ${subject.name} subject save ho gaya. Course/Chapter bhi ready hai.`,"success");
+    };
+
+    function applySubjectManagement(){
+        const grid=getGrid();
+        if(!grid)return;
+        const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
+        grid.querySelectorAll(".subject-card").forEach(card=>{
+            const code=String(card.dataset.subject||"");
+            if(deleted.includes(code.toUpperCase())){
+                card.remove();
+                return;
+            }
+            addDeleteButton(card);
+        });
+        renderCustomSubjects();
+    }
+
+    function injectStyle(){
+        const style=document.createElement("style");
+        style.textContent=`
+            .cs-subject-grid .subject-card{position:relative;}
+            .cs-subject-grid .subject-delete-btn{
+                position:absolute!important;left:8px!important;top:8px!important;
+                width:30px!important;height:30px!important;border-radius:8px!important;
+                display:flex!important;align-items:center!important;justify-content:center!important;
+                background:#fee2e2!important;color:#b91c1c!important;
+                cursor:pointer!important;font-size:15px!important;line-height:1!important;
+                z-index:9999!important;box-sizing:border-box!important;
+            }
+            .cs-subject-grid .subject-delete-btn:hover{background:#fecaca!important;}
+            .cs-subject-grid .subject-delete-btn:focus{outline:2px solid #ef4444!important;outline-offset:2px;}
+        `;
+        document.head.appendChild(style);
+    }
+
+    injectStyle();
+    applySubjectManagement();
+})();
