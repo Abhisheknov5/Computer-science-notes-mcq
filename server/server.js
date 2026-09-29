@@ -308,19 +308,19 @@ function requireOwner(req, res, next) {
 }
 
 /* ======================================================
-   COMPUTER SCIENCE SITE ACCESS
-   Whole website + API protection
-   Separate from existing Admin/Owner login
+   COMPUTER SCIENCE WEBSITE ACCESS
+   Separate from existing Admin / Owner login.
+   Whole website + API are protected.
 ====================================================== */
 
 const CS_SITE_USERNAME =
     process.env.CS_SITE_USERNAME || "abhi";
 
 const CS_SITE_PASSWORD =
-    process.env.CS_SITE_PASSWORD || "admin123";
+    process.env.CS_SITE_PASSWORD || "abhi1";
 
 const CS_SITE_SESSION_SECRET =
-    process.env.CS_SITE_SESSION_SECRET || "cs-private-session-2026-abhi";
+    process.env.CS_SITE_SESSION_SECRET || "change-this-session-secret";
 
 const CS_SITE_COOKIE = "cs_site_auth";
 const CS_SITE_SESSION_TIME = 30 * 24 * 60 * 60 * 1000;
@@ -355,163 +355,74 @@ function setCSSiteCookie(res, token, maxAge) {
 }
 
 function csSiteLoginPage(res) {
-    return res.status(200).send(`<!DOCTYPE html>
+    res
+        .status(401)
+        .type("html")
+        .send(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Computer Science Notes + MCQ - Login</title>
+<title>Computer Science Notes + MCQ</title>
 <style>
 *{box-sizing:border-box}
-body{
-    margin:0;
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-family:Arial,sans-serif;
-    background:#f4f7fb;
-}
-.login-box{
-    width:520px;
-    max-width:94%;
-    background:#fff;
-    padding:44px;
-    border-radius:16px;
-    box-shadow:0 10px 35px rgba(0,0,0,.12);
-}
-.logo{
-    text-align:center;
-    font-size:34px;
-    margin-bottom:12px;
-}
-h2{
-    margin:0 0 12px;
-    text-align:center;
-    font-size:28px;
-}
-.subtitle{
-    margin:0 0 26px;
-    text-align:center;
-    font-size:17px;
-    color:#666;
-}
-input{
-    width:100%;
-    padding:16px;
-    margin:9px 0;
-    border:1px solid #d7dce5;
-    border-radius:10px;
-    font-size:17px;
-    outline:none;
-}
-input:focus{
-    border-color:#2563eb;
-}
-button{
-    width:100%;
-    padding:16px;
-    margin-top:16px;
-    border:0;
-    border-radius:10px;
-    background:#2563eb;
-    color:#fff;
-    font-size:18px;
-    cursor:pointer;
-}
-button:disabled{
-    opacity:.65;
-    cursor:not-allowed;
-}
-#error{
-    display:none;
-    color:#dc2626;
-    text-align:center;
-    margin-top:12px;
-    font-size:14px;
-}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f7fb;font-family:Arial,sans-serif;color:#172033}
+.login-card{width:min(420px,92vw);background:#fff;border-radius:18px;padding:30px;box-shadow:0 12px 35px rgba(0,0,0,.12)}
+h1{margin:0 0 8px;font-size:25px;text-align:center}
+p{margin:0 0 24px;text-align:center;color:#667085}
+label{display:block;margin:14px 0 7px;font-weight:600}
+input{width:100%;padding:12px 13px;border:1px solid #d0d5dd;border-radius:10px;font-size:15px;outline:none}
+input:focus{border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.12)}
+button{width:100%;margin-top:20px;padding:12px;border:0;border-radius:10px;background:#315efb;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.7;cursor:not-allowed}
+#msg{min-height:22px;margin-top:14px;text-align:center;color:#d92d20;font-size:14px}
 </style>
 </head>
 <body>
-<div class="login-box">
-    <div class="logo">📚</div>
-    <h2>Computer Science Notes + MCQ</h2>
-    <p class="subtitle">Login required to access this website</p>
-
-    <form id="loginForm">
-        <input
-            type="text"
-            id="username"
-            placeholder="Username"
-            autocomplete="username"
-            required
-        >
-
-        <input
-            type="password"
-            id="password"
-            placeholder="Password"
-            autocomplete="current-password"
-            required
-        >
-
-        <button id="loginButton" type="submit">Login</button>
-
-        <div id="error">
-            Invalid username or password.
-        </div>
-    </form>
+<div class="login-card">
+<h1>🔐 Computer Science Notes + MCQ</h1>
+<p>Website access ke liye login karein.</p>
+<form id="loginForm">
+<label>Username</label>
+<input id="username" name="username" autocomplete="username" required>
+<label>Password</label>
+<input id="password" name="password" type="password" autocomplete="current-password" required>
+<button id="loginBtn" type="submit">Login</button>
+<div id="msg"></div>
+</form>
 </div>
-
 <script>
-document.getElementById("loginForm").addEventListener("submit", async function(event){
-    event.preventDefault();
-
-    const button = document.getElementById("loginButton");
-    const error = document.getElementById("error");
-
-    error.style.display = "none";
-    button.disabled = true;
-    button.textContent = "Logging in...";
-
-    try {
-        const response = await fetch("/api/cs-site-login", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                username: document.getElementById("username").value,
-                password: document.getElementById("password").value
+document.getElementById("loginForm").addEventListener("submit",async function(e){
+    e.preventDefault();
+    const btn=document.getElementById("loginBtn");
+    const msg=document.getElementById("msg");
+    btn.disabled=true;
+    msg.textContent="";
+    try{
+        const response=await fetch("/api/cs-site-login",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                username:document.getElementById("username").value,
+                password:document.getElementById("password").value
             })
         });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            window.location.href = "/";
-            return;
+        const data=await response.json();
+        if(!response.ok||!data.success){
+            throw new Error(data.message||"Invalid username or password.");
         }
-
-        error.textContent = data.message || "Invalid username or password.";
-        error.style.display = "block";
-    } catch (error) {
-        error.textContent = "Login failed. Please try again.";
-        error.style.display = "block";
+        location.href="/";
+    }catch(error){
+        msg.textContent=error.message;
+        btn.disabled=false;
     }
-
-    button.disabled = false;
-    button.textContent = "Login";
 });
 </script>
 </body>
 </html>`);
 }
 
-/*
- * Site login endpoint must be registered before the site-protection
- * middleware so an unauthenticated visitor can authenticate.
- */
+// Login/logout routes must stay before the protection middleware.
 app.post("/api/cs-site-login", (req, res) => {
     const username = String(req.body?.username || "");
     const password = String(req.body?.password || "");
@@ -542,17 +453,13 @@ app.post("/api/cs-site-login", (req, res) => {
 
 app.post("/api/cs-site-logout", (req, res) => {
     setCSSiteCookie(res, "", 0);
-
     return res.json({
         success: true,
         authenticated: false
     });
 });
 
-/*
- * Everything after this middleware requires the site login.
- * Existing Admin/Owner authentication remains separate and unchanged.
- */
+// Everything below this point requires website login.
 app.use((req, res, next) => {
     if (
         req.path === "/api/cs-site-login" ||
