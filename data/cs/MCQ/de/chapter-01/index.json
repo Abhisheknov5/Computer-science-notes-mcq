@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "id": "cs-1791252170749-b00bbf4ca081",
+      "fileName": "mcq-cs-1791252170749-b00bbf4ca081.html",
+      "originalName": "Digital_Electronics_20_MCQ_Same_UI.html",
+      "name": "Digital Electronics | MCQ Practice",
+      "questionCount": 20,
+      "mainTopicId": "cs-main-1791251794450-88a7c1dd4659",
+      "subtopicId": "cs-sub-1791251818910-117be2fa1c5f",
+      "createdAt": "2026-10-06T02:02:50.749Z",
+      "updatedAt": "2026-10-06T02:02:50.749Z",
+      "url": "/api/cs/mcq-html/file/cs-1791252170749-b00bbf4ca081"
+    },
+    {
+      "id": "cs-1791252631764-5df188f4f333",
+      "fileName": "mcq-cs-1791252631764-5df188f4f333.html",
+      "originalName": "Digital_Electronics_20_MCQ_Same_UI (1).html",
+      "name": "Digital Electronics | MCQ Practice",
+      "questionCount": 20,
+      "mainTopicId": "cs-main-1791252427592-42e95444ec77",
+      "subtopicId": "cs-sub-1791252623745-16cac4dbfe66",
+      "createdAt": "2026-10-06T02:10:31.764Z",
+      "updatedAt": "2026-10-06T02:10:31.764Z",
+      "url": "/api/cs/mcq-html/file/cs-1791252631764-5df188f4f333"
+    },
+    {
+      "id": "cs-1791256085465-de6bf7f5a3dc",
+      "fileName": "mcq-cs-1791256085465-de6bf7f5a3dc.html",
+      "originalName": "Number_System_120_MCQ_Same_UI.html",
+      "name": "Number System | MCQ Practice",
+      "questionCount": 120,
+      "mainTopicId": "cs-main-1791255742671-e37a6c30f3d4",
+      "subtopicId": "cs-sub-1791255763911-44ae7c54c7d8",
+      "createdAt": "2026-10-06T03:08:05.465Z",
+      "updatedAt": "2026-10-06T03:08:05.465Z",
+      "url": "/api/cs/mcq-html/file/cs-1791256085465-de6bf7f5a3dc"
+    }
+  ]
+}

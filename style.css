@@ -972,105 +972,12 @@ body{
     }
 }
 
-/* =========================================================
-   QUIZ DESKTOP LAYOUT — SCREENSHOT STYLE
-   CSS ONLY: keeps quiz functionality unchanged.
-========================================================= */
 
-@media (min-width:901px){
-
-    /* Give the quiz the wider desktop canvas shown in the reference. */
-    body:has(#quizScreen:not(.hidden)) #app{
-        max-width:1125px;
-    }
-
-    /* Balanced question + palette columns. */
-    body:has(#quizScreen:not(.hidden)) .quiz-layout{
-        grid-template-columns:minmax(0,1fr) 310px;
-        gap:18px;
-    }
-
-    /* Question area: compact enough to keep all five options and controls visible. */
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column > .card:first-child{
-        padding:18px 15px !important;
-        border-radius:12px;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .question-text{
-        font-size:20px !important;
-        line-height:1.38 !important;
-        margin-bottom:12px !important;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .options{
-        gap:7px !important;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .option{
-        min-height:40px;
-        padding:9px 13px !important;
-        font-size:17px !important;
-        font-weight:800 !important;
-        line-height:1.4 !important;
-        border-radius:9px;
-    }
-
-    /* Keep Previous / Check / Next available while scrolling long questions. */
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .quiz-controls{
-        position:sticky;
-        bottom:10px;
-        z-index:30;
-        padding:14px 15px;
-        margin-top:10px;
-        border-radius:12px;
-        box-shadow:0 6px 22px rgba(0,0,0,.12);
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .quiz-controls > div{
-        gap:8px;
-    }
-
-    /* Reference-style palette: 5 columns and a scrollable question list. */
-    body:has(#quizScreen:not(.hidden)) .quiz-side-column .palette{
-        padding:14px;
-        border-radius:14px;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-side-column .palette h3{
-        margin:0 0 10px;
-        font-size:15px;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-side-column .pal-grid{
-        grid-template-columns:repeat(5,minmax(0,1fr));
-        gap:6px;
-        max-height:390px;
-        padding-right:2px;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-side-column .pal{
-        min-height:36px;
-        padding:7px 3px;
-        border-radius:7px;
-        font-size:13px;
-    }
-
-    body:has(#quizScreen:not(.hidden)) .quiz-restart-card{
-        padding:10px 14px;
-        border-radius:14px;
-    }
-}
-
-
-/* FINAL QUIZ CONTROL SIZE — match the reference bottom bar */
-@media (min-width:901px){
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .quiz-controls .prev,
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .quiz-controls .next,
-    body:has(#quizScreen:not(.hidden)) .quiz-main-column .quiz-controls .submit{
-        padding:8px 14px !important;
-        min-height:35px;
-        line-height:19px;
-        font-size:14px !important;
-        border-radius:8px;
-    }
+/* Subject card Rename action */
+.subject-card{position:relative;}
+.subject-rename-btn{
+    position:absolute;top:8px;left:48px;z-index:5;
+    display:flex;align-items:center;justify-content:center;
+    width:28px;height:28px;border-radius:8px;
+    background:#e8f0ff;cursor:pointer;user-select:none;
 }

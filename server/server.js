@@ -1437,6 +1437,31 @@ const CS_BUILTIN_SUBJECTS = [
     {id:"toc", name:"Theory of Computation (TOC)", code:"TOC", icon:"🧠", builtIn:true}
 ];
 
+const CS_SUBJECT_OVERRIDES_FILE = path.join(DATA_DIR, "cs-subject-overrides.json");
+
+function readCSSubjectOverrides(){
+    if(!fs.existsSync(CS_SUBJECT_OVERRIDES_FILE)) return {};
+    try{
+        const data=JSON.parse(fs.readFileSync(CS_SUBJECT_OVERRIDES_FILE,"utf8"));
+        return data && typeof data==="object" ? data : {};
+    }catch{return {};}
+}
+
+function writeCSSubjectOverrides(items){
+    fs.mkdirSync(DATA_DIR,{recursive:true});
+    const temp=`${CS_SUBJECT_OVERRIDES_FILE}.tmp`;
+    fs.writeFileSync(temp,JSON.stringify(items,null,2),"utf8");
+    fs.renameSync(temp,CS_SUBJECT_OVERRIDES_FILE);
+}
+
+const CS_SUBJECT_OVERRIDES = readCSSubjectOverrides();
+CS_BUILTIN_SUBJECTS.forEach(item=>{
+    const override=CS_SUBJECT_OVERRIDES[item.id];
+    if(override && typeof override.name==="string" && override.name.trim()){
+        item.name=override.name.trim();
+    }
+});
+
 const CS_SUBJECTS = new Set(CS_BUILTIN_SUBJECTS.map(item => item.id));
 const CS_CUSTOM_SUBJECTS_FILE = path.join(DATA_DIR, "cs-subjects.json");
 const CS_CUSTOM_SUBJECTS = new Map();
@@ -1500,23 +1525,27 @@ async function ensureCSSubjectRegistryLoaded(){
 
 function allCSSubjects(){
     return [
-        ...CS_BUILTIN_SUBJECTS,
+        ...CS_BUILTIN_SUBJECTS
+            .filter(item=>!CS_SUBJECT_OVERRIDES[item.id]?.deleted)
+            .map(item=>({...item,builtIn:true})),
         ...Array.from(CS_CUSTOM_SUBJECTS.values()).map(item=>({...item,builtIn:false}))
     ];
 }
 
 function findCSSubject(value){
     const key=normalizeSubjectId(value);
-    if(CS_SUBJECTS.has(key)) return CS_BUILTIN_SUBJECTS.find(item=>item.id===key)||null;
+    if(CS_SUBJECTS.has(key)){
+        if(CS_SUBJECT_OVERRIDES[key]?.deleted) return null;
+        return CS_BUILTIN_SUBJECTS.find(item=>item.id===key)||null;
+    }
     return CS_CUSTOM_SUBJECTS.get(key)||null;
 }
 
 function normalizeCSSubject(subject){
     const value=normalizeSubjectId(subject);
-    if(!CS_SUBJECTS.has(value) && !CS_CUSTOM_SUBJECTS.has(value)){
-        throw new Error("Computer Science subject valid nahi hai.");
-    }
-    return value;
+    if(CS_SUBJECTS.has(value) && !CS_SUBJECT_OVERRIDES[value]?.deleted) return value;
+    if(CS_CUSTOM_SUBJECTS.has(value)) return value;
+    throw new Error("Computer Science subject valid nahi hai.");
 }
 
 // Every CS API first loads the persistent custom-subject registry.
@@ -1572,10 +1601,28 @@ app.post("/api/cs/subjects", requireOwner, async (req,res)=>{
         // Re-add is allowed ONLY when the admin UI explicitly tells the server
         // that this exact code was previously deleted. Normal duplicates remain blocked.
         if(readd){
-            const builtinByCode=CS_BUILTIN_SUBJECTS.some(item=>
+            const builtin=CS_BUILTIN_SUBJECTS.find(item=>
                 String(item.code||"").trim().toLowerCase()===code.toLowerCase()
             );
-            if(builtinByCode) throw new Error("Built-in Computer Science subject dobara add nahi kiya ja sakta.");
+
+            if(builtin && CS_SUBJECT_OVERRIDES[builtin.id]?.deleted){
+                delete CS_SUBJECT_OVERRIDES[builtin.id];
+                writeCSSubjectOverrides(CS_SUBJECT_OVERRIDES);
+
+                builtin.name=name;
+                builtin.icon=icon;
+
+                res.json({
+                    success:true,
+                    item:{...builtin,builtIn:true},
+                    restoredBuiltIn:true,
+                    firebaseSaved:false
+                });
+                return;
+            }
+
+            const builtinByCode=Boolean(builtin);
+            if(builtinByCode) throw new Error("Ye built-in Subject already maujood hai.");
 
             const staleIds=new Set();
             for(const [customId,item] of CS_CUSTOM_SUBJECTS.entries()){
@@ -1658,21 +1705,141 @@ app.post("/api/cs/subjects", requireOwner, async (req,res)=>{
     }
 });
 
+app.post("/api/cs/subjects/rename", requireOwner, async (req,res)=>{
+    try{
+        await ensureCSSubjectRegistryLoaded();
+
+        const id=normalizeSubjectId(req.body?.id);
+        const name=String(req.body?.name||"").trim();
+
+        if(!id) throw new Error("Subject ID required hai.");
+        if(!name) throw new Error("Subject Name daaliye.");
+        if(name.length>80) throw new Error("Subject Name bahut lamba hai.");
+
+        const builtin=CS_BUILTIN_SUBJECTS.find(item=>normalizeSubjectId(item.id)===id);
+        const custom=CS_CUSTOM_SUBJECTS.get(id);
+        const subject=builtin||custom;
+
+        if(!subject){
+            return res.status(404).json({success:false,message:"Subject nahi mila."});
+        }
+
+        const duplicate=allCSSubjects().some(item =>
+            normalizeSubjectId(item?.id)!==id &&
+            String(item?.name||"").trim().toLowerCase()===name.toLowerCase()
+        );
+        if(duplicate) throw new Error("Ye Subject Name already maujood hai.");
+
+        const oldName=String(subject.name||"").trim();
+        subject.name=name;
+        subject.updatedAt=new Date().toISOString();
+
+        if(builtin){
+            CS_SUBJECT_OVERRIDES[id]={name,updatedAt:subject.updatedAt};
+            writeCSSubjectOverrides(CS_SUBJECT_OVERRIDES);
+        }else{
+            CS_CUSTOM_SUBJECTS.set(id,subject);
+            writeCSCustomSubjects(Array.from(CS_CUSTOM_SUBJECTS.values()));
+
+            if(firebaseEnabled && db){
+                try{
+                    await db.collection("csSubjects").doc(id).set(subject,{merge:true});
+                }catch(error){
+                    console.warn("CS Subject Firebase rename failed; local copy kept:",error.message);
+                }
+            }
+        }
+
+        const chapters=readCSChapters();
+        let changed=false;
+        chapters.forEach(ch=>{
+            if(String(ch.subject||"").toLowerCase()===id.toLowerCase()){
+                ch.title=name;
+                ch.chapterTitle=name;
+                ch.updatedAt=new Date().toISOString();
+                changed=true;
+            }
+        });
+        if(changed) writeCSChapters(chapters);
+
+        res.json({
+            success:true,
+            item:{...subject,builtIn:Boolean(builtin)},
+            oldName
+        });
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
 app.delete("/api/cs/subjects", requireOwner, async (req,res)=>{
     try{
         await ensureCSSubjectRegistryLoaded();
-        const id=normalizeSubjectId(req.body?.id);
+
+        const rawId=String(req.body?.id||"").trim().toLowerCase();
         const exactName=String(req.body?.name||"").trim();
-        if(!id || !exactName) throw new Error("Subject ID aur exact Subject Name required hai.");
+
+        if(!rawId || !exactName){
+            throw new Error("Subject ID aur exact Subject Name required hai.");
+        }
+
+        // Accept either the real server ID OR the Subject Code. This keeps
+        // Delete compatible with old/new admin.js versions.
+        let id=rawId;
+
+        if(!CS_SUBJECTS.has(id)){
+            const builtinByCode=CS_BUILTIN_SUBJECTS.find(item=>
+                String(item.code||"").trim().toLowerCase()===rawId
+            );
+            if(builtinByCode) id=builtinByCode.id;
+        }
+
+        if(!CS_SUBJECTS.has(id)){
+            const customByCode=Array.from(CS_CUSTOM_SUBJECTS.values()).find(item=>
+                String(item.code||"").trim().toLowerCase()===rawId
+            );
+            if(customByCode) id=normalizeSubjectId(customByCode.id);
+        }
 
         if(CS_SUBJECTS.has(id)){
-            return res.status(403).json({success:false,message:"Built-in Computer Science subject delete nahi kiya ja sakta."});
+            const subject=CS_BUILTIN_SUBJECTS.find(item=>item.id===id);
+            if(!subject){
+                return res.status(404).json({success:false,message:"Subject nahi mila."});
+            }
+
+            if(exactName.toLowerCase()!==String(subject.name||"").trim().toLowerCase()){
+                return res.status(403).json({
+                    success:false,
+                    message:"Exact Subject Name match nahi hua. Delete blocked."
+                });
+            }
+
+            CS_SUBJECT_OVERRIDES[id]={
+                ...(CS_SUBJECT_OVERRIDES[id]||{}),
+                deleted:true,
+                updatedAt:new Date().toISOString()
+            };
+            writeCSSubjectOverrides(CS_SUBJECT_OVERRIDES);
+
+            res.json({
+                success:true,
+                message:`${subject.name} delete ho gaya.`,
+                builtIn:true,
+                firebaseDeleted:false
+            });
+            return;
         }
 
         const subject=CS_CUSTOM_SUBJECTS.get(id);
-        if(!subject) return res.status(404).json({success:false,message:"Custom Subject nahi mila."});
-        if(exactName!==String(subject.name||"")){
-            return res.status(403).json({success:false,message:"Exact Subject Name match nahi hua. Delete blocked."});
+        if(!subject){
+            return res.status(404).json({success:false,message:"Subject nahi mila."});
+        }
+
+        if(exactName.toLowerCase()!==String(subject.name||"").trim().toLowerCase()){
+            return res.status(403).json({
+                success:false,
+                message:"Exact Subject Name match nahi hua. Delete blocked."
+            });
         }
 
         CS_CUSTOM_SUBJECTS.delete(id);
@@ -1681,36 +1848,25 @@ app.delete("/api/cs/subjects", requireOwner, async (req,res)=>{
         let firebaseDeleted=false;
         if(firebaseEnabled && db){
             try{
-                // Delete the normal document first.
-                const ref=db.collection("csSubjects").doc(id);
-                const snap=await ref.get();
-                if(snap.exists){
-                    await ref.delete();
-                    firebaseDeleted=true;
-                }
-
-                // Also clean up any older/duplicate registry documents whose
-                // stored id/name/code matches this Subject. This prevents a
-                // deleted Subject from being reported as a duplicate when it
-                // is added again later.
                 const snapshot=await db.collection("csSubjects").get();
                 const batch=db.batch();
-                let extraDeletes=0;
+                let count=0;
+
                 snapshot.docs.forEach(doc=>{
                     const data=doc.data()||{};
-                    const sameId=normalizeSubjectId(data.id)===id;
+                    const sameId=normalizeSubjectId(data.id||doc.id)===id;
                     const sameName=String(data.name||"").trim().toLowerCase()===
                         String(subject.name||"").trim().toLowerCase();
                     const sameCode=String(data.code||"").trim().toLowerCase()===
                         String(subject.code||"").trim().toLowerCase();
 
-                    if((sameId||sameName||sameCode) && doc.id!==id){
+                    if(sameId||sameName||sameCode){
                         batch.delete(doc.ref);
-                        extraDeletes++;
+                        count++;
                     }
                 });
 
-                if(extraDeletes>0){
+                if(count){
                     await batch.commit();
                     firebaseDeleted=true;
                 }
@@ -1719,7 +1875,11 @@ app.delete("/api/cs/subjects", requireOwner, async (req,res)=>{
             }
         }
 
-        res.json({success:true,message:`${subject.name} delete ho gaya.`,firebaseDeleted});
+        res.json({
+            success:true,
+            message:`${subject.name} delete ho gaya.`,
+            firebaseDeleted
+        });
     }catch(error){
         res.status(400).json({success:false,message:error.message});
     }

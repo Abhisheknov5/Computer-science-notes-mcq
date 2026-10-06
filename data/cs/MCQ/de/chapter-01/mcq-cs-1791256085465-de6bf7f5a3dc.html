@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Number System | MCQ Practice</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#172b4d;line-height:1.6}
+.container{max-width:1100px;margin:auto;padding:24px 20px}
+.card{background:#fff;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.08)}
+.hidden{display:none!important}
+h1,h2,h3{margin-top:0}
+button,select{font:inherit}
+button{border:0;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.home{padding:28px}
+.home h1{font-size:32px;margin-bottom:6px}
+.sub{color:#536579;font-size:18px}
+.section{border:1px solid #d4dae2;border-radius:12px;padding:17px 20px;margin:12px 0;cursor:pointer;background:#fafbfc}
+.section:hover{background:#f5f8fc}
+.section-title{font-size:20px;font-weight:700;color:#111}
+.section-count{color:#536579}
+.setup{padding:28px}
+.question-select-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.question-select-row label{font-size:18px;white-space:nowrap}
+.back{display:inline-block;color:#2563eb;text-decoration:none;font-weight:700;margin-bottom:18px}
+select{padding:10px 14px;border:1px solid #ccc;border-radius:8px;margin-left:8px}
+.next{background:#16a34a;color:#fff}
+.prev{background:#6b7280;color:#fff}
+.submit{background:#2563eb;color:#fff}
+.quiz-topbar{margin:0 0 14px}
+.topics-back{padding:12px 18px;border:1px solid #d1d5db;border-radius:10px;background:#f5f5f5;color:#111827;font-size:16px;cursor:pointer}
+.topics-back:hover{background:#e5e7eb}
+.quiz-header{padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}
+.quiz-header strong{font-size:18px}
+.question-card{padding:26px;margin-bottom:18px}
+.question{font-size:22px;font-weight:700;margin-bottom:20px;white-space:pre-line}
+.option{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border:2px solid #e1e5ea;background:#fff;border-radius:10px}
+.option:hover{border-color:#2563eb;background:#eff6ff}
+.option.selected{border-color:#2563eb;background:#dbeafe}
+.option.correct{border-color:#16a34a;background:#dcfce7}
+.option.wrong{border-color:#dc2626;background:#fee2e2}
+.feedback{min-height:28px;font-weight:700;margin-top:12px}
+.explanation{margin-top:14px;padding:16px 18px;border-left:5px solid #2563eb;border-radius:10px;background:#eff6ff;color:#172b4d;font-size:16px;line-height:1.65}
+.explanation-title{font-weight:700;font-size:18px;margin-bottom:6px}
+.bottom{padding:18px 24px;display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:18px}
+.palette{padding:20px 24px}
+.pal-grid{display:flex;flex-wrap:wrap;gap:8px}
+.pal{background:#fff;border:1px solid #d4dae2;width:58px;min-width:58px;height:52px;padding:8px 4px}
+.pal.active{outline:3px solid #2563eb}
+.pal.done{background:#dbeafe}
+.result{padding:32px;text-align:center}
+.stat{font-size:18px;line-height:2}
+.review-card{margin-top:16px;padding:22px;text-align:left}
+.review-q{font-size:20px;font-weight:700}
+.review-option{padding:10px 12px;margin:7px 0;border-radius:8px;border:1px solid #ddd}
+.review-option.correct{background:#dcfce7;border-color:#16a34a}
+.review-option.wrong{background:#fee2e2;border-color:#dc2626}
+@media(max-width:650px){
+.container{padding:14px}
+.home h1{font-size:26px}
+.question{font-size:19px}
+.quiz-header,.bottom{flex-direction:column;align-items:stretch}
+.bottom button{margin:4px 0}
+.pal{width:50px;min-width:50px;height:48px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div id="home" class="card home">
+<h1>📚 Number System MCQ Practice</h1>
+<div class="sub">Class CS • 120 MCQs • 6 Sections</div>
+<div id="sectionsList"></div>
+</div>
+
+<div id="setup" class="card setup hidden">
+<a href="#" class="back" onclick="goHome();return false;">← Back to Sections</a>
+<h2 id="setupTitle"></h2>
+<p class="sub" id="setupInfo"></p>
+<div class="question-select-row">
+<label><b>Questions:</b></label>
+<select id="questionCount"></select>
+</div>
+<br><br>
+<button class="next" onclick="startPractice()">🚀 Start Practice</button>
+</div>
+
+<div id="quiz" class="hidden">
+<div class="quiz-topbar">
+<button class="topics-back" onclick="goHome()">← Topics</button>
+</div>
+<div class="card quiz-header">
+<strong id="sectionName"></strong>
+<div id="counter"></div>
+<div id="attempted"></div>
+</div>
+
+<div class="card question-card">
+<div class="question" id="question"></div>
+<div id="options"></div>
+<div class="feedback" id="feedback"></div>
+<div class="explanation hidden" id="explanation"></div>
+</div>
+
+<div class="card bottom">
+<div>
+<button class="prev" id="prevBtn">← Previous</button>
+<button class="submit" id="checkBtn">Check Answer</button>
+<button class="next" id="nextBtn">Next →</button>
+</div>
+<button class="submit" id="submitBtn">Submit Test</button>
+</div>
+
+<div class="card palette">
+<h3>Question Palette</h3>
+<div class="pal-grid" id="palette"></div>
+</div>
+</div>
+
+<div id="result" class="card result hidden">
+<h2>🎯 Test Result</h2>
+<div class="stat" id="resultText"></div>
+<br>
+<button class="next" id="reviewBtn">👁️ Review Answers</button>
+<button class="prev" id="homeBtn">Choose Section</button>
+</div>
+</div>
+
+<script>
+const questions=[{"id":1,"q":"In a digital system, what is the primary purpose of using a number system?","options":["To represent information","To manufacture electronic pulses","To design mechanical devices","To replace digital circuits","Question not attempted"],"answer":0,"explanation":"The source states that number systems are used for representing information in a digital system."},{"id":2,"q":"Which of the following is one of the factors used to calculate the value of a digit in a number system?","options":["The digit itself","The colour of the symbol","The size of the display","The shape of the circuit","Question not attempted"],"answer":0,"explanation":"The source lists the digit itself as one of the factors used to calculate digit value."},{"id":3,"q":"Which factor identifies the place where a digit is present in a number?","options":["The index","The wavelength","The frequency","The voltage","Question not attempted"],"answer":0,"explanation":"The source identifies the index as the place where the digit is present in the number."},{"id":4,"q":"Which factor represents the total number of digits available in a number system?","options":["The base","The index","The bit","The byte","Question not attempted"],"answer":0,"explanation":"The source defines the base as the total number of digits available in the number system."},{"id":5,"q":"According to the given note, when the digits range from 0 to 9, what is the base of the number system?","options":["2","8","10","16","Question not attempted"],"answer":2,"explanation":"The note states that a number system representing digits 0 to 9 has base 10."},{"id":6,"q":"Which of the following best describes the role of a number system in digital systems?","options":["It provides a way to represent information","It only controls electronic pulses","It only stores program instructions","It only converts physical quantities","Question not attempted"],"answer":0,"explanation":"The source explains that number systems are used for representing information in digital systems."},{"id":7,"q":"Which three elements are specifically mentioned for calculating the digit value?","options":["Digit, index and base","Bit, byte and nibble","Pulse, circuit and gate","Decimal point, byte and bit","Question not attempted"],"answer":0,"explanation":"The source lists the digit, the index, and the base as the three elements."},{"id":8,"q":"Which of the following is directly related to the position of a digit in a number?","options":["Index","Base only","Pulse only","Byte only","Question not attempted"],"answer":0,"explanation":"The source describes the index as the place where the digit is present in the number."},{"id":9,"q":"Which of the following can be represented using a number system in a digital system?","options":["Information","Only mechanical motion","Only chemical reactions","Only sound waves","Question not attempted"],"answer":0,"explanation":"The source states that number systems are used for representing information."},{"id":10,"q":"Which statement is correct about the base of a number system?","options":["It indicates the total number of digits available in the number system.","It always equals 2.","It is the same as the index.","It represents the electronic pulse only.","Question not attempted"],"answer":0,"explanation":"The source defines the base as the total number of digits available in the number system."},{"id":11,"q":"Which one of the following is an example of a digit range associated with base 10 in the given content?","options":["0 to 9","0 to 7","0 and 1 only","0 to 15","Question not attempted"],"answer":0,"explanation":"The source note associates the digit range 0 to 9 with base 10."},{"id":12,"q":"The value of a digit in a number system depends on which combination?","options":["Digit, index and base","Digit and colour only","Base and circuit size only","Index and display size only","Question not attempted"],"answer":0,"explanation":"The source explicitly gives digit, index and base as the factors."},{"id":13,"q":"Which term in the source refers to the place where a digit is present in a number?","options":["Index","Base","Nibble","Byte","Question not attempted"],"answer":0,"explanation":"The source uses the term index for the position of a digit."},{"id":14,"q":"Which of the following is NOT one of the three factors listed for calculating the digit value?","options":["The digit","The index","The base","The colour of the digit","Question not attempted"],"answer":3,"explanation":"The source lists digit, index and base; colour is not mentioned."},{"id":15,"q":"According to the given content, number systems are used in digital systems mainly for which purpose?","options":["Representing information","Representing only mechanical states","Representing only sound","Representing only temperature","Question not attempted"],"answer":0,"explanation":"The source directly states that number systems are used for representing information."},{"id":16,"q":"How many types of number systems are listed in the given content?","options":["2","3","4","5","Question not attempted"],"answer":2,"explanation":"Four types are listed: Binary, Decimal, Hexadecimal and Octal."},{"id":17,"q":"Which of the following is listed as a type of number system?","options":["Binary Number System","Roman Number System","Scientific Number System","Fractional Number System","Question not attempted"],"answer":0,"explanation":"Binary Number System is explicitly listed among the four types."},{"id":18,"q":"Which of the following is one of the number systems used for representing information in digital computers?","options":["Decimal Number System","Roman Number System","Alphabetic Number System","Graphical Number System","Question not attempted"],"answer":0,"explanation":"Decimal Number System is one of the listed types."},{"id":19,"q":"Which of the following pairs contains only number systems listed in the source?","options":["Binary and Decimal","Roman and Binary","Scientific and Octal","Alphabetic and Hexadecimal","Question not attempted"],"answer":0,"explanation":"Binary and Decimal are both explicitly listed types."},{"id":20,"q":"Which number system has the largest base among the four systems listed in the source?","options":["Binary","Decimal","Octal","Hexadecimal","Question not attempted"],"answer":3,"explanation":"The listed bases are 2, 10, 8 and 16 respectively; hexadecimal has the largest base."},{"id":21,"q":"Which number system is generally used in digital computers according to the source?","options":["Binary","Decimal","Octal","Hexadecimal","Question not attempted"],"answer":0,"explanation":"The binary number system is stated to be generally used in digital computers."},{"id":22,"q":"Which of the following correctly matches a number system with its base?","options":["Binary–2","Octal–10","Decimal–8","Hexadecimal–2","Question not attempted"],"answer":0,"explanation":"The source identifies binary as base 2."},{"id":23,"q":"Which of the following correctly matches all four number systems with their bases?","options":["Binary–2, Decimal–10, Octal–8, Hexadecimal–16","Binary–8, Decimal–2, Octal–16, Hexadecimal–10","Binary–10, Decimal–16, Octal–2, Hexadecimal–8","Binary–16, Decimal–8, Octal–10, Hexadecimal–2","Question not attempted"],"answer":0,"explanation":"The source gives binary base 2, decimal base 10, octal base 8 and hexadecimal base 16."},{"id":24,"q":"Which number system uses sixteen symbols according to the source?","options":["Binary","Decimal","Octal","Hexadecimal","Question not attempted"],"answer":3,"explanation":"The hexadecimal system has base 16 and therefore uses 16 symbols."},{"id":25,"q":"Which of the following is NOT among the four number systems listed in the source?","options":["Binary","Decimal","Octal","Roman","Question not attempted"],"answer":3,"explanation":"The four listed systems are Binary, Decimal, Hexadecimal and Octal; Roman is not listed."},{"id":26,"q":"How many digits are used in the binary number system?","options":["2","4","8","10","Question not attempted"],"answer":0,"explanation":"Binary carries only two digits, 0 and 1."},{"id":27,"q":"Which two digits are used in the binary number system?","options":["0 and 1","0 and 7","0 and 9","A and F","Question not attempted"],"answer":0,"explanation":"The source explicitly states that binary carries only 0 and 1."},{"id":28,"q":"What is the base of the binary number system?","options":["2","8","10","16","Question not attempted"],"answer":0,"explanation":"Binary is also known as the base 2 number system."},{"id":29,"q":"In the binary number system, absence of an electronic pulse represents which value?","options":["0","1","2","10","Question not attempted"],"answer":0,"explanation":"The source states that absence of an electronic pulse represents 0."},{"id":30,"q":"In the binary number system, presence of an electronic pulse represents which value?","options":["0","1","2","10","Question not attempted"],"answer":1,"explanation":"The source states that presence of an electronic pulse represents 1."},{"id":31,"q":"What is each binary digit called?","options":["Bit","Byte","Nibble","Decimal","Question not attempted"],"answer":0,"explanation":"Each digit in a binary number is called a bit."},{"id":32,"q":"A collection of four bits is known as what?","options":["Byte","Nibble","Digit","Hexadecimal","Question not attempted"],"answer":1,"explanation":"The source states that a four-bit collection is known as a nibble."},{"id":33,"q":"A collection of eight bits is known as what?","options":["Nibble","Byte","Bit","Octal","Question not attempted"],"answer":1,"explanation":"The source states that a collection of eight bits is known as a byte."},{"id":34,"q":"Which of the following is given as an example of a nibble?","options":["1101","11001010","10100","273","Question not attempted"],"answer":0,"explanation":"The source gives 1101 as an example of a four-bit nibble."},{"id":35,"q":"Which of the following is given as an example of a byte?","options":["1101","11001010","111","101","Question not attempted"],"answer":1,"explanation":"The source gives 11001010 as an example of an eight-bit byte."},{"id":36,"q":"Which statement about a binary digit is correct?","options":["It can have only 0 or 1 as its value.","It can have 0 to 9 as its value.","It can have A to F as its value.","It can have 0 to 15 as its value.","Question not attempted"],"answer":0,"explanation":"A binary digit can have only two values: 0 or 1."},{"id":37,"q":"In a binary number, the location of a digit represents a specific power of which base?","options":["2","8","10","16","Question not attempted"],"answer":0,"explanation":"The source states that a binary digit's location represents a power of base 2."},{"id":38,"q":"What is the positional power represented by the position of a digit at the zero position in the binary system?","options":["2^0","2^1","10^0","8^0","Question not attempted"],"answer":0,"explanation":"The source gives 2^0 as the example for the zero power position in binary."},{"id":39,"q":"In the given binary-system description, the last digit position is represented by which form?","options":["2^x","10^x","8^x","16^x","Question not attempted"],"answer":0,"explanation":"The source gives 2^x, where x represents the last position."},{"id":40,"q":"According to the source, in the expression 2^x for the last position, what does x represent?","options":["The last position","The base","The digit value","The number of bits","Question not attempted"],"answer":0,"explanation":"The source says x represents the last position."},{"id":41,"q":"Which of the following is an example of a binary number provided in the source?","options":["10100","273","2541","FAC2","Question not attempted"],"answer":0,"explanation":"10100 is one of the binary examples listed in the source."},{"id":42,"q":"Which of the following is another binary example explicitly listed in the source?","options":["11011","5644","11F3","0.5365","Question not attempted"],"answer":0,"explanation":"11011 is listed among the binary examples."},{"id":43,"q":"Which of the following is also listed as a binary example?","options":["11001","FAC2","1223","2541","Question not attempted"],"answer":0,"explanation":"11001 is one of the listed binary examples."},{"id":44,"q":"Which of the following is listed as a binary example with leading zeros?","options":["000101","000.101","0008","0019","Question not attempted"],"answer":0,"explanation":"000101 is explicitly listed among the binary examples."},{"id":45,"q":"Which of the following is another binary example with leading zero shown in the source?","options":["011010","010201","012345","0ABD5","Question not attempted"],"answer":0,"explanation":"011010 is explicitly listed as a binary example."},{"id":46,"q":"Which of the following cannot be a binary number based on the digits allowed in the source?","options":["11010","10101","12010","000101","Question not attempted"],"answer":2,"explanation":"Binary uses only 0 and 1, so a value containing digit 2 is not a binary number."},{"id":47,"q":"Which of the following is NOT a valid binary digit according to the source?","options":["0","1","2","Both 0 and 1","Question not attempted"],"answer":2,"explanation":"The binary system contains only the digits 0 and 1."},{"id":48,"q":"Which collection is specifically described as a nibble?","options":["Four bits","Eight bits","Two bits","Sixteen bits","Question not attempted"],"answer":0,"explanation":"A nibble is defined as a collection of four bits."},{"id":49,"q":"Which collection is specifically described as a byte?","options":["Four bits","Eight bits","Three bits","Two bits","Question not attempted"],"answer":1,"explanation":"A byte is defined as a collection of eight bits."},{"id":50,"q":"Which number system is stated to be generally used in digital computers?","options":["Binary","Decimal","Octal","Hexadecimal","Question not attempted"],"answer":0,"explanation":"The source states that the binary number system is generally used in digital computers."},{"id":51,"q":"Which statement is consistent with the given binary characteristics?","options":["Binary has only two values, 0 and 1, and is base 2.","Binary has eight values and is base 8.","Binary has ten values and is base 10.","Binary has sixteen values and is base 16.","Question not attempted"],"answer":0,"explanation":"The source gives both characteristics: binary has 0 and 1 and is base 2."},{"id":52,"q":"Which number system is used in our day-to-day life according to the source?","options":["Decimal","Binary","Octal","Hexadecimal","Question not attempted"],"answer":0,"explanation":"The source states that decimal numbers are used in our day-to-day life."},{"id":53,"q":"How many digits are present in the decimal number system?","options":["2","8","10","16","Question not attempted"],"answer":2,"explanation":"Decimal contains ten digits from 0 to 9."},{"id":54,"q":"Which range represents the digits of the decimal number system?","options":["0 to 1","0 to 7","0 to 9","0 to 15","Question not attempted"],"answer":2,"explanation":"The decimal system contains digits 0 through 9."},{"id":55,"q":"What is the base of the decimal number system?","options":["2","8","10","16","Question not attempted"],"answer":2,"explanation":"Decimal is the base 10 number system."},{"id":56,"q":"In the decimal number system, the position of a digit specifies a power of which base?","options":["2","8","10","16","Question not attempted"],"answer":2,"explanation":"The source states that position specifies a power of base 10."},{"id":57,"q":"What is the minimum value of a digit in the decimal number system?","options":["0","1","8","9","Question not attempted"],"answer":0,"explanation":"The source states that 0 is the minimum digit value."},{"id":58,"q":"What is the maximum value of a digit in the decimal number system?","options":["7","8","9","10","Question not attempted"],"answer":2,"explanation":"The source states that 9 is the maximum digit value."},{"id":59,"q":"In the decimal number 2541, which digit occupies the units position?","options":["1","4","5","2","Question not attempted"],"answer":0,"explanation":"The source identifies 1 as the digit in the unit position of 2541."},{"id":60,"q":"In the decimal number 2541, which digit occupies the tens position?","options":["1","4","5","2","Question not attempted"],"answer":1,"explanation":"The source identifies 4 as the digit in the tens position."},{"id":61,"q":"In the decimal number 2541, which digit occupies the hundreds position?","options":["1","4","5","2","Question not attempted"],"answer":2,"explanation":"The source identifies 5 as the digit in the hundreds position."},{"id":62,"q":"In the decimal number 2541, which digit occupies the thousands position?","options":["1","4","5","2","Question not attempted"],"answer":3,"explanation":"The source identifies 2 as the digit in the thousands position."},{"id":63,"q":"Which expression represents the units contribution in the decimal number 2541?","options":["1×10^0","1×10^1","1×10^2","1×10^3","Question not attempted"],"answer":0,"explanation":"The source writes the unit digit as 1×10^0."},{"id":64,"q":"Which expression represents the tens contribution in the decimal number 2541?","options":["4×10^0","4×10^1","4×10^2","4×10^3","Question not attempted"],"answer":1,"explanation":"The source writes the tens contribution as 4×10^1."},{"id":65,"q":"Which expression represents the hundreds contribution in the decimal number 2541?","options":["5×10^0","5×10^1","5×10^2","5×10^3","Question not attempted"],"answer":2,"explanation":"The source writes the hundreds contribution as 5×10^2."},{"id":66,"q":"Which expression represents the thousands contribution in the decimal number 2541?","options":["2×10^0","2×10^1","2×10^2","2×10^3","Question not attempted"],"answer":3,"explanation":"The source writes the thousands contribution as 2×10^3."},{"id":67,"q":"Which expanded form is given for the decimal number 2541?","options":["(2×1000)+(5×100)+(4×10)+(1×1)","(2×100)+(5×10)+(4×1)+(1×1000)","(2×10)+(5×1000)+(4×100)+(1×1)","(2×1)+(5×10)+(4×100)+(1×1000)","Question not attempted"],"answer":0,"explanation":"The source expands 2541 as 2×1000 + 5×100 + 4×10 + 1×1."},{"id":68,"q":"What is the value of 2×1000 + 5×100 + 4×10 + 1×1?","options":["2451","2541","2514","2415","Question not attempted"],"answer":1,"explanation":"The expanded decimal representation in the source evaluates to 2541."},{"id":69,"q":"Which sequence correctly identifies the place values of 2541 from right to left?","options":["Units, tens, hundreds, thousands","Thousands, hundreds, tens, units","Units, hundreds, tens, thousands","Tens, units, thousands, hundreds","Question not attempted"],"answer":0,"explanation":"The source identifies 1 as units, 4 as tens, 5 as hundreds and 2 as thousands."},{"id":70,"q":"Which statement about decimal digits is correct according to the source?","options":["0 is the minimum and 9 is the maximum digit.","1 is the minimum and 10 is the maximum.","0 is the minimum and 10 is the maximum.","2 is the minimum and 9 is the maximum.","Question not attempted"],"answer":0,"explanation":"The source states that 0 is the minimum and 9 is the maximum digit."},{"id":71,"q":"Which of the following is the correct base-and-digit-range pair for the decimal system?","options":["Base 10; digits 0 to 9","Base 8; digits 0 to 7","Base 2; digits 0 and 1","Base 16; digits 0 to 15","Question not attempted"],"answer":0,"explanation":"The decimal system is base 10 and contains digits 0 through 9."},{"id":72,"q":"What is the base of the octal number system?","options":["2","8","10","16","Question not attempted"],"answer":1,"explanation":"The octal number system has base 8."},{"id":73,"q":"How many digits are available in the octal number system?","options":["2","8","10","16","Question not attempted"],"answer":1,"explanation":"Octal has eight possible digit values."},{"id":74,"q":"Which range contains all digits of the octal number system?","options":["0 to 7","0 to 8","0 to 9","1 to 8","Question not attempted"],"answer":0,"explanation":"Octal uses the digits 0 through 7."},{"id":75,"q":"How many possible digit values can the octal number system represent using its symbols?","options":["2","8","10","16","Question not attempted"],"answer":1,"explanation":"The source states that there are eight possible digit values in octal."},{"id":76,"q":"With the help of how many bits is an octal number represented, according to the source?","options":["2 bits","3 bits","4 bits","8 bits","Question not attempted"],"answer":1,"explanation":"The source states that an octal number is represented with three bits."},{"id":77,"q":"Each set of bits in the octal description has a distinct value between which limits?","options":["0 and 7","0 and 8","1 and 8","0 and 15","Question not attempted"],"answer":0,"explanation":"The source says each set of bits has a distinct value between 0 and 7."},{"id":78,"q":"Which statement correctly describes the octal number system?","options":["It carries eight digits starting from 0 through 7.","It carries ten digits from 0 through 9.","It carries two digits 0 and 1.","It carries sixteen symbols 0 through F.","Question not attempted"],"answer":0,"explanation":"The source lists octal digits as 0, 1, 2, 3, 4, 5, 6 and 7."},{"id":79,"q":"The octal number system is also known as which base number system?","options":["Base 2","Base 8","Base 10","Base 16","Question not attempted"],"answer":1,"explanation":"Octal is also known as the base 8 number system."},{"id":80,"q":"In the octal system, the zero-power position is represented by which expression?","options":["8^0","8^1","2^0","10^0","Question not attempted"],"answer":0,"explanation":"The source gives 8^0 as the zero-power position in octal."},{"id":81,"q":"For the last digit position in an octal number, the source uses which form?","options":["8^x","2^x","10^x","16^x","Question not attempted"],"answer":0,"explanation":"The source gives 8^x for the last position."},{"id":82,"q":"In the octal expression 8^x for the last position, what does x represent?","options":["The last position","The digit value","The base","The number of digits","Question not attempted"],"answer":0,"explanation":"The source states that x represents the last position."},{"id":83,"q":"According to the octal table, which binary value represents octal digit 0?","options":["000","001","010","111","Question not attempted"],"answer":0,"explanation":"The provided table maps octal 0 to binary 000."},{"id":84,"q":"According to the octal table, which binary value represents octal digit 1?","options":["000","001","010","011","Question not attempted"],"answer":1,"explanation":"The provided table maps octal 1 to binary 001."},{"id":85,"q":"According to the octal table, which binary value represents octal digit 2?","options":["001","010","011","100","Question not attempted"],"answer":1,"explanation":"The provided table maps octal 2 to binary 010."},{"id":86,"q":"According to the octal table, which binary value represents octal digit 3?","options":["001","010","011","100","Question not attempted"],"answer":2,"explanation":"The provided table maps octal 3 to binary 011."},{"id":87,"q":"According to the octal table, which binary value represents octal digit 4?","options":["010","011","100","101","Question not attempted"],"answer":2,"explanation":"The provided table maps octal 4 to binary 100."},{"id":88,"q":"According to the octal table, which binary value represents octal digit 5?","options":["100","101","110","111","Question not attempted"],"answer":1,"explanation":"The provided table maps octal 5 to binary 101."},{"id":89,"q":"According to the octal table, which binary value represents octal digit 6?","options":["101","110","111","100","Question not attempted"],"answer":1,"explanation":"The provided table maps octal 6 to binary 110."},{"id":90,"q":"According to the octal table, which binary value represents octal digit 7?","options":["100","101","110","111","Question not attempted"],"answer":3,"explanation":"The provided table maps octal 7 to binary 111."},{"id":91,"q":"Which of the following is explicitly given as an example of an octal number?","options":["273","2541","FAC2","11011","Question not attempted"],"answer":0,"explanation":"273 is one of the octal examples listed in the source."},{"id":92,"q":"Which of the following is another octal example listed in the source?","options":["5644","564","11F3","10100","Question not attempted"],"answer":0,"explanation":"5644 is explicitly listed as an octal example."},{"id":93,"q":"Which of the following is given as a fractional octal example in the source?","options":["0.5365","0.1010","0.ABD5","0.2541","Question not attempted"],"answer":0,"explanation":"0.5365 is listed among the octal examples."},{"id":94,"q":"Which of the following is also listed as an octal example?","options":["1123","11001","1123 in hexadecimal","FAC2","Question not attempted"],"answer":0,"explanation":"1123 is explicitly listed as an octal example."},{"id":95,"q":"Which of the following is another octal example listed in the source?","options":["1223","12F3","0ABD5","2541","Question not attempted"],"answer":0,"explanation":"1223 is explicitly listed as an octal example."},{"id":96,"q":"Which of the following cannot be an octal number based on the digit range given in the source?","options":["273","5644","128","1223","Question not attempted"],"answer":2,"explanation":"Octal uses digits only from 0 to 7, so a value containing 8 cannot be an octal number."},{"id":97,"q":"Which statement about octal is correct?","options":["It uses digits 0–7, has base 8, and three bits are used to represent an octal number.","It uses digits 0–9 and has base 10.","It uses only 0 and 1 and has base 2.","It uses 0–F and has base 16.","Question not attempted"],"answer":0,"explanation":"All three properties are stated in the source: digits 0–7, base 8, and three-bit representation."},{"id":98,"q":"What is the base of the hexadecimal number system?","options":["2","8","10","16","Question not attempted"],"answer":3,"explanation":"The hexadecimal number system has base 16."},{"id":99,"q":"How many symbols are used to represent a hexadecimal number?","options":["2","8","10","16","Question not attempted"],"answer":3,"explanation":"The source states that hexadecimal has base 16 and uses 16 symbols."},{"id":100,"q":"Which set correctly lists the hexadecimal symbols given in the source?","options":["0–9 and A–F","0–7 and A–H","0–9 only","A–P only","Question not attempted"],"answer":0,"explanation":"Hexadecimal uses the ten digits 0–9 and the six letters A–F."},{"id":101,"q":"How many numeric digits are included in the hexadecimal system?","options":["8","10","12","16","Question not attempted"],"answer":1,"explanation":"The hexadecimal system contains ten digits from 0 to 9."},{"id":102,"q":"How many letters are used in the hexadecimal system?","options":["4","5","6","8","Question not attempted"],"answer":2,"explanation":"The source states that six letters, A to F, are used."},{"id":103,"q":"In hexadecimal notation, which decimal value is represented by A?","options":["9","10","11","15","Question not attempted"],"answer":1,"explanation":"The source states that A represents decimal 10."},{"id":104,"q":"In hexadecimal notation, which decimal value is represented by B?","options":["10","11","12","13","Question not attempted"],"answer":1,"explanation":"The source states that B represents decimal 11."},{"id":105,"q":"In hexadecimal notation, which decimal value is represented by C?","options":["10","11","12","13","Question not attempted"],"answer":2,"explanation":"The source states that C represents decimal 12."},{"id":106,"q":"In hexadecimal notation, which decimal value is represented by D?","options":["12","13","14","15","Question not attempted"],"answer":1,"explanation":"The source states that D represents decimal 13."},{"id":107,"q":"In hexadecimal notation, which decimal value is represented by E?","options":["12","13","14","15","Question not attempted"],"answer":2,"explanation":"The source states that E represents decimal 14."},{"id":108,"q":"In hexadecimal notation, which decimal value is represented by F?","options":["12","13","14","15","Question not attempted"],"answer":3,"explanation":"The source states that F represents decimal 15."},{"id":109,"q":"Which statement about A to F in hexadecimal is correct?","options":["They represent decimal values 10 to 15.","They represent decimal values 1 to 6.","They represent decimal values 0 to 5.","They represent decimal values 11 to 16.","Question not attempted"],"answer":0,"explanation":"The source states that A–F define values from 10 to 15."},{"id":110,"q":"How many bits are required for representing a hexadecimal number according to the source?","options":["2 bits","3 bits","4 bits","8 bits","Question not attempted"],"answer":2,"explanation":"The source states that only four bits are required for representing a hexadecimal number."},{"id":111,"q":"Each set of bits in the hexadecimal system has a distinct value between which limits?","options":["0 and 7","0 and 9","0 and 15","1 and 16","Question not attempted"],"answer":2,"explanation":"The source states that each set of bits has a distinct value between 0 and 15."},{"id":112,"q":"Which statement correctly describes the hexadecimal digit set?","options":["Ten digits from 0 to 9 and six letters from A to F.","Eight digits from 0 to 7 and two letters.","Ten digits from 0 to 10.","Only letters from A to F.","Question not attempted"],"answer":0,"explanation":"The source explicitly gives ten digits and six letters A–F."},{"id":113,"q":"Hexadecimal is also known as which number system?","options":["Base 2","Base 8","Base 10","Base 16","Question not attempted"],"answer":3,"explanation":"The source identifies hexadecimal as the base 16 number system."},{"id":114,"q":"In the hexadecimal system, the zero-power position is represented by which expression?","options":["16^0","16^1","10^0","2^0","Question not attempted"],"answer":0,"explanation":"The source gives 16^0 for the zero-power position."},{"id":115,"q":"For the last digit position in a hexadecimal number, the source uses which expression?","options":["16^x","8^x","10^x","2^x","Question not attempted"],"answer":0,"explanation":"The source gives 16^x for the last digit position."},{"id":116,"q":"In the expression 16^x used for the last hexadecimal position, what does x represent?","options":["The last position","The base","The digit value","The number of letters","Question not attempted"],"answer":0,"explanation":"The source states that x represents the last position."},{"id":117,"q":"According to the given binary-to-hexadecimal table, what hexadecimal symbol corresponds to binary 1001?","options":["8","9","A","B","Question not attempted"],"answer":1,"explanation":"The table maps binary 1001 to hexadecimal 9."},{"id":118,"q":"According to the given binary-to-hexadecimal table, what hexadecimal symbol corresponds to binary 1010?","options":["9","A","B","C","Question not attempted"],"answer":1,"explanation":"The table maps binary 1010 to hexadecimal A."},{"id":119,"q":"According to the given binary-to-hexadecimal table, what hexadecimal symbol corresponds to binary 1100?","options":["B","C","D","E","Question not attempted"],"answer":1,"explanation":"The table maps binary 1100 to hexadecimal C."},{"id":120,"q":"According to the given binary-to-hexadecimal table, what hexadecimal symbol corresponds to binary 1111?","options":["D","E","F","0","Question not attempted"],"answer":2,"explanation":"The table maps binary 1111 to hexadecimal F."}];
+const sections=[{"name":"Section A — Introduction / Basic Concepts","start":1,"end":15},{"name":"Section B — Types of Number System","start":16,"end":25},{"name":"Section C — Binary Number System","start":26,"end":50},{"name":"Section D — Decimal Number System","start":51,"end":70},{"name":"Section E — Octal Number System","start":71,"end":95},{"name":"Section F — Hexadecimal Number System","start":96,"end":120}];
+
+let selectedSection=null;
+let quiz=[];
+let currentIndex=0;
+let answers={};
+let checked={};
+let reviewMode=false;
+
+function goHome(){
+ document.getElementById("home").classList.remove("hidden");
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.add("hidden");
+ selectedSection=null;quiz=[];currentIndex=0;answers={};checked={};reviewMode=false;
+ window.scrollTo(0,0);
+}
+
+function renderSections(){
+ const box=document.getElementById("sectionsList");
+ box.innerHTML="";
+ sections.forEach((s,i)=>{
+  const d=document.createElement("div");
+  d.className="section";
+  d.innerHTML=`<div class="section-title">${s.name}</div><div class="section-count">${s.end-s.start+1} Questions</div>`;
+  d.onclick=()=>startSection(i);
+  box.appendChild(d);
+ });
+}
+
+function startSection(i){
+ selectedSection=sections[i];
+ const list=questions.slice(selectedSection.start-1,selectedSection.end);
+ document.getElementById("home").classList.add("hidden");
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("setup").classList.remove("hidden");
+
+ document.getElementById("setupTitle").textContent=selectedSection.name;
+ document.getElementById("setupInfo").textContent=`${list.length} MCQs available`;
+
+ const sel=document.getElementById("questionCount");
+ sel.innerHTML="";
+ [5,10,20,list.length].forEach(n=>{
+  if(n<=list.length && !Array.from(sel.options).some(o=>Number(o.value)===n)){
+   const o=document.createElement("option");
+   o.value=n;
+   o.textContent=n===list.length?`All ${n} Questions`:`${n} Questions`;
+   sel.appendChild(o);
+  }
+ });
+ // IMPORTANT: default हमेशा पूरे section की question count रहेगी
+ sel.value=String(list.length);
+ window.scrollTo(0,0);
+}
+
+function startPractice(){
+ const list=questions.slice(selectedSection.start-1,selectedSection.end)
+   .map((q,i)=>({...q,_id:selectedSection.start+i}));
+ const count=Number(document.getElementById("questionCount").value);
+
+ quiz=list.slice(0,count);
+ currentIndex=0;
+ answers={};
+ checked={};
+ reviewMode=false;
+
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("quiz").classList.remove("hidden");
+ render();
+ window.scrollTo(0,0);
+}
+
+function render(){
+ const q=quiz[currentIndex];
+ if(!q)return;
+
+ document.getElementById("sectionName").textContent=selectedSection.name;
+ document.getElementById("counter").textContent=`Question ${currentIndex+1} of ${quiz.length}`;
+ document.getElementById("attempted").textContent=`Attempted: ${Object.keys(answers).length}/${quiz.length}`;
+ document.getElementById("question").textContent=`Q${q._id}. ${q.q}`;
+
+ const box=document.getElementById("options");
+ box.innerHTML="";
+ document.getElementById("feedback").textContent="";
+ document.getElementById("explanation").classList.add("hidden");
+ document.getElementById("explanation").innerHTML="";
+
+ q.options.forEach((opt,i)=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="option";
+  b.innerHTML=`<b>${String.fromCharCode(65+i)}.</b> ${opt}`;
+
+  const selected=answers[q._id];
+  if(selected===i)b.classList.add("selected");
+
+  // (E) Question not attempted is displayed but is not a selectable answer.
+  if(i===4){
+   b.disabled=true;
+   b.style.cursor="default";
+   b.style.opacity="0.85";
+  }else if(checked[q._id] || reviewMode){
+   b.disabled=true;
+   if(i===q.answer)b.classList.add("correct");
+   if(selected===i && i!==q.answer)b.classList.add("wrong");
+  }else{
+   b.onclick=()=>{
+    answers[q._id]=i;
+    render();
+   };
+  }
+  box.appendChild(b);
+ });
+
+ if(checked[q._id] || reviewMode){
+  const f=document.getElementById("feedback");
+  if(selectedAnswerExists(q)){
+   f.textContent=answers[q._id]===q.answer
+     ?"✅ सही उत्तर!"
+     :`❌ गलत। सही उत्तर: ${String.fromCharCode(65+q.answer)}`;
+   f.style.color=answers[q._id]===q.answer?"#15803d":"#b91c1c";
+  }else{
+   f.textContent=`⚪ Unattempted. सही उत्तर: ${String.fromCharCode(65+q.answer)}`;
+   f.style.color="#536579";
+  }
+
+  document.getElementById("explanation").innerHTML=
+    `<div class="explanation-title">💡 Explanation</div>${formatExplanation(q.explanation)}`;
+  document.getElementById("explanation").classList.remove("hidden");
+ }
+
+ renderPalette();
+ document.getElementById("prevBtn").disabled=currentIndex===0;
+ document.getElementById("nextBtn").disabled=currentIndex===quiz.length-1;
+ document.getElementById("checkBtn").disabled=reviewMode || !!checked[q._id] || answers[q._id]===undefined;
+ document.getElementById("submitBtn").style.display=reviewMode?"none":"inline-block";
+}
+
+function selectedAnswerExists(q){
+ return answers[q._id]!==undefined;
+}
+
+function formatExplanation(s){
+ return s.replace(/\n/g,"<br>");
+}
+
+function renderPalette(){
+ const p=document.getElementById("palette");
+ p.innerHTML="<h3>Question Palette</h3>";
+ const g=document.createElement("div");
+ g.className="pal-grid";
+
+ quiz.forEach((q,i)=>{
+  const b=document.createElement("button");
+  b.className="pal";
+  b.type="button";
+  b.textContent=q._id;
+  if(i===currentIndex)b.classList.add("active");
+  if(answers[q._id]!==undefined)b.classList.add("done");
+  b.onclick=()=>{
+   currentIndex=i;
+   render();
+   window.scrollTo(0,0);
+  };
+  g.appendChild(b);
+ });
+ p.appendChild(g);
+}
+
+document.getElementById("prevBtn").onclick=()=>{
+ if(currentIndex>0){
+  currentIndex--;
+  render();
+  window.scrollTo(0,0);
+ }
+};
+
+document.getElementById("nextBtn").onclick=()=>{
+ if(currentIndex<quiz.length-1){
+  currentIndex++;
+  render();
+  window.scrollTo(0,0);
+ }
+};
+
+document.getElementById("checkBtn").onclick=()=>{
+ const q=quiz[currentIndex];
+ if(answers[q._id]===undefined)return;
+ checked[q._id]=true;
+ render();
+};
+
+document.getElementById("submitBtn").onclick=()=>{
+ if(confirm("क्या आप अपना test submit करना चाहते हैं?"))showResult();
+};
+
+function showResult(){
+ let correct=0,attempted=Object.keys(answers).length;
+ quiz.forEach(q=>{
+  if(answers[q._id]===q.answer)correct++;
+ });
+ let wrong=Object.keys(answers).filter(id=>{
+  const q=quiz.find(x=>String(x._id)===String(id));
+  return q && answers[id]!==q.answer;
+ }).length;
+
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+
+ document.getElementById("resultText").innerHTML=
+ `<div><b>Score:</b> ${correct} / ${quiz.length}</div>
+  <div>🟢 Correct: ${correct}</div>
+  <div>🔴 Wrong: ${wrong}</div>
+  <div>⚪ Unattempted: ${quiz.length-attempted}</div>
+  <div>📊 Attempted: ${attempted}</div>`;
+
+ window.scrollTo(0,0);
+}
+
+document.getElementById("reviewBtn").onclick=()=>{
+ reviewMode=true;
+ currentIndex=0;
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("quiz").classList.remove("hidden");
+ render();
+ window.scrollTo(0,0);
+};
+
+// Keyboard shortcuts for normal quiz + Review Answers
+document.addEventListener("keydown", (e)=>{
+ const tag = document.activeElement?.tagName;
+ if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+ const key = e.key.toLowerCase();
+
+ if(key === "n" && currentIndex < quiz.length - 1){
+   e.preventDefault();
+   currentIndex++;
+   render();
+   window.scrollTo(0,0);
+ }
+
+ if(key === "p" && currentIndex > 0){
+   e.preventDefault();
+   currentIndex--;
+   render();
+   window.scrollTo(0,0);
+ }
+});
+
+document.getElementById("homeBtn").onclick=goHome;
+
+renderSections();
+</script>
+</body>
+</html>

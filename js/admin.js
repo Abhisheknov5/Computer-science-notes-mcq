@@ -1428,13 +1428,91 @@ async function deleteCSSubtopic(id){
         if(!code)return null;
         const strong=card.querySelector("strong");
         const small=card.querySelector("small");
-        const iconEl=card.querySelector("span:not(.subject-delete-btn)");
+        const iconEl=card.querySelector("span:not(.subject-delete-btn):not(.subject-rename-btn)");
+        const customCodes=readJSON(CUSTOM_KEY,[]).map(x=>String(x.code||"").toUpperCase());
         return {
             code,
             name:String(strong?.textContent||code).trim(),
             icon:String(iconEl?.textContent||"📚").trim()||"📚",
-            id:slug(String(small?.textContent||code))||slug(code)
+            // Use the real server subject ID. The card's <small> value is the
+            // short code, which is not always the same as the server ID.
+            id:(typeof subjectIdMap!=="undefined" && subjectIdMap[code])
+                ? subjectIdMap[code]
+                : (slug(String(small?.textContent||code))||slug(code)),
+            builtIn:!customCodes.includes(code.toUpperCase())
         };
+    }
+
+    async function renameSubject(subject){
+        if(!subject)return;
+
+        const oldName=String(subject.name||"").trim();
+        const typed=window.prompt(
+            `Rename "${oldName}"?\n\nNaya Subject Name type karein:`,
+            oldName
+        );
+        if(typed===null)return;
+
+        const name=String(typed).trim();
+        if(!name){
+            message("Subject Name daaliye.","error");
+            return;
+        }
+        if(name===oldName)return;
+        if(name.length>80){
+            message("Subject Name bahut lamba hai.","error");
+            return;
+        }
+
+        try{
+            const response=await fetch("/api/cs/subjects/rename",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({
+                    id:subject.id,
+                    name
+                }),
+                cache:"no-store"
+            });
+            const data=await response.json().catch(()=>({}));
+            if(!response.ok||!data.success){
+                throw new Error(data.message||`HTTP ${response.status}`);
+            }
+
+            // Update local fallback registry.
+            const customs=readJSON(CUSTOM_KEY,[]).map(item=>{
+                if(String(item.code||"").toUpperCase()===String(subject.code||"").toUpperCase()){
+                    return {...item,name:data.item?.name||name};
+                }
+                return item;
+            });
+            writeJSON(CUSTOM_KEY,customs);
+
+            subject.name=data.item?.name||name;
+            subjectNameMap[subject.code]=`${subject.name} (${subject.code})`;
+            mainTopicPlaceholderMap[subject.code]=`Main Topic Title (e.g. ${subject.name} Basics)`;
+
+            const card=document.querySelector(
+                `.subject-card[data-subject="${CSS.escape(subject.code)}"]`
+            );
+            if(card){
+                const strong=card.querySelector("strong");
+                if(strong)strong.textContent=subject.name;
+            }
+
+            if(typeof currentSubject!=="undefined" && currentSubject===subject.code){
+                const title=document.getElementById("currentSubjectTitle");
+                if(title)title.textContent=subject.name;
+
+                const badge=document.getElementById("selectionBadge");
+                if(badge)badge.textContent=subject.name;
+            }
+
+            message(`✅ ${subject.name} rename ho gaya.`,"success");
+        }catch(error){
+            console.error("Subject rename failed:",error);
+            message(`❌ ${error.message||"Subject rename failed."}`,"error");
+        }
     }
 
     async function openDeleteSubject(subject){
@@ -1485,6 +1563,28 @@ async function deleteCSSubtopic(id){
         if(!card || card.querySelector(".subject-delete-btn"))return;
         const subject=subjectFromCard(card);
         if(!subject)return;
+        if(!card.querySelector(".subject-rename-btn")){
+            const renameBtn=document.createElement("span");
+            renameBtn.className="subject-rename-btn";
+            renameBtn.textContent="✏️";
+            renameBtn.title=`Rename ${subject.name}`;
+            renameBtn.setAttribute("role","button");
+            renameBtn.setAttribute("tabindex","0");
+            renameBtn.addEventListener("click",e=>{
+                e.preventDefault();
+                e.stopPropagation();
+                renameSubject(subject);
+            });
+            renameBtn.addEventListener("keydown",e=>{
+                if(e.key==="Enter"||e.key===" "){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    renameSubject(subject);
+                }
+            });
+            card.appendChild(renameBtn);
+        }
+
         const btn=document.createElement("span");
         btn.className="subject-delete-btn";
         btn.textContent="🗑️";
@@ -1539,7 +1639,12 @@ async function deleteCSSubtopic(id){
             const response=await fetch("/api/cs/subjects",{
                 method:"POST",
                 headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({name,code,icon}),
+                body:JSON.stringify({
+                    name,
+                    code,
+                    icon,
+                    readd:readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase()).includes(code)
+                }),
                 cache:"no-store"
             });
             const data=await response.json().catch(()=>({}));
@@ -1549,6 +1654,9 @@ async function deleteCSSubtopic(id){
             message(`❌ ${error.message}`,"error");
             return;
         }
+
+        const deletedAfterAdd=readJSON(DELETED_KEY,[]).filter(x=>String(x).toUpperCase()!==code);
+        writeJSON(DELETED_KEY,deletedAfterAdd);
 
         // Keep a local copy only as a fast UI fallback; the server/Firestore registry is the source of truth.
         const customs=readJSON(CUSTOM_KEY,[]).filter(x=>String(x.code||"").toUpperCase()!==code);
@@ -1605,9 +1713,9 @@ async function deleteCSSubtopic(id){
             if(!response.ok || !data.success || !Array.isArray(data.items)) return;
 
             const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
-            const serverCustoms=data.items.filter(item=>item && item.builtIn===false);
+            const serverSubjects=data.items.filter(item=>item);
 
-            serverCustoms.forEach(subject=>{
+            serverSubjects.forEach(subject=>{
                 const code=String(subject.code||"").trim();
                 if(!code || deleted.includes(code.toUpperCase())) return;
 
@@ -1643,16 +1751,55 @@ async function deleteCSSubtopic(id){
         const style=document.createElement("style");
         style.textContent=`
             .cs-subject-grid .subject-card{position:relative;}
+            .cs-subject-grid .subject-rename-btn,
             .cs-subject-grid .subject-delete-btn{
-                position:absolute!important;left:8px!important;top:8px!important;
+                position:absolute!important;
                 width:30px!important;height:30px!important;border-radius:8px!important;
                 display:flex!important;align-items:center!important;justify-content:center!important;
-                background:#fee2e2!important;color:#b91c1c!important;
                 cursor:pointer!important;font-size:15px!important;line-height:1!important;
                 z-index:9999!important;box-sizing:border-box!important;
             }
+            .cs-subject-grid .subject-delete-btn{
+                left:8px!important;right:auto!important;top:8px!important;
+                background:#fee2e2!important;color:#b91c1c!important;
+            }
+            .cs-subject-grid .subject-rename-btn{
+                right:8px!important;left:auto!important;top:8px!important;
+                background:#e0ecff!important;color:#1d4ed8!important;
+            }
+            .cs-subject-grid .subject-rename-btn:hover{background:#cfe0ff!important;}
+            .cs-subject-grid .subject-rename-btn:focus{outline:2px solid #2563eb!important;outline-offset:2px;}
             .cs-subject-grid .subject-delete-btn:hover{background:#fecaca!important;}
             .cs-subject-grid .subject-delete-btn:focus{outline:2px solid #ef4444!important;outline-offset:2px;}
+
+            /* Selected subject: remove the old top "✓ Selected" pill.
+               Keep only a small check mark at the bottom-right. */
+            .cs-subject-grid .subject-card.active .selected-badge,
+            .cs-subject-grid .subject-card.active .selection-badge,
+            .cs-subject-grid .subject-card.active .selected,
+            .cs-subject-grid .subject-card.active .active-badge{
+                display:none!important;
+            }
+            .cs-subject-grid .subject-card.active::after{
+                content:"✓"!important;
+                position:absolute!important;
+                right:8px!important;
+                bottom:7px!important;
+                top:auto!important;
+                width:20px!important;
+                height:20px!important;
+                border-radius:50%!important;
+                display:flex!important;
+                align-items:center!important;
+                justify-content:center!important;
+                background:#2563eb!important;
+                color:#fff!important;
+                font-size:12px!important;
+                font-weight:900!important;
+                line-height:1!important;
+                z-index:9998!important;
+                box-sizing:border-box!important;
+            }
         `;
         document.head.appendChild(style);
     }
