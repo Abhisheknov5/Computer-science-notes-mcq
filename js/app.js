@@ -218,6 +218,8 @@ function router() {
         renderMCQSetsPage(parts[1], Number(parts[2]));
     } else if (page === "read-notes") {
         renderNotes(parts[1], Number(parts[2]));
+    } else if (page === "subtopic-mcq") {
+        renderSubtopicMCQPage(decodeURIComponent(parts[1] || ""), Number(parts[2]), decodeURIComponent(parts[3] || ""), decodeURIComponent(parts[4] || ""));
     } else if (page === "quiz") {
         const subjectId = parts[1];
         const chapterNumber = Number(parts[2]);
@@ -367,92 +369,94 @@ async function renderChapterList(subjectId) {
         return;
     }
 
-    const subjectNotes = await loadSubjectNotes(subjectId);
+    let hierarchy = [];
+    let subjectNotes = null;
+
+    try {
+        const [hierarchyResponse, notesResponse] = await Promise.all([
+            fetch(`/api/cs/public-hierarchy-v2/${encodeURIComponent(subjectId)}`, { cache: "no-store" }),
+            fetch(`/api/cs/subject-notes/${encodeURIComponent(subjectId)}`, { cache: "no-store" })
+        ]);
+
+        if (hierarchyResponse.ok) {
+            const data = await hierarchyResponse.json();
+            if (data?.success && Array.isArray(data.items)) hierarchy = data.items;
+        }
+
+        if (notesResponse.ok) {
+            const data = await notesResponse.json();
+            if (data?.success && data?.exists && data?.notesUrl) subjectNotes = data;
+        }
+    } catch (error) {
+        console.error("CS public hierarchy load error:", error);
+    }
+
+    const currentParts = (window.location.hash || "#home").substring(1).split("/");
+    if (currentParts[0] !== "subject" || currentParts[1] !== subjectId) return;
 
     app.innerHTML = `
         <button class="back-btn" onclick="location.hash='science'">← Back to Subjects</button>
-
         <div class="page-header">
             <h1>${subject.icon} ${escapeHtml(subject.name)}</h1>
             <p>Topics, Notes and MCQ Practice</p>
         </div>
-
         ${subjectNotes?.notesUrl ? `
             <div style="display:flex;justify-content:center;align-items:center;margin:16px 0 20px;">
                 <button id="commonSubjectNotesBtn" class="btn btn-blue" type="button">📖 ${escapeHtml(subject.name)} Notes</button>
             </div>
         ` : ""}
-
-        <div id="chapterLoading" class="card">
-            <h2>Loading Chapters...</h2>
-            <p>Please wait.</p>
-        </div>
+        <div class="chapter-list" id="csMainTopicList"></div>
     `;
 
     const notesButton = document.getElementById("commonSubjectNotesBtn");
-    if (notesButton && subjectNotes?.notesUrl) {
-        notesButton.onclick = () => window.open(subjectNotes.notesUrl, "_blank", "noopener,noreferrer");
+    if (notesButton && subjectNotes?.notesUrl) notesButton.onclick = () => window.open(subjectNotes.notesUrl, "_blank", "noopener,noreferrer");
+
+    const list = document.getElementById("csMainTopicList");
+    if (!hierarchy.length) {
+        list.innerHTML = `<div class="card"><h2>Topics अभी उपलब्ध नहीं</h2><p>इस subject के Main Topics अभी add नहीं किए गए हैं।</p></div>`;
+        return;
     }
 
-    const cached = readChapterCache(subjectId);
-    if (cached?.length) renderChapterRows(subjectId, cached);
+    hierarchy.forEach((main, index) => {
+        const row = document.createElement("div");
+        row.className = "chapter-item";
+        row.innerHTML = `
+            <div class="chapter-name"><strong>Topic ${index + 1}</strong><span>${escapeHtml(main.title || "")}</span></div>
+            <div class="chapter-actions"><button class="btn btn-blue" type="button">⌄ Open</button></div>
+        `;
 
-    let registry = [];
-    try {
-        const response = await fetch(`/api/cs/chapters/${encodeURIComponent(subjectId)}`, { cache: "no-store" });
-        if (response.ok) {
-            const data = await response.json();
-            registry = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+        const btn = row.querySelector("button");
+        const children = Array.isArray(main.subtopics) ? main.subtopics : [];
+        const childBox = document.createElement("div");
+        childBox.style.cssText = "display:none;margin:0 0 16px;padding:14px 18px 6px;background:#f5faf7;border:1px solid #e2eee5;border-top:0;border-radius:0 0 12px 12px;";
+
+        if (!children.length) {
+            childBox.innerHTML = '<div style="color:#667085;padding:8px 0">Subtopics अभी उपलब्ध नहीं</div>';
+        } else {
+            children.forEach((sub, subIndex) => {
+                const sets = Array.isArray(sub.mcqSets) ? sub.mcqSets : [];
+                const item = document.createElement("div");
+                item.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb;";
+                item.innerHTML = `<div><div style="font-weight:600;color:#253047">${subIndex + 1}. ${escapeHtml(sub.title || "")}</div></div><div><button class="btn btn-green" type="button">📝 MCQ (${sets.length} Set${sets.length === 1 ? "" : "s"})</button></div>`;
+                item.querySelector("button").onclick = () => {
+                    if (!sets.length) { alert("Is Subtopic ke liye MCQ abhi available nahi hai."); return; }
+                    location.hash = `subtopic-mcq/${encodeURIComponent(subjectId)}/${encodeURIComponent(main.chapterNumber)}/${encodeURIComponent(sub.id)}/${encodeURIComponent(sub.title || "")}`;
+                };
+                childBox.appendChild(item);
+            });
         }
-    } catch (error) {
-        console.error("CS chapter registry load error:", error);
-    }
 
-    const chapters = await Promise.all(registry.map(async item => {
-        const number = Number(item.number);
-        if (!Number.isInteger(number)) return null;
-
-        const htmlPromise = fetch(`/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${number}`, { cache: "no-store" })
-            .then(async response => {
-                if (!response.ok) return [];
-                const data = await response.json();
-                return Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
-            }).catch(() => []);
-
-        const jsonPromise = fetch(`/api/cs/mcqs/${encodeURIComponent(subjectId)}/${number}`, { cache: "no-store" })
-            .then(async response => {
-                if (!response.ok) return null;
-                const result = await response.json();
-                return result?.success && result?.exists && result?.data && Array.isArray(result.data.questions)
-                    ? result.data
-                    : null;
-            }).catch(() => null);
-
-        const [htmlItems, mcqData] = await Promise.all([htmlPromise, jsonPromise]);
-        const jsonSet = mcqData ? [{
-            id: "saved-json-mcq",
-            name: mcqData.title || mcqData.chapterTitle || `Chapter ${number} JSON MCQ`,
-            questionCount: mcqData.questions.length,
-            isJSON: true,
-            url: `/#quiz/${subjectId}/${number}/json/direct`
-        }] : [];
-
-        return {
-            number,
-            title: item.title || mcqData?.title || mcqData?.chapterTitle || htmlItems[0]?.name || `Chapter ${number}`,
-            mcq: mcqData,
-            mcqSets: [...htmlItems, ...jsonSet]
+        btn.onclick = () => {
+            const open = childBox.style.display !== "none";
+            childBox.style.display = open ? "none" : "block";
+            btn.textContent = open ? "⌄ Open" : "⌃ Close";
         };
-    }));
 
-    const validChapters = chapters.filter(Boolean);
-    saveChapterCache(subjectId, validChapters);
-
-    const currentParts = (window.location.hash || "#home").substring(1).split("/");
-    if (currentParts[0] !== "subject" || currentParts[1] !== subjectId) return;
-
-    renderChapterRows(subjectId, validChapters);
+        list.appendChild(row);
+        list.appendChild(childBox);
+    });
 }
+
 
 window.addEventListener("storage", function (event) {
     if (!event.key || !event.key.startsWith(CS_PREFIX)) return;
@@ -573,6 +577,27 @@ async function renderNotes(subjectId, chapterNumber) {
             <p>इस topic की Notes अभी उपलब्ध नहीं हैं।</p>
         </div>
     `;
+}
+
+async function renderSubtopicMCQPage(subjectId, chapterNumber, subtopicId, title) {
+    const subject = subjectById(subjectId);
+    app.innerHTML = `<button class="back-btn" onclick="location.hash='subject/${encodeURIComponent(subjectId)}'">← Back to Topics</button><div class="page-header"><h1>📝 MCQ Practice</h1><p>${escapeHtml(subject?.name || subjectId)} — ${escapeHtml(title)}</p></div><div id="csSetLoading" class="card"><h2>Loading MCQ Sets...</h2><p>Please wait.</p></div>`;
+    let items = [];
+    try {
+        const response = await fetch(`/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${encodeURIComponent(chapterNumber)}?subtopicId=${encodeURIComponent(subtopicId)}`, { cache: "no-store" });
+        if (response.ok) { const data = await response.json(); items = Array.isArray(data.items) ? data.items : []; }
+    } catch (error) { console.error("CS subtopic MCQ load error:", error); }
+    const loading = document.getElementById("csSetLoading");
+    if (!items.length) { loading.innerHTML = `<h2>MCQ अभी उपलब्ध नहीं</h2><p>इस Subtopic के लिए अभी कोई MCQ Set upload नहीं किया गया है।</p>`; return; }
+    loading.remove();
+    const grid = document.createElement("div"); grid.className = "card-grid";
+    items.forEach((item,index) => {
+        const card=document.createElement("div"); card.className="card";
+        card.innerHTML=`<div class="card-icon">📝</div><h3>Set ${index+1}</h3><p>${escapeHtml(item.name||item.originalName||"MCQ Set")}</p><p><strong>${Number(item.questionCount||0)}</strong> Questions</p><button class="btn btn-green" type="button">▶ Start MCQ</button>`;
+        card.querySelector("button").onclick=()=>{location.hash=`quiz/${encodeURIComponent(subjectId)}/${encodeURIComponent(chapterNumber)}/${encodeURIComponent(item.id)}/direct`;};
+        grid.appendChild(card);
+    });
+    app.appendChild(grid);
 }
 
 /* =========================================
