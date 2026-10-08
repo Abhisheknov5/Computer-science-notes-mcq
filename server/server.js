@@ -3012,18 +3012,30 @@ app.get("/api/cs/mcq-html/:subject/:chapterNumber",async(req,res)=>{
             try{firebaseItems=await listHTMLFromFirestore(0,subject,chapterNumber);}catch{}
         }
 
+        let sourceItems;
+
+        if(requestedSubtopicId){
+            // For a selected subtopic, the local MCQ is authoritative.
+            // This prevents an old/stale Firebase record from being shown
+            // on the live site when a current local MCQ already exists.
+            const localMatches=localItems.filter(item =>
+                String(item?.subtopicId||"")===requestedSubtopicId
+            );
+
+            sourceItems=localMatches.length
+                ? localMatches
+                : firebaseItems.filter(item =>
+                    String(item?.subtopicId||"")===requestedSubtopicId
+                );
+        }else{
+            sourceItems=[...localItems,...firebaseItems];
+        }
+
         const merged=[];
         const seen=new Set();
 
-        for(const item of [...localItems,...firebaseItems]){
+        for(const item of sourceItems){
             if(!item||!item.id||seen.has(item.id)) continue;
-
-            // If a subtopic is selected, return only MCQs linked to it.
-            // With no subtopicId, preserve the old chapter-wide behaviour.
-            if(requestedSubtopicId &&
-               String(item.subtopicId||"")!==requestedSubtopicId){
-                continue;
-            }
 
             seen.add(item.id);
             merged.push({...item,url:`/api/cs/mcq-html/file/${encodeURIComponent(item.id)}`});
