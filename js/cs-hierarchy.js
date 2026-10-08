@@ -131,6 +131,27 @@
     }
     return false;
   }
-  window.addEventListener('hashchange',()=>hierarchyRouter());
-  setTimeout(()=>hierarchyRouter(),0);
+  // The legacy app.js also listens to DOMContentLoaded/hashchange.
+  // Capture the CS hierarchy routes first so the legacy chapter renderer
+  // cannot race with this final hierarchy renderer on the first open.
+  const isHierarchyRoute=()=>{
+    const p=(window.location.hash||'#home').substring(1).split('/');
+    return p[0]==='science'||p[0]==='subject'||p[0]==='subtopic-mcq';
+  };
+
+  window.addEventListener('DOMContentLoaded',event=>{
+    if(!isHierarchyRoute()) return;
+    event.stopImmediatePropagation();
+    hierarchyRouter();
+  },true);
+
+  window.addEventListener('hashchange',event=>{
+    if(!isHierarchyRoute()) return;
+    event.stopImmediatePropagation();
+    hierarchyRouter();
+  },true);
+
+  setTimeout(()=>{
+    if(isHierarchyRoute()) hierarchyRouter();
+  },0);
 })();

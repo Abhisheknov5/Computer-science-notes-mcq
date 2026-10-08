@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Digital Electronics | MCQ Practice</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#172b4d;line-height:1.6}
+.container{max-width:1100px;margin:auto;padding:24px 20px}
+.card{background:#fff;border-radius:18px;box-shadow:0 5px 18px rgba(0,0,0,.08)}
+.hidden{display:none!important}
+h1,h2,h3{margin-top:0}
+button,select{font:inherit}
+button{border:0;border-radius:9px;padding:11px 18px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.home{padding:28px}
+.home h1{font-size:32px;margin-bottom:6px}
+.sub{color:#536579;font-size:18px}
+.section{border:1px solid #d4dae2;border-radius:12px;padding:17px 20px;margin:12px 0;cursor:pointer;background:#fafbfc}
+.section:hover{background:#f5f8fc}
+.section-title{font-size:20px;font-weight:700;color:#111}
+.section-count{color:#536579}
+.setup{padding:28px}
+.question-select-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap}
+.question-select-row label{font-size:18px;white-space:nowrap}
+.back{display:inline-block;color:#2563eb;text-decoration:none;font-weight:700;margin-bottom:18px}
+select{padding:10px 14px;border:1px solid #ccc;border-radius:8px;margin-left:8px}
+.next{background:#16a34a;color:#fff}
+.prev{background:#6b7280;color:#fff}
+.submit{background:#2563eb;color:#fff}
+.quiz-topbar{margin:0 0 14px}
+.topics-back{padding:12px 18px;border:1px solid #d1d5db;border-radius:10px;background:#f5f5f5;color:#111827;font-size:16px;cursor:pointer}
+.topics-back:hover{background:#e5e7eb}
+.quiz-header{padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:20px}
+.quiz-header strong{font-size:18px}
+.question-card{padding:26px;margin-bottom:18px}
+.question{font-size:22px;font-weight:700;margin-bottom:20px;white-space:pre-line}
+.option{display:block;width:100%;text-align:left;margin:10px 0;padding:14px 16px;border:2px solid #e1e5ea;background:#fff;border-radius:10px}
+.option:hover{border-color:#2563eb;background:#eff6ff}
+.option.selected{border-color:#2563eb;background:#dbeafe}
+.option.correct{border-color:#16a34a;background:#dcfce7}
+.option.wrong{border-color:#dc2626;background:#fee2e2}
+.feedback{min-height:28px;font-weight:700;margin-top:12px}
+.explanation{margin-top:14px;padding:16px 18px;border-left:5px solid #2563eb;border-radius:10px;background:#eff6ff;color:#172b4d;font-size:16px;line-height:1.65}
+.explanation-title{font-weight:700;font-size:18px;margin-bottom:6px}
+.bottom{padding:18px 24px;display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:18px}
+.palette{padding:20px 24px}
+.pal-grid{display:flex;flex-wrap:wrap;gap:8px}
+.pal{background:#fff;border:1px solid #d4dae2;width:58px;min-width:58px;height:52px;padding:8px 4px}
+.pal.active{outline:3px solid #2563eb}
+.pal.done{background:#dbeafe}
+.result{padding:32px;text-align:center}
+.stat{font-size:18px;line-height:2}
+.review-card{margin-top:16px;padding:22px;text-align:left}
+.review-q{font-size:20px;font-weight:700}
+.review-option{padding:10px 12px;margin:7px 0;border-radius:8px;border:1px solid #ddd}
+.review-option.correct{background:#dcfce7;border-color:#16a34a}
+.review-option.wrong{background:#fee2e2;border-color:#dc2626}
+@media(max-width:650px){
+.container{padding:14px}
+.home h1{font-size:26px}
+.question{font-size:19px}
+.quiz-header,.bottom{flex-direction:column;align-items:stretch}
+.bottom button{margin:4px 0}
+.pal{width:50px;min-width:50px;height:48px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div id="home" class="card home">
+<h1>📚 Digital Electronics MCQ Practice</h1>
+<div class="sub">Digital Electronics • 20 MCQs • Basic / Direct Questions</div>
+<div id="sectionsList"></div>
+</div>
+
+<div id="setup" class="card setup hidden">
+<a href="#" class="back" onclick="goHome();return false;">← Back to Sections</a>
+<h2 id="setupTitle"></h2>
+<p class="sub" id="setupInfo"></p>
+<div class="question-select-row">
+<label><b>Questions:</b></label>
+<select id="questionCount"></select>
+</div>
+<br><br>
+<button class="next" onclick="startPractice()">🚀 Start Practice</button>
+</div>
+
+<div id="quiz" class="hidden">
+<div class="quiz-topbar">
+<button class="topics-back" onclick="goHome()">← Topics</button>
+</div>
+<div class="card quiz-header">
+<strong id="sectionName"></strong>
+<div id="counter"></div>
+<div id="attempted"></div>
+</div>
+
+<div class="card question-card">
+<div class="question" id="question"></div>
+<div id="options"></div>
+<div class="feedback" id="feedback"></div>
+<div class="explanation hidden" id="explanation"></div>
+</div>
+
+<div class="card bottom">
+<div>
+<button class="prev" id="prevBtn">← Previous</button>
+<button class="submit" id="checkBtn">Check Answer</button>
+<button class="next" id="nextBtn">Next →</button>
+</div>
+<button class="submit" id="submitBtn">Submit Test</button>
+</div>
+
+<div class="card palette">
+<h3>Question Palette</h3>
+<div class="pal-grid" id="palette"></div>
+</div>
+</div>
+
+<div id="result" class="card result hidden">
+<h2>🎯 Test Result</h2>
+<div class="stat" id="resultText"></div>
+<br>
+<button class="next" id="reviewBtn">👁️ Review Answers</button>
+<button class="prev" id="homeBtn">Choose Section</button>
+</div>
+</div>
+
+<script>
+const questions=[{"id":1,"q":"Which of the following best describes Digital Electronics according to the given tutorial?","options":["Electronics operated only on continuous signals.","Electronics operated on digital signals.","Electronics used only for mechanical systems.","Electronics unrelated to digital circuits.","Question not attempted"],"answer":1,"explanation":"The tutorial describes digital electronics as electronics operated on digital signals."},{"id":2,"q":"Digital electronics, digital circuits, and digital technology are primarily associated with which type of signals?","options":["Digital signals","Only mechanical signals","Only continuous physical values","Only acoustic signals","Question not attempted"],"answer":0,"explanation":"The given content states that digital electronics, digital circuits, and digital technology are operated on digital signals."},{"id":3,"q":"According to the tutorial, digital circuits are made from a large collection of which of the following?","options":["Logic gates","Mechanical gears","Chemical cells","Hydraulic pumps","Question not attempted"],"answer":0,"explanation":"The tutorial explicitly states that digital circuits are made from a large collection of logic gates."},{"id":4,"q":"A simple electronic representation of which function is associated with digital circuits in the given content?","options":["Boolean logic function","Mechanical function","Chemical function","Biological function","Question not attempted"],"answer":0,"explanation":"The tutorial describes a digital circuit as a simple electronic representation of a Boolean logic function."},{"id":5,"q":"Digital techniques are described as helping electronic devices switch into which of the following?","options":["One of the known states","Only an unknown state","Only a mechanical state","Only a chemical state","Question not attempted"],"answer":0,"explanation":"The given content says digital techniques are used to switch an electronic device into one of the known states."},{"id":6,"q":"Which of the following is explicitly mentioned as a topic covered in the Digital Electronics tutorial?","options":["Various conversion types","Building construction","Agricultural techniques","Medical diagnosis","Question not attempted"],"answer":0,"explanation":"The tutorial mentions various conversion types among the basic and academic concepts it covers."},{"id":7,"q":"Which of the following is listed as a topic in the Digital Electronics tutorial?","options":["Decoders","Soil testing","Thermodynamic cycles","Bridge construction","Question not attempted"],"answer":0,"explanation":"Decoders are specifically listed among the tutorial topics."},{"id":8,"q":"Which of the following is also mentioned as a topic covered by the Digital Electronics tutorial?","options":["Multiplexers","Crop rotation","Fluid mechanics","Human anatomy","Question not attempted"],"answer":0,"explanation":"Multiplexers are specifically included in the list of topics covered by the tutorial."},{"id":9,"q":"What is identified as a prerequisite for understanding Digital Electronics better?","options":["A good understanding of the core concepts of computers","Advanced knowledge of civil engineering","Advanced knowledge of chemistry","Professional experience in mechanical design","Question not attempted"],"answer":0,"explanation":"The prerequisite section states that a good understanding of the core concepts of computer is required."},{"id":10,"q":"According to the prerequisite section, Digital Electronics is a concept of which of the following?","options":["Digital computers","Civil structures","Chemical laboratories","Mechanical workshops","Question not attempted"],"answer":0,"explanation":"The tutorial states that digital electronics is the concept of digital computers."},{"id":11,"q":"The Digital Electronics tutorial is intended for students who are interested in understanding how which of the following are designed?","options":["Digital circuits","Road networks","Chemical plants","Agricultural fields","Question not attempted"],"answer":0,"explanation":"The audience section says the tutorial is helpful for students interested in how digital circuits are designed."},{"id":12,"q":"What does the tutorial state that students can learn about the way a computer understands?","options":["Human language","Weather patterns","Geological formations","Plant growth","Question not attempted"],"answer":0,"explanation":"The audience section says the tutorial helps students understand how the computer understands human language."},{"id":13,"q":"The tutorial is designed to cover which of the following aspects of Digital Electronics?","options":["Basic and academic concepts","Only advanced industrial manufacturing","Only computer programming syntax","Only mechanical machine design","Question not attempted"],"answer":0,"explanation":"The introduction explicitly says that the tutorial covers the basic and academic concepts of Digital Electronics."},{"id":14,"q":"According to the audience section, the tutorial helps students understand which area?","options":["Circuitry design","Building design","Chemical formulation","Agricultural planning","Question not attempted"],"answer":0,"explanation":"The tutorial states that its coverage of the basics of Digital Electronics helps students understand circuitry design."},{"id":15,"q":"Which of the following best matches the relationship between digital circuits and logic gates described in the tutorial?","options":["Digital circuits are made from a large collection of logic gates.","Digital circuits cannot contain logic gates.","Logic gates are unrelated to digital circuits.","Logic gates are used only in mechanical devices.","Question not attempted"],"answer":0,"explanation":"The tutorial directly connects digital circuits with a large collection of logic gates."},{"id":16,"q":"Which of the following is NOT mentioned among the example topics in the Digital Electronics tutorial?","options":["Decoders","Multiplexers","Logic gates","Database normalization","Question not attempted"],"answer":3,"explanation":"Decoders, multiplexers, and logic gates are explicitly mentioned. Database normalization is not mentioned in the provided content."},{"id":17,"q":"What is one of the stated purposes of the Digital Electronics tutorial?","options":["To help learners understand digital circuitry and related concepts.","To teach only civil engineering calculations.","To teach only biological processes.","To teach only mechanical manufacturing.","Question not attempted"],"answer":0,"explanation":"The tutorial is designed to explain core Digital Electronics concepts and help learners understand circuitry design."},{"id":18,"q":"According to the given content, digital devices are described in terms of switching into known states rather than reproducing what?","options":["A continuous range of values","A fixed digital state","A known state","A logic operation","Question not attempted"],"answer":0,"explanation":"The tutorial contrasts digital operation with reproducing a continuous range of values."},{"id":19,"q":"If a mistake is found in the Digital Electronics Tutorial, what does the 'Problems' section instruct the reader to do?","options":["Post the problem in the contact form.","Delete the tutorial.","Ignore the mistake.","Replace the tutorial with another subject.","Question not attempted"],"answer":0,"explanation":"The Problems section says that if there is any mistake, the reader should post the problem in the contact form."},{"id":20,"q":"What is the stated 'Last Updated' date of the Digital Electronics Tutorial provided in the source?","options":["17 Mar 2025","17 Mar 2024","15 Apr 2025","31 Dec 2025","Question not attempted"],"answer":0,"explanation":"The provided source begins with 'Last Updated : 17 Mar 2025'."}];
+const sections=[{"name":"Section A — Basic / Direct Questions","start":1,"end":20}];
+
+let selectedSection=null;
+let quiz=[];
+let currentIndex=0;
+let answers={};
+let checked={};
+let reviewMode=false;
+
+function goHome(){
+ document.getElementById("home").classList.remove("hidden");
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.add("hidden");
+ selectedSection=null;quiz=[];currentIndex=0;answers={};checked={};reviewMode=false;
+ window.scrollTo(0,0);
+}
+
+function renderSections(){
+ const box=document.getElementById("sectionsList");
+ box.innerHTML="";
+ sections.forEach((s,i)=>{
+  const d=document.createElement("div");
+  d.className="section";
+  d.innerHTML=`<div class="section-title">${s.name}</div><div class="section-count">${s.end-s.start+1} Questions</div>`;
+  d.onclick=()=>startSection(i);
+  box.appendChild(d);
+ });
+}
+
+function startSection(i){
+ selectedSection=sections[i];
+ const list=questions.slice(selectedSection.start-1,selectedSection.end);
+ document.getElementById("home").classList.add("hidden");
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("setup").classList.remove("hidden");
+
+ document.getElementById("setupTitle").textContent=selectedSection.name;
+ document.getElementById("setupInfo").textContent=`${list.length} MCQs available`;
+
+ const sel=document.getElementById("questionCount");
+ sel.innerHTML="";
+ [5,10,20,list.length].forEach(n=>{
+  if(n<=list.length && !Array.from(sel.options).some(o=>Number(o.value)===n)){
+   const o=document.createElement("option");
+   o.value=n;
+   o.textContent=n===list.length?`All ${n} Questions`:`${n} Questions`;
+   sel.appendChild(o);
+  }
+ });
+ // IMPORTANT: default हमेशा पूरे section की question count रहेगी
+ sel.value=String(list.length);
+ window.scrollTo(0,0);
+}
+
+function startPractice(){
+ const list=questions.slice(selectedSection.start-1,selectedSection.end)
+   .map((q,i)=>({...q,_id:selectedSection.start+i}));
+ const count=Number(document.getElementById("questionCount").value);
+
+ quiz=list.slice(0,count);
+ currentIndex=0;
+ answers={};
+ checked={};
+ reviewMode=false;
+
+ document.getElementById("setup").classList.add("hidden");
+ document.getElementById("quiz").classList.remove("hidden");
+ render();
+ window.scrollTo(0,0);
+}
+
+function render(){
+ const q=quiz[currentIndex];
+ if(!q)return;
+
+ document.getElementById("sectionName").textContent=selectedSection.name;
+ document.getElementById("counter").textContent=`Question ${currentIndex+1} of ${quiz.length}`;
+ document.getElementById("attempted").textContent=`Attempted: ${Object.keys(answers).length}/${quiz.length}`;
+ document.getElementById("question").textContent=`Q${q._id}. ${q.q}`;
+
+ const box=document.getElementById("options");
+ box.innerHTML="";
+ document.getElementById("feedback").textContent="";
+ document.getElementById("explanation").classList.add("hidden");
+ document.getElementById("explanation").innerHTML="";
+
+ q.options.forEach((opt,i)=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.className="option";
+  b.innerHTML=`<b>${String.fromCharCode(65+i)}.</b> ${opt}`;
+
+  const selected=answers[q._id];
+  if(selected===i)b.classList.add("selected");
+
+  // (E) Question not attempted is displayed but is not a selectable answer.
+  if(i===4){
+   b.disabled=true;
+   b.style.cursor="default";
+   b.style.opacity="0.85";
+  }else if(checked[q._id] || reviewMode){
+   b.disabled=true;
+   if(i===q.answer)b.classList.add("correct");
+   if(selected===i && i!==q.answer)b.classList.add("wrong");
+  }else{
+   b.onclick=()=>{
+    answers[q._id]=i;
+    render();
+   };
+  }
+  box.appendChild(b);
+ });
+
+ if(checked[q._id] || reviewMode){
+  const f=document.getElementById("feedback");
+  if(selectedAnswerExists(q)){
+   f.textContent=answers[q._id]===q.answer
+     ?"✅ सही उत्तर!"
+     :`❌ गलत। सही उत्तर: ${String.fromCharCode(65+q.answer)}`;
+   f.style.color=answers[q._id]===q.answer?"#15803d":"#b91c1c";
+  }else{
+   f.textContent=`⚪ Unattempted. सही उत्तर: ${String.fromCharCode(65+q.answer)}`;
+   f.style.color="#536579";
+  }
+
+  document.getElementById("explanation").innerHTML=
+    `<div class="explanation-title">💡 Explanation</div>${formatExplanation(q.explanation)}`;
+  document.getElementById("explanation").classList.remove("hidden");
+ }
+
+ renderPalette();
+ document.getElementById("prevBtn").disabled=currentIndex===0;
+ document.getElementById("nextBtn").disabled=currentIndex===quiz.length-1;
+ document.getElementById("checkBtn").disabled=reviewMode || !!checked[q._id] || answers[q._id]===undefined;
+ document.getElementById("submitBtn").style.display=reviewMode?"none":"inline-block";
+}
+
+function selectedAnswerExists(q){
+ return answers[q._id]!==undefined;
+}
+
+function formatExplanation(s){
+ return s.replace(/\n/g,"<br>");
+}
+
+function renderPalette(){
+ const p=document.getElementById("palette");
+ p.innerHTML="<h3>Question Palette</h3>";
+ const g=document.createElement("div");
+ g.className="pal-grid";
+
+ quiz.forEach((q,i)=>{
+  const b=document.createElement("button");
+  b.className="pal";
+  b.type="button";
+  b.textContent=q._id;
+  if(i===currentIndex)b.classList.add("active");
+  if(answers[q._id]!==undefined)b.classList.add("done");
+  b.onclick=()=>{
+   currentIndex=i;
+   render();
+   window.scrollTo(0,0);
+  };
+  g.appendChild(b);
+ });
+ p.appendChild(g);
+}
+
+document.getElementById("prevBtn").onclick=()=>{
+ if(currentIndex>0){
+  currentIndex--;
+  render();
+  window.scrollTo(0,0);
+ }
+};
+
+document.getElementById("nextBtn").onclick=()=>{
+ if(currentIndex<quiz.length-1){
+  currentIndex++;
+  render();
+  window.scrollTo(0,0);
+ }
+};
+
+document.getElementById("checkBtn").onclick=()=>{
+ const q=quiz[currentIndex];
+ if(answers[q._id]===undefined)return;
+ checked[q._id]=true;
+ render();
+};
+
+document.getElementById("submitBtn").onclick=()=>{
+ if(confirm("क्या आप अपना test submit करना चाहते हैं?"))showResult();
+};
+
+function showResult(){
+ let correct=0,attempted=Object.keys(answers).length;
+ quiz.forEach(q=>{
+  if(answers[q._id]===q.answer)correct++;
+ });
+ let wrong=Object.keys(answers).filter(id=>{
+  const q=quiz.find(x=>String(x._id)===String(id));
+  return q && answers[id]!==q.answer;
+ }).length;
+
+ document.getElementById("quiz").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+
+ document.getElementById("resultText").innerHTML=
+ `<div><b>Score:</b> ${correct} / ${quiz.length}</div>
+  <div>🟢 Correct: ${correct}</div>
+  <div>🔴 Wrong: ${wrong}</div>
+  <div>⚪ Unattempted: ${quiz.length-attempted}</div>
+  <div>📊 Attempted: ${attempted}</div>`;
+
+ window.scrollTo(0,0);
+}
+
+document.getElementById("reviewBtn").onclick=()=>{
+ reviewMode=true;
+ currentIndex=0;
+ document.getElementById("result").classList.add("hidden");
+ document.getElementById("quiz").classList.remove("hidden");
+ render();
+ window.scrollTo(0,0);
+};
+
+// Keyboard shortcuts for normal quiz + Review Answers
+document.addEventListener("keydown", (e)=>{
+ const tag = document.activeElement?.tagName;
+ if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+ const key = e.key.toLowerCase();
+
+ if(key === "n" && currentIndex < quiz.length - 1){
+   e.preventDefault();
+   currentIndex++;
+   render();
+   window.scrollTo(0,0);
+ }
+
+ if(key === "p" && currentIndex > 0){
+   e.preventDefault();
+   currentIndex--;
+   render();
+   window.scrollTo(0,0);
+ }
+});
+
+document.getElementById("homeBtn").onclick=goHome;
+
+renderSections();
+</script>
+</body>
+</html>

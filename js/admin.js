@@ -6,6 +6,7 @@ let currentMainTopic = null;
 let currentSubtopic = null;
 let csMainTopicsCache = [];
 let csSubtopicsCache = [];
+let csChaptersCache = [];
 let importedQuestions = [];
 let importedData = null;
 
@@ -79,14 +80,24 @@ function getElementOptional(id){
     return document.getElementById(id);
 }
 
-function selectSubject(subject){
+async function selectSubject(subject, preselectChapter=1){
     resetSimpleWorkflow();
     currentSubject=subject;
-    currentChapter=1;
+
+    // Subject select hote hi Topic 1 ko current hierarchy state maan lo.
+    // Isse Chapter selector hidden/missing hone par bhi Main Topic API ko
+    // valid chapter number milta rahega. Server se actual chapter list
+    // load hone ke baad loadCSChaptersForSubject() isko verify karega.
+    const requestedChapter=Number(preselectChapter);
+    currentChapter=Number.isInteger(requestedChapter) && requestedChapter>0
+        ? requestedChapter
+        : null;
+
     currentMainTopic=null;
     currentSubtopic=null;
     csMainTopicsCache=[];
     csSubtopicsCache=[];
+    csChaptersCache=[];
 
     document.querySelectorAll(".subject-card").forEach(card=>{
         card.classList.toggle("active",card.dataset.subject===subject);
@@ -108,9 +119,6 @@ function selectSubject(subject){
     const mcqCount=getElementOptional("mcqCountBadge");
     if(mcqCount) mcqCount.textContent="0 MCQ Sets";
 
-    // Main Topics are the first level inside a Subject.
-    loadCSMainTopics(1);
-
     const notesUrl=getElementOptional("notesUrl");
     if(notesUrl) notesUrl.value="";
 
@@ -119,38 +127,40 @@ function selectSubject(subject){
 
     updateMainTopicPlaceholder();
     updateSelectionUI();
+    return loadCSChaptersForSubject(preselectChapter);
 }
 
 /* HTML subject cards call this exact function name. */
 window.selectSubjectCard=function(subject){
-    selectSubject(subject);
+    // Har Subject card click par Topic 1 default/current Chapter rahega.
+    // Visible #chapterNumber selector hona zaroori nahi hai.
+    return selectSubject(subject,1);
 };
 
 window.selectSubject=selectSubject;
 
 function updateSelectionUI(){
-    // Chapter is an internal compatibility bucket only; users never manage it here.
-    currentChapter=Number(currentChapter||1);
-
     const subjectText=currentSubject
         ? (subjectNameMap[currentSubject]||currentSubject)
         : "Select Subject";
 
     updateMainTopicPlaceholder();
 
-    const chapterText="";
+    const chapterText=currentChapter
+        ? (csChaptersCache.find(x=>Number(x.number)===Number(currentChapter))?.title || `Topic ${currentChapter}`)
+        : "Select Chapter";
 
     const title=getElementOptional("currentSubjectTitle");
     if(title) title.textContent=subjectText;
 
     const badge=getElementOptional("selectionBadge");
-    if(badge) badge.textContent=subjectText;
+    if(badge) badge.textContent=currentChapter ? `${subjectText} • ${chapterText}` : subjectText;
 
     const uploadSubject=getElementOptional("uploadSubjectText");
     if(uploadSubject) uploadSubject.textContent=currentSubject?subjectText:"—";
 
     const uploadChapter=getElementOptional("uploadChapterText");
-    if(uploadChapter) uploadChapter.textContent=currentChapter||"—";
+    if(uploadChapter) uploadChapter.textContent=currentChapter?chapterText:"—";
 
     const uploadMainTopic=getElementOptional("uploadMainTopicText");
     if(uploadMainTopic) uploadMainTopic.textContent=currentMainTopic?.title||"—";
@@ -162,19 +172,189 @@ function updateSelectionUI(){
     if(description){
         description.textContent=currentSubject&&currentChapter
             ? `${subjectText} • Topic ${currentChapter}`
-            : "Selected subject ke uploaded MCQ yahan dikhenge.";
+            : "Subject select karke Chapter select karein.";
     }
 }
 
-const chapterNumberInput=null;
-if(chapterNumberInput){
-    chapterNumberInput.addEventListener("input",()=>{
+function ensureChapterSelector(){
+    const existing=getElementOptional("chapterNumber");
+    if(!existing) return null;
+    if(existing.tagName.toLowerCase()==="select") return existing;
+
+    const select=document.createElement("select");
+    select.id=existing.id;
+    for(const attr of ["class","style","name","required","disabled","data-section"]){
+        if(existing.hasAttribute(attr)) select.setAttribute(attr,existing.getAttribute(attr));
+    }
+    select.innerHTML='<option value="">Select Chapter</option>';
+    existing.replaceWith(select);
+    return select;
+}
+
+async function loadCSChaptersForSubject(preselect=null){
+    const select=ensureChapterSelector();
+    if(select){
+        select.innerHTML='<option value="">Loading Chapters...</option>';
+        select.disabled=true;
+    }
+
+    if(!currentSubject||!subjectIdMap[currentSubject]){
+        csChaptersCache=[];
+        currentChapter=null;
+        if(select){
+            select.innerHTML='<option value="">Select Chapter</option>';
+            select.disabled=true;
+        }
         updateSelectionUI();
-        const quizList=getElementOptional("quizList");
-        if(quizList) quizList.innerHTML=`<div class="empty"><strong>Load MCQ</strong> dabaiye.</div>`;
-        const mcqCount=getElementOptional("mcqCountBadge");
-        if(mcqCount) mcqCount.textContent="0 MCQ Sets";
-    });
+        return [];
+    }
+
+    try{
+        const r=await fetch(`/api/cs/chapters/${encodeURIComponent(subjectIdMap[currentSubject])}`,{cache:"no-store"});
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(d.message||`HTTP ${r.status}`);
+
+        let items=Array.isArray(d)?d:(Array.isArray(d.items)?d.items:[]);
+        csChaptersCache=items.filter(x=>Number.isInteger(Number(x.number))).sort((a,b)=>Number(a.number)-Number(b.number));
+
+        // Built-in Subjects can exist without a Course/Chapter record in
+        // cs-chapters.json. Main Topic APIs require that record, so create
+        // Topic 1 here when the selected Subject has no Chapter yet.
+        const requested=preselect!=null ? Number(preselect) : 1;
+        const requestedExists=Number.isInteger(requested) && requested>0
+            ? csChaptersCache.some(x=>Number(x.number)===requested)
+            : csChaptersCache.length>0;
+
+        if(!requestedExists && currentSubject && subjectIdMap[currentSubject]){
+            const chapterTitleInput=getElementOptional("chapterTitle");
+            const chapterTitle=String(
+                chapterTitleInput?.value ||
+                subjectNameMap[currentSubject] ||
+                currentSubject
+            ).trim();
+
+            if(chapterTitle){
+                const createChapter=await fetch("/api/cs/chapters",{
+                    method:"POST",
+                    headers:{"Content-Type":"application/json"},
+                    body:JSON.stringify({
+                        subject:subjectIdMap[currentSubject],
+                        chapterTitle
+                    })
+                });
+                const createData=await createChapter.json().catch(()=>({}));
+                if(!createChapter.ok || !createData.success){
+                    throw new Error(createData.message || `Chapter create HTTP ${createChapter.status}`);
+                }
+
+                // Re-read the server list so the actual Chapter object/id is
+                // used by the existing Subject -> Chapter -> Main Topic flow.
+                const refreshed=await fetch(`/api/cs/chapters/${encodeURIComponent(subjectIdMap[currentSubject])}`,{cache:"no-store"});
+                const refreshedData=await refreshed.json().catch(()=>({}));
+                if(!refreshed.ok) throw new Error(refreshedData.message || `HTTP ${refreshed.status}`);
+                items=Array.isArray(refreshedData)?refreshedData:(Array.isArray(refreshedData.items)?refreshedData.items:[]);
+                csChaptersCache=items.filter(x=>Number.isInteger(Number(x.number))).sort((a,b)=>Number(a.number)-Number(b.number));
+            }
+        }
+
+        if(select){
+            select.innerHTML='<option value="">Select Chapter</option>';
+            csChaptersCache.forEach(item=>{
+                const option=document.createElement("option");
+                option.value=String(item.number);
+                option.textContent=`Topic ${item.number} — ${item.title||item.chapterTitle||`Chapter ${item.number}`}`;
+                select.appendChild(option);
+            });
+            select.disabled=false;
+        }
+
+        // IMPORTANT:
+        // The current CS admin page may not have a visible #chapterNumber
+        // selector. Chapter selection must therefore NOT depend on `select`.
+        // Subject -> Chapter -> Main Topic state is maintained in JS.
+        const preferred=preselect!=null ? Number(preselect) : null;
+        const target=
+            preferred && csChaptersCache.some(x=>Number(x.number)===preferred)
+                ? preferred
+                : (csChaptersCache.length ? Number(csChaptersCache[0].number) : null);
+
+        if(target){
+            // IMPORTANT: selectChapter() updates currentChapter even when
+            // there is no visible chapter <select> in the current HTML.
+            if(select) select.value=String(target);
+            selectChapter(target);
+        }else{
+            currentChapter=null;
+            currentMainTopic=null;
+            currentSubtopic=null;
+            csMainTopicsCache=[];
+            csSubtopicsCache=[];
+            resetSimpleWorkflow();
+            updateSelectionUI();
+        }
+
+        if(!preselect && !csChaptersCache.length){
+            currentChapter=null;
+            currentMainTopic=null;
+            currentSubtopic=null;
+            csMainTopicsCache=[];
+            csSubtopicsCache=[];
+            resetSimpleWorkflow();
+            updateSelectionUI();
+        }
+        return csChaptersCache;
+    }catch(error){
+        console.error("CS chapter list load error:",error);
+        csChaptersCache=[];
+        currentChapter=null;
+        if(select){
+            select.innerHTML='<option value="">Chapter load nahi hua</option>';
+            select.disabled=false;
+        }
+        updateSelectionUI();
+        return [];
+    }
+}
+
+function selectChapter(chapterNumber){
+    const number=Number(chapterNumber);
+    const chapter=csChaptersCache.find(x=>Number(x.number)===number);
+    if(!chapter){
+        currentChapter=null;
+        currentMainTopic=null;
+        currentSubtopic=null;
+        csMainTopicsCache=[];
+        csSubtopicsCache=[];
+        resetSimpleWorkflow();
+        updateSelectionUI();
+        return;
+    }
+
+    currentChapter=number;
+    currentMainTopic=null;
+    currentSubtopic=null;
+    csMainTopicsCache=[];
+    csSubtopicsCache=[];
+    resetSimpleWorkflow();
+
+    const chapterTitle=getElementOptional("chapterTitle");
+    if(chapterTitle) chapterTitle.value=chapter.title||chapter.chapterTitle||"";
+
+    const select=ensureChapterSelector();
+    if(select) select.value=String(number);
+
+    const quizList=getElementOptional("quizList");
+    if(quizList) quizList.innerHTML='<div class="empty">Main Topic select karein.</div>';
+    const mcqCount=getElementOptional("mcqCountBadge");
+    if(mcqCount) mcqCount.textContent="0 MCQ Sets";
+
+    updateSelectionUI();
+    loadCSMainTopics(number);
+}
+
+const chapterNumberInput=ensureChapterSelector();
+if(chapterNumberInput){
+    chapterNumberInput.addEventListener("change",()=>selectChapter(chapterNumberInput.value));
 }
 
 const mcqFileInput=getElementOptional("mcqFile");
@@ -223,8 +403,8 @@ async function logout(){try{await fetch("/api/owner/logout",{method:"POST"});}ca
 
 function getManagementInputs(){
     if(!currentSubject||!subjectIdMap[currentSubject]) throw new Error("Pehle Subject select karein.");
-    // Chapter is kept internally for backward compatibility; the admin UI does not expose it.
-    const chapterNumber=Number(currentChapter||1);
+    const chapterNumber=Number(currentChapter);
+    if(!Number.isInteger(chapterNumber)||chapterNumber<1) throw new Error("Pehle Chapter select karein.");
     return {subject:subjectIdMap[currentSubject],chapterNumber};
 }
 
@@ -256,12 +436,13 @@ async function saveChapter(){
             return;
         }
 
-        currentChapter=Number(d.chapter?.number)||null;
-        updateSelectionUI();
+        const savedChapterNumber=Number(d.chapter?.number)||null;
+        await loadCSChaptersForSubject(savedChapterNumber);
+        if(savedChapterNumber) selectChapter(savedChapterNumber);
 
         showMessage(
             "chapterMessage",
-            `✅ Topic ${currentChapter} successfully save ho gaya.`,
+            `✅ Topic ${savedChapterNumber} successfully save ho gaya.`,
             "success"
         );
 
@@ -272,7 +453,7 @@ async function saveChapter(){
         alert("Server error. Topic save nahi hua.");
     }
 }
-async function deleteChapter(){let inputs;try{inputs=getManagementInputs();}catch(e){alert(e.message);return;}if(!confirm(`Kya aap ${currentSubject} ka Topic ${inputs.chapterNumber} delete karna chahte hain?`))return;try{const r=await fetch("/api/cs/chapters",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)});const d=await r.json();if(!r.ok||!d.success){alert(d.message||"Chapter delete nahi hua.");return;}showMessage("chapterMessage","✅ Topic delete ho gaya.","success");getElement("quizList").innerHTML=`<div class="empty">Topic ${inputs.chapterNumber} delete ho gaya.</div>`;getElement("mcqCountBadge").textContent="0 MCQ Sets";getElement("chapterTitle").value="";notifyChapterListChanged();}catch(e){console.error(e);alert("Server error. Chapter delete nahi hua.");}}
+async function deleteChapter(){let inputs;try{inputs=getManagementInputs();}catch(e){alert(e.message);return;}if(!confirm(`Kya aap ${currentSubject} ka Topic ${inputs.chapterNumber} delete karna chahte hain?`))return;try{const r=await fetch("/api/cs/chapters",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify(inputs)});const d=await r.json();if(!r.ok||!d.success){alert(d.message||"Chapter delete nahi hua.");return;}showMessage("chapterMessage","✅ Topic delete ho gaya.","success");getElement("quizList").innerHTML=`<div class="empty">Topic ${inputs.chapterNumber} delete ho gaya.</div>`;getElement("mcqCountBadge").textContent="0 MCQ Sets";getElement("chapterTitle").value="";currentChapter=null;currentMainTopic=null;currentSubtopic=null;resetSimpleWorkflow();await loadCSChaptersForSubject();notifyChapterListChanged();}catch(e){console.error(e);alert("Server error. Chapter delete nahi hua.");}}
 
 function getNotesInputs(){if(!currentSubject||!subjectIdMap[currentSubject])throw new Error("Pehle Subject select karein.");return {subject:subjectIdMap[currentSubject]};}
 function openDriveForNotes(){window.open("https://drive.google.com/drive/my-drive","_blank","noopener,noreferrer");}
@@ -993,6 +1174,50 @@ async function loadCSMainTopics(chapterNumber=currentChapter||1){
         if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
 
         csMainTopicsCache=Array.isArray(d.items)?d.items:[];
+
+        // OS Main Topics must follow the same sequence shown in the
+        // public Operating System sidebar. Do not change the UI.
+        if(String(currentSubject).toUpperCase()==="OS"){
+            const publicOSOrder=[
+                "Functions of Operating System",
+                "Operating System Tutorial",
+                "Types of Operating Systems",
+                "Components of Operating System",
+                "Operating System Structure",
+                "Operating System Examples",
+                "What is Spooling in an Operating System",
+                "What is Operating system"
+            ];
+
+            const normalizeTitle=value=>String(value||"")
+                .trim()
+                .toLowerCase()
+                .replace(/\\s+/g," ");
+
+            const orderMap=new Map(
+                publicOSOrder.map((title,index)=>[normalizeTitle(title),index])
+            );
+
+            csMainTopicsCache.sort((a,b)=>{
+                const ai=orderMap.has(normalizeTitle(a.title))
+                    ? orderMap.get(normalizeTitle(a.title))
+                    : Number.MAX_SAFE_INTEGER;
+                const bi=orderMap.has(normalizeTitle(b.title))
+                    ? orderMap.get(normalizeTitle(b.title))
+                    : Number.MAX_SAFE_INTEGER;
+
+                if(ai!==bi) return ai-bi;
+
+                // Keep any additional topics after the known public sequence.
+                return Number(a.order||0)-Number(b.order||0) ||
+                    String(a.title||"").localeCompare(
+                        String(b.title||""),
+                        undefined,
+                        {sensitivity:"base"}
+                    );
+            });
+        }
+
         resetSimpleWorkflow();
         renderCSMainTopics();
         return csMainTopicsCache;
@@ -1009,7 +1234,11 @@ function renderCSMainTopics(){
     if(!container) return;
 
     if(!csMainTopicsCache.length){
-        container.innerHTML='<div class="cs-subtopic-empty">Is Subject ke andar abhi koi Main Topic nahi hai.</div>';
+        container.innerHTML=`<div class="cs-subtopic-empty">${
+            currentSubject && !currentChapter
+                ? "Pehle Chapter select karein."
+                : "Is Subject ke andar abhi koi Main Topic nahi hai."
+        }</div>`;
         return;
     }
 
@@ -1096,8 +1325,12 @@ function selectCSMainTopic(id){
 }
 
 async function saveCSMainTopic(){
-    if(!currentSubject||!currentChapter){
+    if(!currentSubject){
         showMessage("mainTopicMessage","Pehle Subject select karein.","error");
+        return;
+    }
+    if(!currentChapter){
+        showMessage("mainTopicMessage","Pehle Chapter select karein.","error");
         return;
     }
 
@@ -1219,6 +1452,49 @@ async function loadCSSubtopics(mainTopicId=currentMainTopic?.id){
         if(!r.ok||!d.success) throw new Error(d.message||`HTTP ${r.status}`);
 
         csSubtopicsCache=Array.isArray(d.items)?d.items:[];
+
+        // OS Subtopic Management must use the same sequence as the
+        // public Operating System sidebar. UI/CSS is unchanged.
+        if(String(currentSubject).toUpperCase()==="OS"){
+            const publicOSOrder=[
+                "Operating System Tutorial",
+                "Functions of Operating System",
+                "Types of Operating Systems",
+                "Components of Operating System",
+                "Operating System Structure",
+                "Operating System Examples",
+                "What is Spooling in an Operating System",
+                "What is Operating system"
+            ];
+
+            const normalizeTitle=value=>String(value||"")
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g," ");
+
+            const orderMap=new Map(
+                publicOSOrder.map((title,index)=>[normalizeTitle(title),index])
+            );
+
+            csSubtopicsCache.sort((a,b)=>{
+                const ai=orderMap.has(normalizeTitle(a.title))
+                    ? orderMap.get(normalizeTitle(a.title))
+                    : Number.MAX_SAFE_INTEGER;
+                const bi=orderMap.has(normalizeTitle(b.title))
+                    ? orderMap.get(normalizeTitle(b.title))
+                    : Number.MAX_SAFE_INTEGER;
+
+                if(ai!==bi) return ai-bi;
+
+                return Number(a.order||0)-Number(b.order||0) ||
+                    String(a.title||"").localeCompare(
+                        String(b.title||""),
+                        undefined,
+                        {sensitivity:"base"}
+                    );
+            });
+        }
+
         renderCSSubtopics();
         return csSubtopicsCache;
     }catch(error){
@@ -1423,6 +1699,45 @@ async function deleteCSSubtopic(id){
         if(p)p.hidden=true;
     }
 
+    // Automatic icons for common Computer Science subjects.
+    // Unknown/new subjects keep the entered icon, with 📚 as the fallback.
+    function getAutomaticSubjectIcon(name,code,fallback="📚"){
+        const key=String(code||"").trim().toUpperCase();
+        const title=String(name||"").trim().toLowerCase();
+        const icons={
+            AI:"🤖",
+            CN:"🌐",
+            COA:"🖥️",
+            CS:"💻",
+            DBMS:"🗄️",
+            DE:"🔌",
+            DSA:"🧩",
+            IOT:"📡",
+            OOPS:"💻",
+            OS:"⚙️",
+            TOC:"🧠",
+            PYTHON:"🐍",
+            JAVA:"☕",
+            C:"©️",
+            CPP:"⚡",
+            HTML:"🌐",
+            CSS:"🎨",
+            JS:"🟨",
+            JAVASCRIPT:"🟨",
+            SQL:"🗃️"
+        };
+        if(icons[key])return icons[key];
+        if(/operating\s*system/.test(title))return "⚙️";
+        if(/theory\s+of\s+computation/.test(title))return "🧠";
+        if(/database/.test(title))return "🗄️";
+        if(/data\s*structure|algorithm/.test(title))return "🧩";
+        if(/computer\s*network/.test(title))return "🌐";
+        if(/digital\s*electronics/.test(title))return "🔌";
+        if(/artificial\s*intelligence/.test(title))return "🤖";
+        if(/internet\s*of\s*things/.test(title))return "📡";
+        return String(fallback||"📚").trim()||"📚";
+    }
+
     function subjectFromCard(card){
         const code=String(card?.dataset?.subject||"").trim();
         if(!code)return null;
@@ -1439,6 +1754,11 @@ async function deleteCSSubtopic(id){
             id:(typeof subjectIdMap!=="undefined" && subjectIdMap[code])
                 ? subjectIdMap[code]
                 : (slug(String(small?.textContent||code))||slug(code)),
+            serverName:(
+                !customCodes.includes(code.toUpperCase()) &&
+                typeof subjectNameMap!=="undefined" &&
+                subjectNameMap[code]
+            ) ? subjectNameMap[code] : String(strong?.textContent||code).trim(),
             builtIn:!customCodes.includes(code.toUpperCase())
         };
     }
@@ -1529,7 +1849,7 @@ async function deleteCSSubtopic(id){
             const response=await fetch("/api/cs/subjects",{
                 method:"DELETE",
                 headers:{"Content-Type":"application/json"},
-                body:JSON.stringify({id:subject.id,name:subject.name}),
+                body:JSON.stringify({id:subject.id,name:subject.name,code:subject.code,serverName:subject.serverName||subject.name}),
                 cache:"no-store"
             });
             const data=await response.json().catch(()=>({}));
@@ -1628,7 +1948,8 @@ async function deleteCSSubtopic(id){
     window.addCustomSubject=async function(){
         const name=String(document.getElementById("newSubjectName")?.value||"").trim();
         const code=String(document.getElementById("newSubjectCode")?.value||"").trim().toUpperCase();
-        const icon=String(document.getElementById("newSubjectIcon")?.value||"📘").trim()||"📘";
+        const enteredIcon=String(document.getElementById("newSubjectIcon")?.value||"📘").trim()||"📘";
+        const icon=getAutomaticSubjectIcon(name,code,enteredIcon);
 
         if(!name){message("Subject Name daaliye.","error");return;}
         if(!code){message("Short Code daaliye.","error");return;}
@@ -1685,6 +2006,13 @@ async function deleteCSSubtopic(id){
         document.getElementById("newSubjectCode").value="";
         document.getElementById("newSubjectIcon").value="📘";
         closePanel();
+
+        // The server creates Course/Chapter 1 for every new Subject.
+        // Select the new Subject and that first Chapter immediately so the
+        // existing Subject → Chapter → Main Topic → Subtopic → MCQ flow
+        // starts in the correct state. No existing CRUD/API logic is changed.
+        await selectSubject(code,1);
+
         message(`✅ ${subject.name} subject save ho gaya. Course/Chapter bhi ready hai.`,"success");
     };
 

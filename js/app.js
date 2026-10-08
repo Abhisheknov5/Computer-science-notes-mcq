@@ -4,22 +4,74 @@
    Same UI / quiz flow as the original project.
 ========================================= */
 
-const subjects = [
-  { id:"ai", name:"Artificial Intelligence (AI)", icon:"🤖", description:"Artificial Intelligence concepts and fundamentals" },
-  { id:"cn", name:"Computer Networks (CN)", icon:"🌐", description:"Computer networking concepts and protocols" },
-  { id:"dsa", name:"Data Structures & Algorithms (DSA)", icon:"🧩", description:"Data structures and algorithmic problem solving" },
-  { id:"dbms", name:"Database Management System (DBMS)", icon:"🗄️", description:"Database concepts, SQL and management systems" },
-  { id:"de", name:"Digital Electronics (DE)", icon:"🔌", description:"Digital logic, circuits and electronic fundamentals" },
-  { id:"e-commerce", name:"E-Commerce", icon:"🛒", description:"Electronic commerce concepts and applications" },
-  { id:"iot", name:"Internet of Things (IoT)", icon:"📡", description:"IoT concepts, devices and connected systems" },
-  { id:"multimedia", name:"Multimedia", icon:"🎞️", description:"Multimedia concepts, media and applications" },
-  { id:"oops", name:"Object-Oriented Programming (OOPS)", icon:"💻", description:"Object-oriented programming concepts" },
-  { id:"os", name:"Operating System (OS)", icon:"⚙️", description:"Operating system concepts and fundamentals" },
-  { id:"software-engineering", name:"Software Engineering", icon:"🛠️", description:"Software engineering principles and practices" },
-  { id:"toc", name:"Theory of Computation (TOC)", icon:"🧠", description:"Automata, formal languages and computation theory" }
-];
+let subjects = [];
 
 const app = document.getElementById("app");
+
+async function loadCSSubjects() {
+    try {
+        const [subjectResponse, localResponse] = await Promise.all([
+            fetch("/api/cs/subjects", { cache: "no-store" }),
+            fetch("/data/cs-subjects.json", { cache: "no-store" })
+        ]);
+
+        if (!subjectResponse.ok) {
+            throw new Error(`HTTP ${subjectResponse.status}`);
+        }
+
+        const data = await subjectResponse.json();
+        if (!data?.success || !Array.isArray(data.items)) {
+            throw new Error(data?.message || "Subject list load failed.");
+        }
+
+        // Built-in subjects come from the server registry.
+        // Custom subjects are shown only when they also exist in the
+        // persistent local CS subject registry. This prevents deleted
+        // Firebase/stale custom subjects (for example old test subjects)
+        // from reappearing on the public page.
+        let localCustomIds = null;
+
+        if (localResponse.ok) {
+            try {
+                const localData = await localResponse.json();
+                if (Array.isArray(localData?.items)) {
+                    localCustomIds = new Set(
+                        localData.items
+                            .map(item => String(item?.id || "").trim().toLowerCase())
+                            .filter(Boolean)
+                    );
+                }
+            } catch (error) {
+                console.warn("Local CS subject registry parse failed:", error);
+            }
+        }
+
+        subjects = data.items
+            .filter(item => {
+                if (item?.builtIn === true) return true;
+                if (item?.deleted === true) return false;
+                if (localCustomIds === null) return true;
+                return localCustomIds.has(
+                    String(item?.id || "").trim().toLowerCase()
+                );
+            })
+            .map(item => ({
+                id: String(item.id || "").trim(),
+                name: String(item.name || item.id || "").trim(),
+                icon: String(item.icon || "📚").trim() || "📚",
+                description: String(
+                    item.description || "Computer Science subject"
+                ).trim()
+            }))
+            .filter(item => item.id && item.name);
+
+        return subjects;
+    } catch (error) {
+        console.error("CS Subject List Load Error:", error);
+        subjects = [];
+        return subjects;
+    }
+}
 const CS_PREFIX = "computerScienceChapterList:v1:";
 
 function escapeHtml(value) {
@@ -208,7 +260,9 @@ function renderHome() {
 /* =========================================
    SUBJECT LIST — NO CLASS PAGE
 ========================================= */
-function renderScience() {
+async function renderScience() {
+    await loadCSSubjects();
+
     app.innerHTML = `
         <button class="back-btn" onclick="location.hash='home'">← Back to Home</button>
 
@@ -605,7 +659,11 @@ async function renderQuizPage(subjectId, chapterNumber, directStart = false, mcq
 }
 
 window.addEventListener("hashchange", router);
-window.addEventListener("DOMContentLoaded", router);
+
+window.addEventListener("DOMContentLoaded", async () => {
+    await loadCSSubjects();
+    router();
+});
 
 function goHome() {
     location.hash = "home";

@@ -1528,7 +1528,9 @@ function allCSSubjects(){
         ...CS_BUILTIN_SUBJECTS
             .filter(item=>!CS_SUBJECT_OVERRIDES[item.id]?.deleted)
             .map(item=>({...item,builtIn:true})),
-        ...Array.from(CS_CUSTOM_SUBJECTS.values()).map(item=>({...item,builtIn:false}))
+        ...Array.from(CS_CUSTOM_SUBJECTS.values())
+            .filter(item=>!CS_SUBJECT_OVERRIDES[item.id]?.deleted)
+            .map(item=>({...item,builtIn:false}))
     ];
 }
 
@@ -1538,13 +1540,15 @@ function findCSSubject(value){
         if(CS_SUBJECT_OVERRIDES[key]?.deleted) return null;
         return CS_BUILTIN_SUBJECTS.find(item=>item.id===key)||null;
     }
-    return CS_CUSTOM_SUBJECTS.get(key)||null;
+    const custom=CS_CUSTOM_SUBJECTS.get(key);
+    if(custom && CS_SUBJECT_OVERRIDES[key]?.deleted) return null;
+    return custom||null;
 }
 
 function normalizeCSSubject(subject){
     const value=normalizeSubjectId(subject);
     if(CS_SUBJECTS.has(value) && !CS_SUBJECT_OVERRIDES[value]?.deleted) return value;
-    if(CS_CUSTOM_SUBJECTS.has(value)) return value;
+    if(CS_CUSTOM_SUBJECTS.has(value) && !CS_SUBJECT_OVERRIDES[value]?.deleted) return value;
     throw new Error("Computer Science subject valid nahi hai.");
 }
 
@@ -1772,48 +1776,169 @@ app.post("/api/cs/subjects/rename", requireOwner, async (req,res)=>{
     }
 });
 
+async function cleanupCSSubjectData(subjectId){
+    const subject=String(subjectId||"").trim().toLowerCase();
+    if(!subject) return {localDeleted:false,firebaseDeleted:false};
+
+    let localDeleted=false;
+    let firebaseDeleted=false;
+
+    const sameSubject=value=>String(value||"").trim().toLowerCase()===subject;
+
+    try{
+        const chapters=readCSChapters();
+        const nextChapters=chapters.filter(item=>!sameSubject(item.subject));
+        if(nextChapters.length!==chapters.length){
+            writeCSChapters(nextChapters);
+            localDeleted=true;
+        }
+    }catch(error){
+        console.warn("CS Subject chapter cleanup failed:",error.message);
+    }
+
+    try{
+        const mainTopics=readCSMainTopicsV2();
+        const nextMainTopics=mainTopics.filter(item=>!sameSubject(item.subject));
+        if(nextMainTopics.length!==mainTopics.length){
+            writeCSMainTopicsV2(nextMainTopics);
+            localDeleted=true;
+        }
+    }catch(error){
+        console.warn("CS Subject main topic cleanup failed:",error.message);
+    }
+
+    try{
+        const subtopics=readCSSubtopics();
+        const nextSubtopics=subtopics.filter(item=>!sameSubject(item.subject));
+        if(nextSubtopics.length!==subtopics.length){
+            writeCSSubtopics(nextSubtopics);
+            localDeleted=true;
+        }
+    }catch(error){
+        console.warn("CS Subject subtopic cleanup failed:",error.message);
+    }
+
+    try{
+        const subjectRoot=path.join(CS_MCQ_ROOT,subject);
+        if(fs.existsSync(subjectRoot)){
+            fs.rmSync(subjectRoot,{recursive:true,force:true});
+            localDeleted=true;
+        }
+    }catch(error){
+        console.warn("CS Subject MCQ file cleanup failed:",error.message);
+    }
+
+    if(firebaseEnabled && db){
+        const deleteCollectionSubjectDocs=async(collectionName)=>{
+            try{
+                const snapshot=await db.collection(collectionName)
+                    .where("subject","==",subject).get();
+
+                if(!snapshot.empty){
+                    for(let start=0;start<snapshot.docs.length;start+=450){
+                        const batch=db.batch();
+                        snapshot.docs.slice(start,start+450).forEach(doc=>batch.delete(doc.ref));
+                        await batch.commit();
+                    }
+                    firebaseDeleted=true;
+                }
+            }catch(error){
+                console.warn(`CS Subject Firebase ${collectionName} cleanup failed:`,error.message);
+            }
+        };
+
+        await deleteCollectionSubjectDocs("csMainTopics");
+        await deleteCollectionSubjectDocs("csSubtopics");
+        await deleteCollectionSubjectDocs("mcqHtml");
+    }
+
+    return {localDeleted,firebaseDeleted};
+}
+
 app.delete("/api/cs/subjects", requireOwner, async (req,res)=>{
     try{
         await ensureCSSubjectRegistryLoaded();
 
         const rawId=String(req.body?.id||"").trim().toLowerCase();
-        const exactName=String(req.body?.name||"").trim();
+        const providedName=String(req.body?.name||"").trim();
+        const providedCode=String(req.body?.code||"").trim();
+        const providedServerName=String(req.body?.serverName||"").trim();
 
-        if(!rawId || !exactName){
-            throw new Error("Subject ID aur exact Subject Name required hai.");
+        if(!rawId && !providedCode && !providedName){
+            throw new Error("Subject ID, Code ya Name required hai.");
         }
 
-        // Accept either the real server ID OR the Subject Code. This keeps
-        // Delete compatible with old/new admin.js versions.
         let id=rawId;
 
         if(!CS_SUBJECTS.has(id)){
             const builtinByCode=CS_BUILTIN_SUBJECTS.find(item=>
+                String(item.code||"").trim().toLowerCase()===providedCode.toLowerCase() ||
                 String(item.code||"").trim().toLowerCase()===rawId
             );
             if(builtinByCode) id=builtinByCode.id;
         }
 
         if(!CS_SUBJECTS.has(id)){
-            const customByCode=Array.from(CS_CUSTOM_SUBJECTS.values()).find(item=>
-                String(item.code||"").trim().toLowerCase()===rawId
-            );
+            const customByCode=Array.from(CS_CUSTOM_SUBJECTS.values()).find(item=>{
+                const itemCode=String(item.code||"").trim().toLowerCase();
+                return itemCode===providedCode.toLowerCase() || itemCode===rawId;
+            });
             if(customByCode) id=normalizeSubjectId(customByCode.id);
         }
 
-        if(CS_SUBJECTS.has(id)){
-            const subject=CS_BUILTIN_SUBJECTS.find(item=>item.id===id);
-            if(!subject){
-                return res.status(404).json({success:false,message:"Subject nahi mila."});
-            }
+        const canonicalBuiltin=CS_BUILTIN_SUBJECTS.find(item=>item.id===id);
+        const customSubject=CS_CUSTOM_SUBJECTS.get(id);
+        const subject=canonicalBuiltin||customSubject;
 
-            if(exactName.toLowerCase()!==String(subject.name||"").trim().toLowerCase()){
-                return res.status(403).json({
-                    success:false,
-                    message:"Exact Subject Name match nahi hua. Delete blocked."
-                });
-            }
+        if(!subject){
+            return res.status(404).json({success:false,message:"Subject nahi mila."});
+        }
 
+        const acceptedNames=new Set([
+            subject.name,
+            subject.code,
+            subject.id,
+            providedName,
+            providedCode,
+            providedServerName
+        ].map(value=>String(value||"").trim().toLowerCase()).filter(Boolean));
+
+        // Also accept the original built-in name if the built-in was renamed.
+        if(canonicalBuiltin){
+            const originalBuiltin=CS_BUILTIN_SUBJECTS.find(item=>item.id===id);
+            if(originalBuiltin) acceptedNames.add(String(originalBuiltin.name||"").trim().toLowerCase());
+
+            const builtinNameMap={
+                ai:"Artificial Intelligence (AI)",
+                cn:"Computer Networks (CN)",
+                dsa:"Data Structures & Algorithms (DSA)",
+                dbms:"Database Management System (DBMS)",
+                de:"Digital Electronics (DE)",
+                "e-commerce":"E-Commerce",
+                iot:"Internet of Things (IoT)",
+                multimedia:"Multimedia",
+                oops:"Object-Oriented Programming (OOPS)",
+                os:"Operating System (OS)",
+                "software-engineering":"Software Engineering",
+                toc:"Theory of Computation (TOC)"
+            };
+            if(builtinNameMap[id]) acceptedNames.add(builtinNameMap[id].toLowerCase());
+        }
+
+        const suppliedValues=[providedName,providedCode,providedServerName,rawId]
+            .map(value=>String(value||"").trim().toLowerCase())
+            .filter(Boolean);
+
+        if(suppliedValues.length && !suppliedValues.some(value=>acceptedNames.has(value))){
+            return res.status(403).json({
+                success:false,
+                message:"Subject Name/Code/ID match nahi hua. Delete blocked."
+            });
+        }
+
+        const cleanup=await cleanupCSSubjectData(id);
+
+        if(canonicalBuiltin){
             CS_SUBJECT_OVERRIDES[id]={
                 ...(CS_SUBJECT_OVERRIDES[id]||{}),
                 deleted:true,
@@ -1825,60 +1950,50 @@ app.delete("/api/cs/subjects", requireOwner, async (req,res)=>{
                 success:true,
                 message:`${subject.name} delete ho gaya.`,
                 builtIn:true,
-                firebaseDeleted:false
+                localDeleted:cleanup.localDeleted,
+                firebaseDeleted:cleanup.firebaseDeleted
             });
             return;
-        }
-
-        const subject=CS_CUSTOM_SUBJECTS.get(id);
-        if(!subject){
-            return res.status(404).json({success:false,message:"Subject nahi mila."});
-        }
-
-        if(exactName.toLowerCase()!==String(subject.name||"").trim().toLowerCase()){
-            return res.status(403).json({
-                success:false,
-                message:"Exact Subject Name match nahi hua. Delete blocked."
-            });
         }
 
         CS_CUSTOM_SUBJECTS.delete(id);
         writeCSCustomSubjects(Array.from(CS_CUSTOM_SUBJECTS.values()));
 
-        let firebaseDeleted=false;
+        let firebaseSubjectDeleted=false;
         if(firebaseEnabled && db){
             try{
                 const snapshot=await db.collection("csSubjects").get();
-                const batch=db.batch();
-                let count=0;
+                for(let start=0;start<snapshot.docs.length;start+=450){
+                    const batch=db.batch();
+                    let count=0;
 
-                snapshot.docs.forEach(doc=>{
-                    const data=doc.data()||{};
-                    const sameId=normalizeSubjectId(data.id||doc.id)===id;
-                    const sameName=String(data.name||"").trim().toLowerCase()===
-                        String(subject.name||"").trim().toLowerCase();
-                    const sameCode=String(data.code||"").trim().toLowerCase()===
-                        String(subject.code||"").trim().toLowerCase();
+                    snapshot.docs.slice(start,start+450).forEach(doc=>{
+                        const data=doc.data()||{};
+                        const sameId=normalizeSubjectId(data.id||doc.id)===id;
+                        const sameName=String(data.name||"").trim().toLowerCase()===String(subject.name||"").trim().toLowerCase();
+                        const sameCode=String(data.code||"").trim().toLowerCase()===String(subject.code||"").trim().toLowerCase();
 
-                    if(sameId||sameName||sameCode){
-                        batch.delete(doc.ref);
-                        count++;
+                        if(sameId||sameName||sameCode){
+                            batch.delete(doc.ref);
+                            count++;
+                        }
+                    });
+
+                    if(count){
+                        await batch.commit();
+                        firebaseSubjectDeleted=true;
                     }
-                });
-
-                if(count){
-                    await batch.commit();
-                    firebaseDeleted=true;
                 }
             }catch(error){
-                console.warn("CS Subject Firebase delete failed:",error.message);
+                console.warn("CS Subject Firebase registry delete failed:",error.message);
             }
         }
 
         res.json({
             success:true,
             message:`${subject.name} delete ho gaya.`,
-            firebaseDeleted
+            localDeleted:cleanup.localDeleted,
+            firebaseDeleted:Boolean(cleanup.firebaseDeleted||firebaseSubjectDeleted)
         });
     }catch(error){
         res.status(400).json({success:false,message:error.message});
@@ -2064,6 +2179,136 @@ async function deleteFirebaseCSSubtopic(id) {
 }
 
 /* ------------------------------------------------------
+   GENERIC SUBTOPIC ORDER
+------------------------------------------------------ */
+
+function subtopicGroupKey(item) {
+    return [
+        String(item?.subject || "").trim().toLowerCase(),
+        Number(item?.chapterNumber),
+        String(item?.mainTopicId || "").trim()
+    ].join("|");
+}
+
+function numericSubtopicOrder(item) {
+    const value = Number(item?.order);
+    return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function backfillLocalCSSubtopicOrders() {
+    const items = readCSSubtopics();
+    let changed = false;
+    const counters = new Map();
+
+    for (const item of items) {
+        const key = subtopicGroupKey(item);
+        const existingOrder = numericSubtopicOrder(item);
+
+        if (existingOrder !== null) {
+            counters.set(
+                key,
+                Math.max(counters.get(key) || 0, existingOrder)
+            );
+            continue;
+        }
+
+        const nextOrder = (counters.get(key) || 0) + 1;
+        item.order = nextOrder;
+        counters.set(key, nextOrder);
+        changed = true;
+    }
+
+    if (changed) writeCSSubtopics(items);
+    return items;
+}
+
+async function getOrderedCSSubtopics(subject, chapterNumber, mainTopicId) {
+    const local = backfillLocalCSSubtopicOrders().filter(x =>
+        String(x.subject).toLowerCase() === subject &&
+        Number(x.chapterNumber) === chapterNumber &&
+        String(x.mainTopicId || "") === mainTopicId
+    );
+
+    let remote = [];
+    if (firebaseEnabled && db) {
+        try {
+            remote = (await getFirebaseCSSubtopics()).filter(x =>
+                String(x.subject).toLowerCase() === subject &&
+                Number(x.chapterNumber) === chapterNumber &&
+                String(x.mainTopicId || "") === mainTopicId
+            );
+        } catch (error) {
+            console.warn("CS Subtopic Firebase read failed:", error.message);
+        }
+    }
+
+    const localById = new Map(
+        local.filter(x => x?.id).map(x => [String(x.id), x])
+    );
+
+    const merged = new Map();
+    local.forEach(item => {
+        if (item?.id) merged.set(String(item.id), item);
+    });
+
+    remote.forEach(item => {
+        if (!item?.id) return;
+        if (!localById.has(String(item.id))) {
+            merged.set(String(item.id), item);
+        }
+    });
+
+    const all = [...merged.values()];
+    const counters = new Map();
+
+    local.forEach(item => {
+        const key = subtopicGroupKey(item);
+        const order = numericSubtopicOrder(item);
+        if (order !== null) {
+            counters.set(key, Math.max(counters.get(key) || 0, order));
+        }
+    });
+
+    const firebaseBackfill = [];
+
+    for (const item of all) {
+        if (numericSubtopicOrder(item) !== null) continue;
+
+        const key = subtopicGroupKey(item);
+        const nextOrder = (counters.get(key) || 0) + 1;
+        item.order = nextOrder;
+        counters.set(key, nextOrder);
+
+        if (firebaseEnabled && db && !localById.has(String(item.id))) {
+            firebaseBackfill.push(item);
+        }
+    }
+
+    if (firebaseBackfill.length) {
+        await Promise.all(
+            firebaseBackfill.map(item =>
+                saveFirebaseCSSubtopic(item).catch(error => {
+                    console.warn(
+                        "CS Subtopic Firebase order backfill failed:",
+                        error.message
+                    );
+                })
+            )
+        );
+    }
+
+    return all.sort((a, b) =>
+        (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
+        (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
+        String(a.title || "").localeCompare(
+            String(b.title || ""),
+            undefined,
+            { sensitivity: "base" }
+        )
+    );
+}
+
+/* ------------------------------------------------------
    GET SUBTOPICS
    Subject + Main Topic / Chapter
 ------------------------------------------------------ */
@@ -2144,6 +2389,8 @@ app.get(
             const items =
                 Array.from(merged.values())
                     .sort((a, b) =>
+                        (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
+                        (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
                         String(a.title || "")
                             .localeCompare(
                                 String(b.title || ""),
@@ -4332,32 +4579,16 @@ app.get("/api/cs/subtopics-v2/:subject/:chapterNumber",async(req,res)=>{
 
         if(!mainTopic) return res.status(404).json({success:false,message:"Main Topic nahi mila."});
 
-        const local=readCSSubtopics().filter(x=>
-            String(x.subject).toLowerCase()===subject &&
-            Number(x.chapterNumber)===chapterNumber &&
-            String(x.mainTopicId||"")===mainTopicId
+        const items = await getOrderedCSSubtopics(
+            subject,
+            chapterNumber,
+            mainTopicId
         );
-
-        let remote=[];
-        if(firebaseEnabled&&db){
-            try{
-                remote=(await getFirebaseCSSubtopics()).filter(x=>
-                    String(x.subject).toLowerCase()===subject &&
-                    Number(x.chapterNumber)===chapterNumber &&
-                    String(x.mainTopicId||"")===mainTopicId
-                );
-            }catch{}
-        }
-
-        const map=new Map();
-        [...local,...remote].forEach(x=>x?.id&&map.set(String(x.id),x));
 
         res.json({
             success:true,
             mainTopic,
-            items:[...map.values()].sort((a,b)=>
-                String(a.title||"").localeCompare(String(b.title||""),undefined,{sensitivity:"base"})
-            )
+            items
         });
     }catch(error){
         res.status(400).json({success:false,message:error.message});
@@ -4382,7 +4613,7 @@ app.post("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
 
         if(!mainTopic) throw new Error("Selected Main Topic valid nahi hai.");
 
-        const items=readCSSubtopics();
+        const items=backfillLocalCSSubtopicOrders();
 
         const duplicate=items.find(x=>
             String(x.subject).toLowerCase()===subject &&
@@ -4393,6 +4624,40 @@ app.post("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
 
         if(duplicate) return res.json({success:true,item:duplicate});
 
+        let siblingOrders=items
+            .filter(x =>
+                String(x.subject).toLowerCase()===subject &&
+                Number(x.chapterNumber)===chapterNumber &&
+                String(x.mainTopicId||"")===mainTopicId
+            )
+            .map(x => numericSubtopicOrder(x))
+            .filter(order => order !== null);
+
+        if(firebaseEnabled && db){
+            try{
+                const remote=await getFirebaseCSSubtopics();
+                siblingOrders=siblingOrders.concat(
+                    remote
+                        .filter(x =>
+                            String(x.subject).toLowerCase()===subject &&
+                            Number(x.chapterNumber)===chapterNumber &&
+                            String(x.mainTopicId||"")===mainTopicId
+                        )
+                        .map(x => numericSubtopicOrder(x))
+                        .filter(order => order !== null)
+                );
+            }catch(error){
+                console.warn(
+                    "CS Subtopic Firebase sibling read failed:",
+                    error.message
+                );
+            }
+        }
+
+        const nextOrder=(siblingOrders.length
+            ? Math.max(...siblingOrders)
+            : 0) + 1;
+
         const now=new Date().toISOString();
         const item={
             id:`cs-sub-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`,
@@ -4400,6 +4665,7 @@ app.post("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
             chapterNumber,
             mainTopicId,
             title,
+            order:nextOrder,
             createdAt:now,
             updatedAt:now,
             source:"admin"
@@ -4510,7 +4776,17 @@ app.get("/api/cs/hierarchy-v2/:subject/:chapterNumber",async(req,res)=>{
             .sort((a,b)=>Number(a.order||0)-Number(b.order||0))
             .map(main=>({
                 ...main,
-                subtopics:subs.filter(x=>String(x.mainTopicId||"")===String(main.id))
+                subtopics:subs
+                    .filter(x=>String(x.mainTopicId||"")===String(main.id))
+                    .sort((a,b)=>
+                        (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
+                        (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
+                        String(a.title||"").localeCompare(
+                            String(b.title||""),
+                            undefined,
+                            {sensitivity:"base"}
+                        )
+                    )
             }));
 
         res.json({success:true,items});
@@ -4541,7 +4817,7 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             }catch{}
         }
 
-        let subs=readCSSubtopics().filter(x=>
+        let subs=backfillLocalCSSubtopicOrders().filter(x=>
             String(x.subject).toLowerCase()===subject
         );
         if(firebaseEnabled&&db){
@@ -4579,7 +4855,15 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             const chapterNumber=Number(main.chapterNumber);
             const chapterMcqs=mcqByChapter.get(chapterNumber)||[];
             const children=subs.filter(s=>String(s.mainTopicId||'')===String(main.id))
-                .sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),undefined,{sensitivity:'base'}))
+                .sort((a,b)=>
+                    (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
+                    (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
+                    String(a.title||'').localeCompare(
+                        String(b.title||''),
+                        undefined,
+                        {sensitivity:'base'}
+                    )
+                )
                 .map(sub=>({
                     ...sub,
                     mcqSets:chapterMcqs.filter(item=>String(item.subtopicId||'')===String(sub.id))

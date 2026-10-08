@@ -1,0 +1,20 @@
+ admin/index.html                                   |  263 [32m+[m[31m-[m
+ data/cs-chapters.json                              |   44 [32m+[m[31m-[m
+ data/cs-main-topics.json                           |   54 [32m+[m
+ data/cs-subject-notes.json                         |    3 [32m+[m[31m-[m
+ data/cs-subjects.json                              |   28 [32m+[m
+ data/cs-subtopics.json                             |   95 [32m+[m[31m-[m
+ data/cs/MCQ/ai/chapter-01/index.json               |   12 [32m+[m
+ .../mcq-cs-1790676544805-b67b9e1afa75.html}        |    0
+ data/cs/MCQ/dbms/chapter-01/index.json             |   24 [32m+[m[31m-[m
+ .../mcq-cs-1790627877374-e41b51a25880.html         |  383 [32m++[m
+ .../mcq-cs-1790631890959-914e9e2516df.html         |  383 [32m++[m
+ data/cs/MCQ/dbms/chapter-02/index.json             |   13 [32m+[m[31m-[m
+ data/cs/MCQ/sql/chapter-01/index.json              |   28 [32m+[m
+ .../mcq-cs-1790686548109-74431b0e480a.html         |  383 [32m++[m
+ .../mcq-cs-1790687601562-5986ff92ca2e.html         |  383 [32m++[m
+ index.html                                         |    3 [32m+[m
+ js/admin.js                                        |  926 [32m++++[m[31m-[m
+ js/cs-hierarchy.js                                 |  136 [32m+[m
+ server/server.js                                   | 3796 [32m++++++++++++++[m[31m------[m
+ 19 files changed, 5597 insertions(+), 1360 deletions(-)

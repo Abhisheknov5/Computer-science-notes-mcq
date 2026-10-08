@@ -1,54 +1,6 @@
 {
   "items": [
     {
-      "id": "cn-1",
-      "subject": "cn",
-      "number": 1,
-      "title": "basic of ai",
-      "chapterTitle": "basic of ai",
-      "updatedAt": "2026-09-25T07:59:46.827Z"
-    },
-    {
-      "id": "e-commerce-1",
-      "subject": "e-commerce",
-      "number": 1,
-      "title": "basic of e commerce",
-      "chapterTitle": "basic of e commerce",
-      "updatedAt": "2026-09-25T11:16:49.444Z"
-    },
-    {
-      "id": "ai-1",
-      "subject": "ai",
-      "number": 1,
-      "title": "hfjdbfjabfsjf",
-      "chapterTitle": "hfjdbfjabfsjf",
-      "updatedAt": "2026-09-25T13:57:21.159Z"
-    },
-    {
-      "id": "dbms-1",
-      "subject": "dbms",
-      "number": 1,
-      "title": "DBMS Tutorial",
-      "chapterTitle": "DBMS Tutorial",
-      "updatedAt": "2026-09-28T20:37:28.363Z"
-    },
-    {
-      "id": "abcd-1",
-      "subject": "abcd",
-      "number": 1,
-      "title": "abcd",
-      "chapterTitle": "abcd",
-      "updatedAt": "2026-09-29T11:12:38.647Z"
-    },
-    {
-      "id": "sql-1",
-      "subject": "sql",
-      "number": 1,
-      "title": "SQL",
-      "chapterTitle": "SQL",
-      "updatedAt": "2026-09-29T12:54:57.070Z"
-    },
-    {
       "id": "cpp-1",
       "subject": "cpp",
       "number": 1,
@@ -63,6 +15,30 @@
       "title": "aaaa",
       "chapterTitle": "aaaa",
       "updatedAt": "2026-10-06T03:13:13.893Z"
+    },
+    {
+      "id": "de-1",
+      "subject": "de",
+      "number": 1,
+      "title": "1- Digital Electronics (DE)",
+      "chapterTitle": "1- Digital Electronics (DE)",
+      "updatedAt": "2026-10-07T10:44:37.341Z"
+    },
+    {
+      "id": "os-1",
+      "subject": "os",
+      "number": 1,
+      "title": "Operating System",
+      "chapterTitle": "Operating System",
+      "updatedAt": "2026-10-08T01:32:40.275Z"
+    },
+    {
+      "id": "dbms-1",
+      "subject": "dbms",
+      "number": 1,
+      "title": "Operating System",
+      "chapterTitle": "Operating System",
+      "updatedAt": "2026-10-08T01:54:31.238Z"
     }
   ]
 }
