@@ -1562,6 +1562,59 @@ app.use("/api/cs", async (req,res,next)=>{
     }
 });
 
+
+/*
+ * Non-destructive subject visibility sync.
+ * This is intentionally separate from DELETE /api/cs/subjects:
+ * it only persists the built-in subject's `deleted` visibility flag.
+ * Existing chapters, main topics, subtopics and MCQ files are untouched.
+ */
+app.post("/api/cs/subjects/visibility", requireOwner, async (req,res)=>{
+    try{
+        await ensureCSSubjectRegistryLoaded();
+
+        const codes=Array.isArray(req.body?.deletedCodes)
+            ? req.body.deletedCodes
+            : [];
+
+        const normalizedCodes=new Set(
+            codes
+                .map(value=>String(value||"").trim().toLowerCase())
+                .filter(Boolean)
+        );
+
+        let changed=0;
+
+        CS_BUILTIN_SUBJECTS.forEach(item=>{
+            const code=String(item.code||"").trim().toLowerCase();
+            if(!code) return;
+
+            if(normalizedCodes.has(code)){
+                if(!CS_SUBJECT_OVERRIDES[item.id]?.deleted){
+                    CS_SUBJECT_OVERRIDES[item.id]={
+                        ...(CS_SUBJECT_OVERRIDES[item.id]||{}),
+                        deleted:true,
+                        updatedAt:new Date().toISOString()
+                    };
+                    changed++;
+                }
+            }
+        });
+
+        if(changed>0){
+            writeCSSubjectOverrides(CS_SUBJECT_OVERRIDES);
+        }
+
+        res.json({
+            success:true,
+            changed,
+            deletedCodes:Array.from(normalizedCodes)
+        });
+    }catch(error){
+        res.status(400).json({success:false,message:error.message});
+    }
+});
+
 app.get("/api/cs/subjects", async (req,res)=>{
     try{
         await ensureCSSubjectRegistryLoaded();

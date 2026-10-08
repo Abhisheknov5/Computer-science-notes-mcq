@@ -87,6 +87,39 @@
       "createdAt": "2026-10-08T02:13:44.902Z",
       "updatedAt": "2026-10-08T02:13:44.902Z",
       "source": "admin"
+    },
+    {
+      "id": "cs-sub-1791466884716-f5f9803fe933",
+      "subject": "dbms",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1791424494926-765337eab33a",
+      "title": "Types of Databases",
+      "order": 3,
+      "createdAt": "2026-10-08T13:41:24.716Z",
+      "updatedAt": "2026-10-08T13:41:24.716Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-sub-1791467209563-1d8777cb9e66",
+      "subject": "se",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1791467192378-30498ea7b33f",
+      "title": "Software Engineering Tutorial",
+      "order": 1,
+      "createdAt": "2026-10-08T13:46:49.563Z",
+      "updatedAt": "2026-10-08T13:46:49.563Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-sub-1791467221763-eab207036cee",
+      "subject": "se",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1791467192378-30498ea7b33f",
+      "title": "Software Process Model in Software Engineering",
+      "order": 2,
+      "createdAt": "2026-10-08T13:47:01.763Z",
+      "updatedAt": "2026-10-08T13:47:01.763Z",
+      "source": "admin"
     }
   ]
 }

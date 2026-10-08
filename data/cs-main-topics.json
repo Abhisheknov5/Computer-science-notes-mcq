@@ -59,6 +59,16 @@
       "createdAt": "2026-10-08T02:13:32.597Z",
       "updatedAt": "2026-10-08T02:13:32.597Z",
       "source": "admin"
+    },
+    {
+      "id": "cs-main-1791467192378-30498ea7b33f",
+      "subject": "se",
+      "chapterNumber": 1,
+      "title": "Software Engineering",
+      "order": 1,
+      "createdAt": "2026-10-08T13:46:32.378Z",
+      "updatedAt": "2026-10-08T13:46:32.378Z",
+      "source": "admin"
     }
   ]
 }

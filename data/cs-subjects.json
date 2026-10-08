@@ -7,6 +7,15 @@
       "name": "abcd",
       "id": "abcd",
       "source": "admin"
+    },
+    {
+      "id": "se",
+      "name": "Software Engineering",
+      "code": "SE",
+      "icon": "📘",
+      "createdAt": "2026-10-08T13:42:48.368Z",
+      "source": "admin",
+      "updatedAt": "2026-10-08T13:43:06.103Z"
     }
   ]
 }

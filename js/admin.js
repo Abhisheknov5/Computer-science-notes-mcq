@@ -1677,6 +1677,35 @@ async function deleteCSSubtopic(id){
     function writeJSON(key,value){
         try{localStorage.setItem(key,JSON.stringify(value));}catch{}
     }
+
+    async function syncLocalDeletedSubjectsToServer(){
+        const deleted=readJSON(DELETED_KEY,[])
+            .map(x=>String(x||"").trim().toUpperCase())
+            .filter(Boolean);
+
+        if(!deleted.length)return;
+
+        try{
+            const response=await fetch("/api/cs/subjects/visibility",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                credentials:"same-origin",
+                cache:"no-store",
+                body:JSON.stringify({deletedCodes:deleted})
+            });
+
+            const data=await response.json().catch(()=>({}));
+
+            if(!response.ok || !data.success){
+                console.warn(
+                    "CS subject visibility sync failed:",
+                    data.message || `HTTP ${response.status}`
+                );
+            }
+        }catch(error){
+            console.warn("CS subject visibility sync failed:",error.message);
+        }
+    }
     function slug(value){
         return String(value||"").trim().toLowerCase()
             .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
@@ -1686,6 +1715,7 @@ async function deleteCSSubtopic(id){
             .replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
     function getGrid(){return document.querySelector(".cs-subject-grid");}
+    const BUILTIN_SUBJECT_CODES=new Set(Object.keys(subjectIdMap));
     function getMessage(){return document.getElementById("subjectManageMessage");}
     function message(text,type="success"){
         const el=getMessage();
@@ -2043,6 +2073,24 @@ async function deleteCSSubtopic(id){
             const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
             const serverSubjects=data.items.filter(item=>item);
 
+            const serverCodes=new Set(
+                serverSubjects
+                    .map(item=>String(item?.code||"").trim().toUpperCase())
+                    .filter(Boolean)
+            );
+
+            // Persistent server visibility is the source of truth for built-ins.
+            // If a built-in is absent from /api/cs/subjects because it is marked
+            // deleted, remove only its card from this admin grid. No data cleanup
+            // happens here.
+            BUILTIN_SUBJECT_CODES.forEach(code=>{
+                if(!serverCodes.has(String(code).toUpperCase())){
+                    grid.querySelector(
+                        `.subject-card[data-subject="${CSS.escape(code)}"]`
+                    )?.remove();
+                }
+            });
+
             serverSubjects.forEach(subject=>{
                 const code=String(subject.code||"").trim();
                 if(!code || deleted.includes(code.toUpperCase())) return;
@@ -2133,6 +2181,14 @@ async function deleteCSSubtopic(id){
     }
 
     injectStyle();
-    applySubjectManagement();
-    loadServerCustomSubjects();
+
+    // One-time migration bridge:
+    // the tested localhost version already stores hidden subjects in localStorage.
+    // Persist that exact state on the server without deleting any subject data,
+    // then render from the server registry so localhost and Live converge.
+    syncLocalDeletedSubjectsToServer()
+        .finally(()=>{
+            applySubjectManagement();
+            loadServerCustomSubjects();
+        });
 })();
