@@ -151,14 +151,14 @@ async function getHTMLFromFirebase(id) {
 async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
     if (!firebaseEnabled || !db) return [];
 
+    // CS hierarchy stores MCQ HTML with classNumber = 0 because CS
+    // subjects are not tied to an NCERT class. In that case, do not
+    // require an exact classNumber match; filter by subject + chapter.
     let query = db
         .collection("mcqHtml")
         .where("subject", "==", String(subject).toLowerCase())
         .where("chapterNumber", "==", Number(chapterNumber));
 
-    // CS MCQs are stored with classNumber 0.
-    // A zero classNumber means "all CS classes", so do not require
-    // an exact Firestore classNumber match when the caller passes 0.
     if (Number(classNumber) > 0) {
         query = query.where("classNumber", "==", Number(classNumber));
     }
@@ -4914,11 +4914,6 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             if(firebaseEnabled&&db){
                 try{
                     const remote=await listHTMLFromFirestore(0,subject,chapterNumber);
-
-                    // Local MCQs are authoritative for a subtopic.
-                    // Firebase is only a fallback for subtopics that have
-                    // no local MCQ, preventing stale Firebase data from
-                    // replacing the current local upload.
                     const localSubtopicIdsWithMCQ=new Set(
                         items
                             .map(x=>String(x?.subtopicId||"").trim())
@@ -4928,21 +4923,27 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
                     const merged=[...items];
                     const seen=new Set(items.map(x=>String(x?.id||"")));
 
-                    remote.forEach(x=>{
-                        if(!x||!x.id) return;
+                    for(const x of remote){
+                        if(!x||!x.id) continue;
 
                         const subtopicId=String(x.subtopicId||"").trim();
-                        if(subtopicId && localSubtopicIdsWithMCQ.has(subtopicId)) return;
+
+                        // Keep local MCQ authoritative for a subtopic.
+                        if(subtopicId && localSubtopicIdsWithMCQ.has(subtopicId)){
+                            continue;
+                        }
 
                         const key=String(x.id);
-                        if(seen.has(key)) return;
+                        if(seen.has(key)) continue;
 
                         seen.add(key);
                         merged.push(x);
-                    });
+                    }
 
                     items=merged;
-                }catch{}
+                }catch(error){
+                    console.warn("CS public hierarchy MCQ merge failed:",error.message);
+                }
             }
             mcqByChapter.set(chapterNumber,items.map(x=>({
                 ...x,
