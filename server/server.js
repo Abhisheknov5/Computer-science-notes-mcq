@@ -151,14 +151,14 @@ async function getHTMLFromFirebase(id) {
 async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
     if (!firebaseEnabled || !db) return [];
 
-    // CS hierarchy stores MCQ HTML with classNumber = 0 because CS
-    // subjects are not tied to an NCERT class. In that case, do not
-    // require an exact classNumber match; filter by subject + chapter.
     let query = db
         .collection("mcqHtml")
         .where("subject", "==", String(subject).toLowerCase())
         .where("chapterNumber", "==", Number(chapterNumber));
 
+    // CS MCQs are stored with classNumber 0.
+    // A zero classNumber means "all CS classes", so do not require
+    // an exact Firestore classNumber match when the caller passes 0.
     if (Number(classNumber) > 0) {
         query = query.where("classNumber", "==", Number(classNumber));
     }
@@ -2986,7 +2986,20 @@ app.get("/api/cs/mcq-html/file/:id",async(req,res)=>{
             for(const cd of chapterDirs){
                 if(!cd.isDirectory()) continue;
                 const n=Number(cd.name.replace("chapter-",""));
-                const items=readCSMCQMetadata(subject,n);
+                let items=[];
+
+                // Do not validate every folder name as a CS subject here.
+                // Extra/old folders inside data/cs/MCQ must not break MCQ loading.
+                try{
+                    const indexFile=path.join(subjectRoot,cd.name,"index.json");
+                    if(fs.existsSync(indexFile)){
+                        const data=JSON.parse(fs.readFileSync(indexFile,"utf8"));
+                        items=Array.isArray(data.items)?data.items:[];
+                    }
+                }catch{
+                    items=[];
+                }
+
                 const item=items.find(x=>x.id===id);
                 if(!item) continue;
                 const file=path.join(subjectRoot,cd.name,item.fileName);
@@ -4914,6 +4927,11 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             if(firebaseEnabled&&db){
                 try{
                     const remote=await listHTMLFromFirestore(0,subject,chapterNumber);
+
+                    // Local MCQs are authoritative for a subtopic.
+                    // Firebase is only a fallback for subtopics that have
+                    // no local MCQ, preventing stale Firebase data from
+                    // replacing the current local upload.
                     const localSubtopicIdsWithMCQ=new Set(
                         items
                             .map(x=>String(x?.subtopicId||"").trim())
@@ -4923,27 +4941,21 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
                     const merged=[...items];
                     const seen=new Set(items.map(x=>String(x?.id||"")));
 
-                    for(const x of remote){
-                        if(!x||!x.id) continue;
+                    remote.forEach(x=>{
+                        if(!x||!x.id) return;
 
                         const subtopicId=String(x.subtopicId||"").trim();
-
-                        // Keep local MCQ authoritative for a subtopic.
-                        if(subtopicId && localSubtopicIdsWithMCQ.has(subtopicId)){
-                            continue;
-                        }
+                        if(subtopicId && localSubtopicIdsWithMCQ.has(subtopicId)) return;
 
                         const key=String(x.id);
-                        if(seen.has(key)) continue;
+                        if(seen.has(key)) return;
 
                         seen.add(key);
                         merged.push(x);
-                    }
+                    });
 
                     items=merged;
-                }catch(error){
-                    console.warn("CS public hierarchy MCQ merge failed:",error.message);
-                }
+                }catch{}
             }
             mcqByChapter.set(chapterNumber,items.map(x=>({
                 ...x,
