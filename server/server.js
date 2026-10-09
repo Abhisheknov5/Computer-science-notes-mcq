@@ -4903,9 +4903,34 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             if(firebaseEnabled&&db){
                 try{
                     const remote=await listHTMLFromFirestore(0,subject,chapterNumber);
-                    const map=new Map(items.map(x=>[String(x.id),x]));
-                    remote.forEach(x=>map.set(String(x.id),x));
-                    items=[...map.values()];
+                    const localSubtopicIdsWithMCQ=new Set(
+                        items
+                            .map(x=>String(x?.subtopicId||"").trim())
+                            .filter(Boolean)
+                    );
+
+                    const merged=[...items];
+                    const seen=new Set(items.map(x=>String(x?.id||"")));
+
+                    for(const x of remote){
+                        if(!x||!x.id) continue;
+
+                        const subtopicId=String(x.subtopicId||"").trim();
+
+                        // Local MCQs are authoritative for a subtopic.
+                        // Firebase is used only when local has no MCQ for it.
+                        if(subtopicId && localSubtopicIdsWithMCQ.has(subtopicId)){
+                            continue;
+                        }
+
+                        const key=String(x.id);
+                        if(seen.has(key)) continue;
+
+                        seen.add(key);
+                        merged.push(x);
+                    }
+
+                    items=merged;
                 }catch{}
             }
             mcqByChapter.set(chapterNumber,items.map(x=>({
