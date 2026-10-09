@@ -2965,16 +2965,9 @@ app.post("/api/cs/mcq-html/upload",requireOwner,mcqHTMLUpload.single("mcqFile"),
 
 app.get("/api/cs/mcq-html/file/:id",async(req,res)=>{
     const id=String(req.params.id||"");
-    try{
-        if(firebaseEnabled&&db){
-            const data=await getHTMLFromFirebase(id);
-            if(data&&typeof data.html==="string"){
-                res.type("html").send(data.html);
-                return;
-            }
-        }
-    }catch(error){console.warn("CS Firebase MCQ read failed:",error.message);}
 
+    // Local MCQ HTML is authoritative. Firebase is only a fallback.
+    // This prevents stale Firebase HTML from overriding the current local file.
     const root=path.resolve(CS_MCQ_ROOT);
     if(fs.existsSync(root)){
         const subjectDirs=fs.readdirSync(root,{withFileTypes:true});
@@ -2991,12 +2984,23 @@ app.get("/api/cs/mcq-html/file/:id",async(req,res)=>{
                 if(!item) continue;
                 const file=path.join(subjectRoot,cd.name,item.fileName);
                 if(fs.existsSync(file)){
-                    res.sendFile(path.resolve(file));
+                    res.type("html").sendFile(path.resolve(file));
                     return;
                 }
             }
         }
     }
+
+    try{
+        if(firebaseEnabled&&db){
+            const data=await getHTMLFromFirebase(id);
+            if(data&&typeof data.html==="string"){
+                res.type("html").send(data.html);
+                return;
+            }
+        }
+    }catch(error){console.warn("CS Firebase MCQ read failed:",error.message);}
+
     res.status(404).send("MCQ file not found.");
 });
 
@@ -4903,34 +4907,9 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             if(firebaseEnabled&&db){
                 try{
                     const remote=await listHTMLFromFirestore(0,subject,chapterNumber);
-                    const localSubtopicIdsWithMCQ=new Set(
-                        items
-                            .map(x=>String(x?.subtopicId||"").trim())
-                            .filter(Boolean)
-                    );
-
-                    const merged=[...items];
-                    const seen=new Set(items.map(x=>String(x?.id||"")));
-
-                    for(const x of remote){
-                        if(!x||!x.id) continue;
-
-                        const subtopicId=String(x.subtopicId||"").trim();
-
-                        // Local MCQs are authoritative for a subtopic.
-                        // Firebase is used only when local has no MCQ for it.
-                        if(subtopicId && localSubtopicIdsWithMCQ.has(subtopicId)){
-                            continue;
-                        }
-
-                        const key=String(x.id);
-                        if(seen.has(key)) continue;
-
-                        seen.add(key);
-                        merged.push(x);
-                    }
-
-                    items=merged;
+                    const map=new Map(items.map(x=>[String(x.id),x]));
+                    remote.forEach(x=>map.set(String(x.id),x));
+                    items=[...map.values()];
                 }catch{}
             }
             mcqByChapter.set(chapterNumber,items.map(x=>({
