@@ -2947,6 +2947,22 @@ app.post("/api/cs/mcq-html/upload",requireOwner,mcqHTMLUpload.single("mcqFile"),
             url:`/api/cs/mcq-html/file/${encodeURIComponent(id)}`
         };
 
+        // Permanent CS MCQ storage is Firestore. Do not report success or
+        // write a local-only copy when Firestore is unavailable or the save fails.
+        if(!firebaseEnabled||!db){
+            throw new Error("Firebase Firestore connected nahi hai. MCQ permanently save nahi ho sakta; Render Environment/Secret mein firebase-service-account.json configure karein.");
+        }
+
+        const firebaseSaved=await saveHTMLToFirebase(
+            {classNumber:0,subject,chapterNumber,subtopicId},
+            item,
+            html
+        );
+        if(!firebaseSaved){
+            throw new Error("Firebase Firestore mein MCQ save nahi hua. Upload dobara karein.");
+        }
+
+        // Keep the local copy for compatibility, but only after permanent save.
         const dir=csChapterDir(subject,chapterNumber);
         fs.mkdirSync(dir,{recursive:true});
         fs.writeFileSync(path.join(dir,fileName),html,"utf8");
@@ -2955,15 +2971,7 @@ app.post("/api/cs/mcq-html/upload",requireOwner,mcqHTMLUpload.single("mcqFile"),
         items.push(item);
         writeCSMCQMetadata(subject,chapterNumber,items);
 
-        if(firebaseEnabled&&db){
-            try{
-                await saveHTMLToFirebase({classNumber:0,subject,chapterNumber,subtopicId},item,html);
-            }catch(error){
-                console.warn("CS Firestore MCQ save failed; local copy kept:",error.message);
-            }
-        }
-
-        res.json({success:true,item});
+        res.json({success:true,item,firebaseSaved:true});
     }catch(error){
         console.error("CS MCQ upload error:",error);
         res.status(400).json({success:false,message:error.message||"MCQ upload failed."});
@@ -5042,6 +5050,22 @@ app.post("/api/cs/mcq-html/upload-v2",requireOwner,mcqHTMLUpload.single("mcqFile
             url:`/api/cs/mcq-html/file/${encodeURIComponent(id)}`
         };
 
+        // Permanent CS MCQ storage is Firestore. Do not report success or
+        // write a local-only copy when Firestore is unavailable or the save fails.
+        if(!firebaseEnabled||!db){
+            throw new Error("Firebase Firestore connected nahi hai. MCQ permanently save nahi ho sakta; Render Environment/Secret mein firebase-service-account.json configure karein.");
+        }
+
+        const firebaseSaved=await saveHTMLToFirebase(
+            {classNumber:0,subject,chapterNumber,mainTopicId,subtopicId},
+            item,
+            html
+        );
+        if(!firebaseSaved){
+            throw new Error("Firebase Firestore mein MCQ save nahi hua. Upload dobara karein.");
+        }
+
+        // Keep the local copy for compatibility, but only after permanent save.
         const dir=csChapterDir(subject,chapterNumber);
         fs.mkdirSync(dir,{recursive:true});
         fs.writeFileSync(path.join(dir,fileName),html,"utf8");
@@ -5050,19 +5074,7 @@ app.post("/api/cs/mcq-html/upload-v2",requireOwner,mcqHTMLUpload.single("mcqFile
         items.push(item);
         writeCSMCQMetadata(subject,chapterNumber,items);
 
-        if(firebaseEnabled&&db){
-            try{
-                await saveHTMLToFirebase(
-                    {classNumber:0,subject,chapterNumber,mainTopicId,subtopicId},
-                    item,
-                    html
-                );
-            }catch(error){
-                console.warn("CS Firestore MCQ save failed; local copy kept:",error.message);
-            }
-        }
-
-        res.json({success:true,item});
+        res.json({success:true,item,firebaseSaved:true});
     }catch(error){
         console.error("CS hierarchy MCQ upload error:",error);
         res.status(400).json({success:false,message:error.message||"MCQ upload failed."});
