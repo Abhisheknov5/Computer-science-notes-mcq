@@ -3046,15 +3046,21 @@ app.get("/api/cs/mcq-html/:subject/:chapterNumber",async(req,res)=>{
 
         let sourceItems;
 
-        // Firestore is the durable source of truth. Render's local filesystem
-        // can be replaced during deploy/restart, so never let local metadata
-        // hide records that still exist in Firestore.
-        sourceItems=[...localItems,...firebaseItems];
-
         if(requestedSubtopicId){
-            sourceItems=sourceItems.filter(item =>
+            // For a selected subtopic, the local MCQ is authoritative.
+            // This prevents an old/stale Firebase record from being shown
+            // on the live site when a current local MCQ already exists.
+            const localMatches=localItems.filter(item =>
                 String(item?.subtopicId||"")===requestedSubtopicId
             );
+
+            sourceItems=localMatches.length
+                ? localMatches
+                : firebaseItems.filter(item =>
+                    String(item?.subtopicId||"")===requestedSubtopicId
+                );
+        }else{
+            sourceItems=[...localItems,...firebaseItems];
         }
 
         const merged=[];
@@ -4463,6 +4469,49 @@ async function deleteFirebaseCSMainTopicV2(id){
     return true;
 }
 
+// Resolve hierarchy records from both local JSON and Firestore. The public
+// list already merges these stores, so write/validation routes must do the same.
+async function findCSMainTopicV2(subject, chapterNumber, id){
+    const matches = item =>
+        String(item?.id || "") === String(id || "") &&
+        String(item?.subject || "").toLowerCase() === String(subject || "").toLowerCase() &&
+        Number(item?.chapterNumber) === Number(chapterNumber);
+
+    const local = readCSMainTopicsV2().find(matches);
+    if(local) return local;
+
+    if(firebaseEnabled && db){
+        try{
+            const remote = await getFirebaseCSMainTopicsV2();
+            return remote.find(matches) || null;
+        }catch(error){
+            console.warn("CS Main Topic Firestore validation failed:", error.message);
+        }
+    }
+    return null;
+}
+
+async function findCSSubtopicV2(subject, chapterNumber, mainTopicId, subtopicId){
+    const matches = item =>
+        String(item?.id || "") === String(subtopicId || "") &&
+        String(item?.subject || "").toLowerCase() === String(subject || "").toLowerCase() &&
+        Number(item?.chapterNumber) === Number(chapterNumber) &&
+        String(item?.mainTopicId || "") === String(mainTopicId || "");
+
+    const local = readCSSubtopics().find(matches);
+    if(local) return local;
+
+    if(firebaseEnabled && db){
+        try{
+            const remote = await getFirebaseCSSubtopics();
+            return remote.find(matches) || null;
+        }catch(error){
+            console.warn("CS Subtopic Firestore validation failed:", error.message);
+        }
+    }
+    return null;
+}
+
 /* ---------- MAIN TOPICS ---------- */
 
 app.get("/api/cs/main-topics/:subject/:chapterNumber",async(req,res)=>{
@@ -4662,11 +4711,7 @@ app.get("/api/cs/subtopics-v2/:subject/:chapterNumber",async(req,res)=>{
 
         if(!mainTopicId) throw new Error("Main Topic select karein.");
 
-        const mainTopic=readCSMainTopicsV2().find(x=>
-            String(x.id)===mainTopicId &&
-            String(x.subject).toLowerCase()===subject &&
-            Number(x.chapterNumber)===chapterNumber
-        );
+        const mainTopic=await findCSMainTopicV2(subject,chapterNumber,mainTopicId);
 
         if(!mainTopic) return res.status(404).json({success:false,message:"Main Topic nahi mila."});
 
@@ -4696,11 +4741,7 @@ app.post("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
         if(!mainTopicId) throw new Error("Pehle Main Topic select karein.");
         if(!title) throw new Error("Subtopic Title daaliye.");
 
-        const mainTopic=readCSMainTopicsV2().find(x=>
-            String(x.id)===mainTopicId &&
-            String(x.subject).toLowerCase()===subject &&
-            Number(x.chapterNumber)===chapterNumber
-        );
+        const mainTopic=await findCSMainTopicV2(subject,chapterNumber,mainTopicId);
 
         if(!mainTopic) throw new Error("Selected Main Topic valid nahi hai.");
 
@@ -5007,19 +5048,10 @@ app.post("/api/cs/mcq-html/upload-v2",requireOwner,mcqHTMLUpload.single("mcqFile
         if(!mainTopicId) throw new Error("Main Topic select karein.");
         if(!subtopicId) throw new Error("Subtopic select karein.");
 
-        const mainTopic=readCSMainTopicsV2().find(x=>
-            String(x.id)===mainTopicId &&
-            String(x.subject).toLowerCase()===subject &&
-            Number(x.chapterNumber)===chapterNumber
-        );
+        const mainTopic=await findCSMainTopicV2(subject,chapterNumber,mainTopicId);
         if(!mainTopic) throw new Error("Selected Main Topic valid nahi hai.");
 
-        const subtopic=readCSSubtopics().find(x=>
-            String(x.id)===subtopicId &&
-            String(x.subject).toLowerCase()===subject &&
-            Number(x.chapterNumber)===chapterNumber &&
-            String(x.mainTopicId||"")===mainTopicId
-        );
+        const subtopic=await findCSSubtopicV2(subject,chapterNumber,mainTopicId,subtopicId);
         if(!subtopic) throw new Error("Selected Subtopic valid nahi hai.");
 
         const html=req.file.buffer.toString("utf8");
