@@ -3091,19 +3091,16 @@ app.patch("/api/cs/mcq-html/rename",requireOwner,async(req,res)=>{
         const newName=String(req.body.newName||"").trim();
         if(!id||!newName) throw new Error("Quiz ID aur new name required hai.");
 
-        // Firestore is the durable source of truth; Render local files can be ephemeral.
-        if(!firebaseEnabled||!db) throw new Error("Firebase Firestore connected nahi hai; permanent MCQ metadata update nahi ho sakta.");
-        const firebaseItem=await getHTMLFromFirebase(id);
-        if(!firebaseItem) return res.status(404).json({success:false,message:"Firestore mein MCQ nahi mila."});
-        const renamed=await renameHTMLInFirebase({classNumber:0,subject,chapterNumber},id,String(firebaseItem.fileName||""),newName);
-        if(!renamed) return res.status(404).json({success:false,message:"Firestore mein MCQ nahi mila."});
-
         const items=readCSMCQMetadata(subject,chapterNumber);
         const index=items.findIndex(item=>item.id===id);
-        if(index>=0){
-            items[index].name=newName;
-            items[index].updatedAt=new Date().toISOString();
-            writeCSMCQMetadata(subject,chapterNumber,items);
+        if(index<0) return res.status(404).json({success:false,message:"MCQ nahi mila."});
+
+        items[index].name=newName;
+        items[index].updatedAt=new Date().toISOString();
+        writeCSMCQMetadata(subject,chapterNumber,items);
+
+        if(firebaseEnabled&&db){
+            try{await renameHTMLInFirebase({classNumber:0,subject,chapterNumber},id,items[index].fileName,newName);}catch{}
         }
         res.json({success:true});
     }catch(error){res.status(400).json({success:false,message:error.message});}
@@ -3114,21 +3111,16 @@ app.delete("/api/cs/mcq-html",requireOwner,async(req,res)=>{
         const subject=normalizeCSSubject(req.body.subject);
         const chapterNumber=Number(req.body.chapterNumber);
         const id=String(req.body.id||"");
-        if(!id) throw new Error("MCQ ID required hai.");
-        if(!firebaseEnabled||!db) throw new Error("Firebase Firestore connected nahi hai; permanent MCQ delete verify nahi ho sakta.");
-
-        // A Firestore record may outlive Render's temporary local metadata.
-        const firebaseItem=await getHTMLFromFirebase(id);
-        if(!firebaseItem) return res.status(404).json({success:false,message:"Firestore mein MCQ nahi mila."});
-        await deleteHTMLFromFirebase(id);
-
         const items=readCSMCQMetadata(subject,chapterNumber);
         const item=items.find(x=>x.id===id);
+        if(!item) return res.status(404).json({success:false,message:"MCQ nahi mila."});
+
         writeCSMCQMetadata(subject,chapterNumber,items.filter(x=>x.id!==id));
-        if(item?.fileName){
-            const file=path.join(csChapterDir(subject,chapterNumber),item.fileName);
-            if(fs.existsSync(file)) fs.unlinkSync(file);
-        }
+
+        const file=path.join(csChapterDir(subject,chapterNumber),item.fileName);
+        if(fs.existsSync(file)) fs.unlinkSync(file);
+        if(firebaseEnabled&&db){try{await deleteHTMLFromFirebase(id);}catch{}}
+
         res.json({success:true});
     }catch(error){res.status(400).json({success:false,message:error.message});}
 });
