@@ -25,7 +25,7 @@ let reviewMode = false;
    SECTION DEFINITIONS
 ========================================= */
 
-let sectionDefinitions = [
+const sectionDefinitions = [
 
     {
         id: "A",
@@ -188,9 +188,11 @@ function getSectionForQuestion(
     index
 ) {
 
-    // Section ranges are based on the question's position in the uploaded set,
-    // not a possibly missing/non-sequential source id.
-    const id = index + 1;
+    const id =
+        getQuestionId(
+            question,
+            index
+        );
 
     const explicit =
         question?.section ||
@@ -295,7 +297,11 @@ function getSectionQuestions(section) {
     return allQuizQuestions.filter(
         (question, index) => {
 
-            const id = index + 1;
+            const id =
+                getQuestionId(
+                    question,
+                    index
+                );
 
             return (
                 id >= section.start &&
@@ -332,6 +338,91 @@ function injectQuizLayoutStyles() {
 
 
     style.textContent = `
+
+        /* CS quiz attempt UI: match the wider NCERT reference layout.
+           CSS-only changes; quiz controls and event handlers are untouched. */
+
+        #app:has(.quiz-page-header) {
+            width: 100% !important;
+            max-width: 1100px !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        #app:has(.quiz-page-header) .quiz-page-header {
+            min-height: 98px;
+            border-radius: 16px !important;
+            text-align: center;
+        }
+
+        #app:has(.quiz-page-header) #quizApp {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        #app:has(.quiz-page-header) .quiz-layout {
+            grid-template-columns: minmax(0, 1fr) 302px;
+            gap: 18px;
+        }
+
+        #app:has(.quiz-page-header) .quiz-main-column .card:first-child {
+            min-height: 370px;
+            padding: 18px 15px !important;
+        }
+
+        #app:has(.quiz-page-header) .quiz-main-column .quiz-controls {
+            position: static;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 66px;
+            padding: 14px !important;
+        }
+
+        #app:has(.quiz-page-header) .quiz-main-column .quiz-controls > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        #app:has(.quiz-page-header) .quiz-side-column .palette {
+            padding: 14px !important;
+        }
+
+        #app:has(.quiz-page-header) .quiz-side-column .pal-grid {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 6px;
+            max-height: 355px;
+        }
+
+        #app:has(.quiz-page-header) .quiz-side-column .pal {
+            min-height: 35px;
+        }
+
+        @media (max-width: 900px) {
+            #app:has(.quiz-page-header) {
+                max-width: 94% !important;
+            }
+            #app:has(.quiz-page-header) .quiz-layout {
+                grid-template-columns: minmax(0, 1fr) 280px;
+            }
+        }
+
+        @media (max-width: 700px) {
+            #app:has(.quiz-page-header) .quiz-layout {
+                display: flex;
+                flex-direction: column;
+            }
+            #app:has(.quiz-page-header) .quiz-main-column,
+            #app:has(.quiz-page-header) .quiz-side-column {
+                width: 100%;
+            }
+            #app:has(.quiz-page-header) .quiz-main-column .quiz-controls {
+                flex-wrap: wrap;
+            }
+        }
 
         /* Full Quiz card */
 
@@ -534,40 +625,6 @@ function initializeQuizSystem(
 
     allQuizQuestions =
         extractQuestions(data);
-
-    // Keep the exact legacy section boundaries for NCERT. For Computer Science,
-    // derive section ranges from the uploaded set's real question count so no
-    // fixed 150-question assumption or NCERT wording leaks into the CS UI.
-    if (String(quizClass).toUpperCase() === "CS") {
-        const total = allQuizQuestions.length;
-        const groups = [
-            { id: "A", name: "Section A — Basic Questions", weight: 35 },
-            { id: "B", name: "Section B — Concept-Based Questions", weight: 35 },
-            { id: "C", name: "Section C — Statement-Based Questions", weight: 35 },
-            { id: "D", name: "Section D — Assertion–Reason Questions", weight: 20 },
-            { id: "E", name: "Section E — Case / Scenario-Based Questions", weight: 25 }
-        ].slice(0, Math.min(5, total));
-        const weightTotal = groups.reduce((sum, group) => sum + group.weight, 0);
-        let start = 1;
-        let cumulativeWeight = 0;
-        sectionDefinitions = groups.map((group, index) => {
-            cumulativeWeight += group.weight;
-            const end = index === groups.length - 1
-                ? total
-                : Math.max(start, Math.min(total, Math.round(total * cumulativeWeight / weightTotal)));
-            const section = { id: group.id, name: group.name, start, end };
-            start = end + 1;
-            return section;
-        });
-    } else {
-        sectionDefinitions = [
-            { id: "A", name: "Section A — Basic / Direct NCERT Questions", start: 1, end: 35 },
-            { id: "B", name: "Section B — Concept Based Questions", start: 36, end: 70 },
-            { id: "C", name: "Section C — Statement Based Questions", start: 71, end: 105 },
-            { id: "D", name: "Section D — Assertion–Reason Questions", start: 106, end: 125 },
-            { id: "E", name: "Section E — Case / Scenario Based Questions", start: 126, end: 150 }
-        ];
-    }
 
     if (
         !allQuizQuestions.length
