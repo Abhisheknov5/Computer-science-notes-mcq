@@ -64,6 +64,24 @@ const sectionDefinitions = [
 
 ];
 
+// Keep the original NCERT labels for NCERT quizzes. The same quiz engine is
+// also used by Computer Science, where NCERT terminology is incorrect.
+function getSectionDisplayName(section) {
+    if (String(quizClass).toUpperCase() !== "CS") {
+        return section.name;
+    }
+
+    const names = {
+        A: "Section A — Basic Questions",
+        B: "Section B — Concept-Based Questions",
+        C: "Section C — Statement-Based Questions",
+        D: "Section D — Assertion–Reason Questions",
+        E: "Section E — Case / Scenario-Based Questions"
+    };
+
+    return names[section.id] || section.name;
+}
+
 
 /* =========================================
    HTML ESCAPE
@@ -642,13 +660,15 @@ function renderQuizHome() {
                 </h2>
 
                 <p>
-                    Class ${quizClass}
+                    ${String(quizClass).toUpperCase() === "CS"
+                        ? "Computer Science"
+                        : `Class ${quizClass}`}
                     •
                     ${allQuizQuestions.length}
                     MCQs
                     •
                     ${availableSections.length}
-                    Sections
+                    ${String(quizClass).toUpperCase() === "CS" ? "Question Groups" : "Sections"}
                 </p>
 
             </div>
@@ -695,7 +715,7 @@ function renderQuizHome() {
                                 class="section-title"
                             >
                                 ${quizEscape(
-                                    section.name
+                                    getSectionDisplayName(section)
                                 )}
                             </div>
 
@@ -1047,7 +1067,9 @@ function openFullQuiz() {
     document.getElementById(
         "setupTitle"
     ).textContent =
-        selectedSection.name;
+        selectedSection.id === "ALL"
+            ? selectedSection.name
+            : getSectionDisplayName(selectedSection);
 
     document.getElementById(
         "setupInfo"

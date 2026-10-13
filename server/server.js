@@ -3046,21 +3046,15 @@ app.get("/api/cs/mcq-html/:subject/:chapterNumber",async(req,res)=>{
 
         let sourceItems;
 
+        // Firestore is the durable source of truth. Render's local filesystem
+        // can be replaced during deploy/restart, so never let local metadata
+        // hide records that still exist in Firestore.
+        sourceItems=[...localItems,...firebaseItems];
+
         if(requestedSubtopicId){
-            // For a selected subtopic, the local MCQ is authoritative.
-            // This prevents an old/stale Firebase record from being shown
-            // on the live site when a current local MCQ already exists.
-            const localMatches=localItems.filter(item =>
+            sourceItems=sourceItems.filter(item =>
                 String(item?.subtopicId||"")===requestedSubtopicId
             );
-
-            sourceItems=localMatches.length
-                ? localMatches
-                : firebaseItems.filter(item =>
-                    String(item?.subtopicId||"")===requestedSubtopicId
-                );
-        }else{
-            sourceItems=[...localItems,...firebaseItems];
         }
 
         const merged=[];
