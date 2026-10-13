@@ -641,7 +641,14 @@ async function renderQuizPage(subjectId, chapterNumber, directStart = false, mcq
                 const data = await response.json();
                 const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
                 const selectedItem = items.find(item => String(item.id) === String(mcqSetId));
-                if (selectedItem?.url) mcqData = await loadMCQHTML(selectedItem.url);
+                if (selectedItem?.url) {
+                    // Uploaded CS HTML is a complete standalone quiz page.
+                    // Open it directly so its own topic cards, five options,
+                    // styles and behaviour are preserved instead of parsing it
+                    // into the legacy NCERT section renderer.
+                    window.location.assign(selectedItem.url);
+                    return;
+                }
             }
         } catch (error) {
             console.error("Selected MCQ Set load error:", error);
