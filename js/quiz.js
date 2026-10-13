@@ -25,7 +25,7 @@ let reviewMode = false;
    SECTION DEFINITIONS
 ========================================= */
 
-const sectionDefinitions = [
+let sectionDefinitions = [
 
     {
         id: "A",
@@ -63,24 +63,6 @@ const sectionDefinitions = [
     }
 
 ];
-
-// Keep the original NCERT labels for NCERT quizzes. The same quiz engine is
-// also used by Computer Science, where NCERT terminology is incorrect.
-function getSectionDisplayName(section) {
-    if (String(quizClass).toUpperCase() !== "CS") {
-        return section.name;
-    }
-
-    const names = {
-        A: "Section A — Basic Questions",
-        B: "Section B — Concept-Based Questions",
-        C: "Section C — Statement-Based Questions",
-        D: "Section D — Assertion–Reason Questions",
-        E: "Section E — Case / Scenario-Based Questions"
-    };
-
-    return names[section.id] || section.name;
-}
 
 
 /* =========================================
@@ -206,11 +188,9 @@ function getSectionForQuestion(
     index
 ) {
 
-    const id =
-        getQuestionId(
-            question,
-            index
-        );
+    // Section ranges are based on the question's position in the uploaded set,
+    // not a possibly missing/non-sequential source id.
+    const id = index + 1;
 
     const explicit =
         question?.section ||
@@ -315,11 +295,7 @@ function getSectionQuestions(section) {
     return allQuizQuestions.filter(
         (question, index) => {
 
-            const id =
-                getQuestionId(
-                    question,
-                    index
-                );
+            const id = index + 1;
 
             return (
                 id >= section.start &&
@@ -559,6 +535,40 @@ function initializeQuizSystem(
     allQuizQuestions =
         extractQuestions(data);
 
+    // Keep the exact legacy section boundaries for NCERT. For Computer Science,
+    // derive section ranges from the uploaded set's real question count so no
+    // fixed 150-question assumption or NCERT wording leaks into the CS UI.
+    if (String(quizClass).toUpperCase() === "CS") {
+        const total = allQuizQuestions.length;
+        const groups = [
+            { id: "A", name: "Section A — Basic Questions", weight: 35 },
+            { id: "B", name: "Section B — Concept-Based Questions", weight: 35 },
+            { id: "C", name: "Section C — Statement-Based Questions", weight: 35 },
+            { id: "D", name: "Section D — Assertion–Reason Questions", weight: 20 },
+            { id: "E", name: "Section E — Case / Scenario-Based Questions", weight: 25 }
+        ].slice(0, Math.min(5, total));
+        const weightTotal = groups.reduce((sum, group) => sum + group.weight, 0);
+        let start = 1;
+        let cumulativeWeight = 0;
+        sectionDefinitions = groups.map((group, index) => {
+            cumulativeWeight += group.weight;
+            const end = index === groups.length - 1
+                ? total
+                : Math.max(start, Math.min(total, Math.round(total * cumulativeWeight / weightTotal)));
+            const section = { id: group.id, name: group.name, start, end };
+            start = end + 1;
+            return section;
+        });
+    } else {
+        sectionDefinitions = [
+            { id: "A", name: "Section A — Basic / Direct NCERT Questions", start: 1, end: 35 },
+            { id: "B", name: "Section B — Concept Based Questions", start: 36, end: 70 },
+            { id: "C", name: "Section C — Statement Based Questions", start: 71, end: 105 },
+            { id: "D", name: "Section D — Assertion–Reason Questions", start: 106, end: 125 },
+            { id: "E", name: "Section E — Case / Scenario Based Questions", start: 126, end: 150 }
+        ];
+    }
+
     if (
         !allQuizQuestions.length
     ) {
@@ -660,15 +670,13 @@ function renderQuizHome() {
                 </h2>
 
                 <p>
-                    ${String(quizClass).toUpperCase() === "CS"
-                        ? "Computer Science"
-                        : `Class ${quizClass}`}
+                    Class ${quizClass}
                     •
                     ${allQuizQuestions.length}
                     MCQs
                     •
                     ${availableSections.length}
-                    ${String(quizClass).toUpperCase() === "CS" ? "Question Groups" : "Sections"}
+                    Sections
                 </p>
 
             </div>
@@ -715,7 +723,7 @@ function renderQuizHome() {
                                 class="section-title"
                             >
                                 ${quizEscape(
-                                    getSectionDisplayName(section)
+                                    section.name
                                 )}
                             </div>
 
@@ -1067,9 +1075,7 @@ function openFullQuiz() {
     document.getElementById(
         "setupTitle"
     ).textContent =
-        selectedSection.id === "ALL"
-            ? selectedSection.name
-            : getSectionDisplayName(selectedSection);
+        selectedSection.name;
 
     document.getElementById(
         "setupInfo"
