@@ -23,6 +23,21 @@
       "createdAt": "2026-10-14T01:07:16.180Z",
       "updatedAt": "2026-10-14T01:07:16.180Z",
       "url": "/api/cs/mcq-html/file/cs-1791940036180-17f64675e8d5"
+    },
+    {
+      "id": "cs-pdf-1792010815336-df1f684614db",
+      "fileName": "mcq-cs-pdf-1792010815336-df1f684614db.html",
+      "originalName": "DE-6.pdf",
+      "name": "Introduction to Digital Electronics — PDF MCQs",
+      "questionCount": 80,
+      "mainTopicId": "cs-main-1792006824835-560e587769aa",
+      "subtopicId": "cs-sub-1792006836334-ec1178045e10",
+      "mainTopicTitle": "Digital Electronics",
+      "subtopicTitle": "Introduction to Digital Electronics",
+      "createdAt": "2026-10-14T20:46:55.337Z",
+      "updatedAt": "2026-10-14T20:46:55.337Z",
+      "url": "/api/cs/mcq-html/file/cs-pdf-1792010815336-df1f684614db",
+      "sourceType": "pdf"
     }
   ]
 }

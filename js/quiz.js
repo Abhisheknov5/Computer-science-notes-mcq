@@ -25,7 +25,7 @@ let reviewMode = false;
    SECTION DEFINITIONS
 ========================================= */
 
-const sectionDefinitions = [
+let sectionDefinitions = [
 
     {
         id: "A",
@@ -194,6 +194,14 @@ function getSectionForQuestion(
             index
         );
 
+    if (Number.isFinite(Number(question?.topicNumber)) && String(question?.topicTitle || "").trim()) {
+        const topicSection = sectionDefinitions.find(section =>
+            Number.isFinite(Number(section.topicNumber)) &&
+            Number(section.topicNumber) === Number(question.topicNumber)
+        );
+        if (topicSection) return topicSection;
+    }
+
     const explicit =
         question?.section ||
         question?.sectionId ||
@@ -254,19 +262,15 @@ function getSectionForQuestion(
 
     }
 
-    for (
-        const section of sectionDefinitions
-    ) {
-
-        if (
-            id >= section.start &&
-            id <= section.end
-        ) {
-
+    for (const section of sectionDefinitions) {
+        if (Number.isFinite(Number(section.topicNumber)) &&
+            Number(question?.topicNumber) === Number(section.topicNumber)) {
             return section;
-
         }
-
+        if (section.start != null && section.end != null &&
+            id >= section.start && id <= section.end) {
+            return section;
+        }
     }
 
     return null;
@@ -303,10 +307,11 @@ function getSectionQuestions(section) {
                     index
                 );
 
-            return (
-                id >= section.start &&
-                id <= section.end
-            );
+            if (Number.isFinite(Number(section.topicNumber))) {
+                return Number(question?.topicNumber) === Number(section.topicNumber);
+            }
+            return section.start != null && section.end != null &&
+                id >= section.start && id <= section.end;
 
         }
     );
@@ -625,6 +630,38 @@ function initializeQuizSystem(
 
     allQuizQuestions =
         extractQuestions(data);
+
+    // PDF-imported sets use their original topic labels; other quizzes keep NCERT A-E sections.
+    const pdfTopicQuestions = allQuizQuestions.filter(q =>
+        Number.isFinite(Number(q?.topicNumber)) &&
+        Number(q.topicNumber) > 0 &&
+        String(q?.topicTitle || "").trim()
+    );
+    if (pdfTopicQuestions.length) {
+        const topicMap = new Map();
+        pdfTopicQuestions.forEach(q => {
+            const number = Number(q.topicNumber);
+            if (!topicMap.has(number)) {
+                topicMap.set(number, {
+                    id: `TOPIC_${number}`,
+                    name: `Topic ${number} — ${String(q.topicTitle).trim()}`,
+                    topicNumber: number,
+                    start: null,
+                    end: null
+                });
+            }
+        });
+        sectionDefinitions = [...topicMap.values()].sort((a, b) => a.topicNumber - b.topicNumber);
+    } else {
+        sectionDefinitions = [
+            { id: "A", name: "Section A — Basic / Direct NCERT Questions", start: 1, end: 35 },
+            { id: "B", name: "Section B — Concept Based Questions", start: 36, end: 70 },
+            { id: "C", name: "Section C — Statement Based Questions", start: 71, end: 105 },
+            { id: "D", name: "Section D — Assertion–Reason Questions", start: 106, end: 125 },
+            { id: "E", name: "Section E — Case / Scenario Based Questions", start: 126, end: 150 }
+        ];
+    }
+
 
     if (
         !allQuizQuestions.length

@@ -1266,6 +1266,7 @@ function resetSimpleWorkflow(){
     setWorkflowCard("subtopicCard",false);
     setWorkflowCard("mcqCard",false);
     setWorkflowCard("uploadCard",false);
+    setWorkflowCard("pdfUploadCard",false);
 }
 
 function manageCSMainTopic(id){
@@ -1278,6 +1279,7 @@ function manageCSMainTopic(id){
     setWorkflowCard("subtopicCard",!!currentMainTopic);
     setWorkflowCard("mcqCard",false);
     setWorkflowCard("uploadCard",false);
+    setWorkflowCard("pdfUploadCard",false);
 
     const input=getElementOptional("subtopicTitle");
     if(input) input.value="";
@@ -1296,6 +1298,7 @@ function manageCSSubtopic(id){
 
     setWorkflowCard("mcqCard",true);
     setWorkflowCard("uploadCard",true);
+    setWorkflowCard("pdfUploadCard",true);
     updateSelectionUI();
     loadQuizzes();
     document.getElementById("mcqCard")?.scrollIntoView({behavior:"smooth",block:"start"});
@@ -2184,3 +2187,28 @@ async function deleteCSSubtopic(id){
             loadServerCustomSubjects();
         });
 })();
+
+
+// PDF import is additive; it does not replace the existing HTML upload flow.
+async function uploadMCQPDF(){
+    let inputs;
+    try{inputs=getManagementInputs();}catch(e){showMessage("pdfUploadMessage",e.message,"error");return;}
+    if(!currentMainTopic){showMessage("pdfUploadMessage","Main Topic open karke Subtopics manage karein.","error");return;}
+    if(!currentSubtopic){showMessage("pdfUploadMessage","Pehle Subtopic select karein.","error");return;}
+    const file=getElement("mcqPdfFile").files[0];
+    if(!file){showMessage("pdfUploadMessage","Pehle PDF file select karein.","error");return;}
+    const fd=new FormData();fd.append("pdfFile",file,file.name);fd.append("subject",String(inputs.subject));fd.append("chapterNumber",String(inputs.chapterNumber));
+    fd.append("mainTopicId",String(currentMainTopic.id));fd.append("subtopicId",String(currentSubtopic.id));
+    try{
+        showMessage("pdfUploadMessage","⏳ PDF text aur MCQ options extract ho rahe hain...","success");
+        const r=await fetch("/api/cs/pdf-mcq/import",{method:"POST",body:fd,credentials:"same-origin",cache:"no-store"});
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.success){showMessage("pdfUploadMessage",`❌ ${d.message||`Import failed (HTTP ${r.status})`}`,"error");return;}
+        const count=Number(d.item?.questionCount||0);
+        showMessage("pdfUploadMessage",`✅ ${count} MCQs save hue aur student quiz ke liye publish kiye gaye. ${d.warning||""}`,"success");
+        getElement("mcqPdfFile").value="";getElement("pdfFileName").textContent="No PDF selected";
+    }catch(e){console.error(e);showMessage("pdfUploadMessage",`❌ PDF import nahi hua: ${e.message||"Server error."}`,"error");}
+}
+function escapePdfHTML(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+document.addEventListener("change",e=>{if(e.target?.id==="mcqPdfFile"){getElement("pdfFileName").textContent=e.target.files?.[0]?.name||"No PDF selected";}});

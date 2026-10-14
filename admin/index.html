@@ -1715,7 +1715,33 @@ button {
                  NOTES
             ========================== -->
 
-            <section class="card">
+            
+            <section class="card workflow-card" id="pdfUploadCard" hidden>
+                <div class="section-heading"><div>
+                    <h2>📕 PDF se MCQ Import</h2>
+                    <p>Selected Subject → Main Topic → Subtopic mein PDF upload karke MCQs extract karein.</p>
+                </div></div>
+                <div class="upload-grid">
+                    <div class="file-drop">
+                        <div class="upload-icon">📄</div>
+                        <strong>MCQ PDF file select karein</strong>
+                        <input type="file" id="mcqPdfFile" accept=".pdf,application/pdf">
+                        <div id="pdfFileName" class="file-name">No PDF selected</div>
+                    </div>
+                    <div class="upload-side">
+                        <div class="upload-summary">
+                            <div><span>Subject</span><strong id="pdfUploadSubjectText">—</strong></div>
+                            <div><span>Main Topic</span><strong id="pdfUploadMainTopicText">—</strong></div>
+                            <div><span>Subtopic</span><strong id="pdfUploadSubtopicText">—</strong></div>
+                        </div>
+                        <button class="primary-btn" type="button" id="uploadMCQPDFButton" onclick="uploadMCQPDF()">📕 Upload PDF &amp; Extract MCQs</button>
+                        <div id="pdfUploadMessage" class="message"></div>
+                    </div>
+                </div>
+                <div id="pdfImportPreview" hidden></div>
+            </section>
+
+<section class="card">
 
 
                 <div class="section-heading">

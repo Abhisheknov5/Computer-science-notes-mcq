@@ -2614,7 +2614,32 @@ async function renderQuizPage(subjectId, chapterNumber, directStart = false, mcq
 
 
 
-    if (!mcqData) {
+    if (!mcqData && !mcqSetId && !forceJSON) {
+        try {
+            const response = await fetch(`/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${chapterNumber}`, { cache: "no-store" });
+            if (response.ok) {
+                const data = await response.json();
+                const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+                const selectedItem = items.filter(item => item?.url).sort((a, b) =>
+                    String(b.createdAt || "").localeCompare(String(a.createdAt || ""))
+                )[0];
+                if (selectedItem) {
+                    const uploaded = await loadMCQHTML(selectedItem.url);
+                    if (uploaded && Array.isArray(uploaded.questions) && uploaded.questions.length) {
+                        mcqData = {
+                            title: uploaded.title || selectedItem.name || selectedItem.originalName || `Topic ${chapterNumber}`,
+                            chapterTitle: uploaded.title || selectedItem.name || selectedItem.originalName || `Topic ${chapterNumber}`,
+                            questions: uploaded.questions
+                        };
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Default published MCQ set load error:", error);
+        }
+    }
+
+    if (!mcqData) {
 
 
 

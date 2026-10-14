@@ -61,23 +61,23 @@
       "source": "admin"
     },
     {
-      "id": "cs-main-1791939975274-beee27e5c24c",
+      "id": "cs-main-1792006824835-560e587769aa",
       "subject": "de",
       "chapterNumber": 1,
       "title": "Digital Electronics",
       "order": 1,
-      "createdAt": "2026-10-14T01:06:15.274Z",
-      "updatedAt": "2026-10-14T01:06:15.274Z",
+      "createdAt": "2026-10-14T19:40:24.835Z",
+      "updatedAt": "2026-10-14T19:40:24.835Z",
       "source": "admin"
     },
     {
-      "id": "cs-main-1791940014058-2d750b7c1be4",
+      "id": "cs-main-1792011065650-b7526f0e658a",
       "subject": "de",
       "chapterNumber": 1,
       "title": "Binary System",
       "order": 2,
-      "createdAt": "2026-10-14T01:06:54.058Z",
-      "updatedAt": "2026-10-14T01:06:54.058Z",
+      "createdAt": "2026-10-14T20:51:05.650Z",
+      "updatedAt": "2026-10-14T20:51:05.650Z",
       "source": "admin"
     }
   ]
