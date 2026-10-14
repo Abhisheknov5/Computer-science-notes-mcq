@@ -17,14 +17,6 @@
       "updatedAt": "2026-10-06T03:13:13.893Z"
     },
     {
-      "id": "de-1",
-      "subject": "de",
-      "number": 1,
-      "title": "1- Digital Electronics (DE)",
-      "chapterTitle": "1- Digital Electronics (DE)",
-      "updatedAt": "2026-10-07T10:44:37.341Z"
-    },
-    {
       "id": "os-1",
       "subject": "os",
       "number": 1,
@@ -47,6 +39,14 @@
       "title": "Software Engineering",
       "chapterTitle": "Software Engineering",
       "updatedAt": "2026-10-08T13:43:06.140Z"
+    },
+    {
+      "id": "de-1",
+      "subject": "de",
+      "number": 1,
+      "title": "DE (DE)",
+      "chapterTitle": "DE (DE)",
+      "updatedAt": "2026-10-14T01:05:57.631Z"
     }
   ]
 }

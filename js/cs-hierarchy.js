@@ -123,7 +123,7 @@
       return true;
     }
     if(p[0]==='subject'&&p[1]){
-      try{const [items,notes]=await Promise.all([loadHierarchy(p[1]),loadNotes(p[1])]);if((window.location.hash||'').substring(1).split('/')[0]==='subject')renderSubject(p[1],items,notes);}catch(e){console.error('Hierarchy load error:',e);}
+      try{const [items,notes]=await Promise.all([loadHierarchy(p[1]),loadNotes(p[1])]);if((window.location.hash||'').substring(1).split('/')[0]==='subject'&&decodeURIComponent((window.location.hash||'').substring(1).split('/')[1]||'')===decodeURIComponent(p[1]))renderSubject(p[1],items,notes);}catch(e){console.error('Hierarchy load error:',e);}
       return true;
     }
     if(p[0]==='subtopic-mcq'&&p[1]&&p[2]&&p[3]){
@@ -131,27 +131,18 @@
     }
     return false;
   }
-  // The legacy app.js also listens to DOMContentLoaded/hashchange.
-  // Capture the CS hierarchy routes first so the legacy chapter renderer
-  // cannot race with this final hierarchy renderer on the first open.
+  // The hierarchy renderer exclusively owns these CS routes. app.js has a
+  // matching guard, so each navigation/refresh has one renderer, not two.
   const isHierarchyRoute=()=>{
     const p=(window.location.hash||'#home').substring(1).split('/');
     return p[0]==='science'||p[0]==='subject'||p[0]==='subtopic-mcq';
   };
 
-  window.addEventListener('DOMContentLoaded',event=>{
-    if(!isHierarchyRoute()) return;
-    event.stopImmediatePropagation();
-    hierarchyRouter();
-  },true);
-
-  window.addEventListener('hashchange',event=>{
-    if(!isHierarchyRoute()) return;
-    event.stopImmediatePropagation();
-    hierarchyRouter();
-  },true);
-
-  setTimeout(()=>{
+  window.addEventListener('DOMContentLoaded',()=>{
     if(isHierarchyRoute()) hierarchyRouter();
-  },0);
+  });
+
+  window.addEventListener('hashchange',()=>{
+    if(isHierarchyRoute()) hierarchyRouter();
+  });
 })();

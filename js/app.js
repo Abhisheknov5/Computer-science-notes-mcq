@@ -820,6 +820,10 @@ function router() {
 
     const page = parts[0];
 
+    // These public CS routes have one owner: js/cs-hierarchy.js.
+    // Prevent the legacy router from rendering over the hierarchy UI on refresh.
+    if (["science", "subject", "subtopic-mcq"].includes(page)) return;
+
 
 
 

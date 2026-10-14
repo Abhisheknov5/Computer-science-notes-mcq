@@ -983,12 +983,39 @@ body{
 }
 
 
-/* Homepage: center a single subject card without changing multi-card grids. */
-#app > .section > .card-grid:has(> .card:only-child) {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
+/* CS homepage alignment fix: keep the original page width and layout. */
+#app > .section > .section-title {
+    display: none;
 }
 
-#app > .section > .card-grid:has(> .card:only-child) > .card {
-    width: min(100%, 320px);
+#app > .hero {
+    margin-bottom: 18px;
+}
+
+#app > .section {
+    margin-top: 0;
+}
+
+#app > .section > .card-grid {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 18px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#app > .section > .card-grid > .card {
+    flex: 0 1 245px;
+    width: 245px;
+    max-width: 100%;
+    margin: 0;
+}
+
+@media (max-width: 650px) {
+    #app > .section > .card-grid > .card {
+        flex-basis: 245px;
+        width: min(245px, 100%);
+    }
 }

@@ -78,17 +78,6 @@
       "source": "admin"
     },
     {
-      "id": "cs-sub-1791425624902-5d8c2a0c2503",
-      "subject": "de",
-      "chapterNumber": 1,
-      "mainTopicId": "cs-main-1791425612597-3a99bc9f188c",
-      "title": "Digital Electronics Tutorial",
-      "order": 1,
-      "createdAt": "2026-10-08T02:13:44.902Z",
-      "updatedAt": "2026-10-08T02:13:44.902Z",
-      "source": "admin"
-    },
-    {
       "id": "cs-sub-1791466884716-f5f9803fe933",
       "subject": "dbms",
       "chapterNumber": 1,
@@ -133,25 +122,36 @@
       "source": "admin"
     },
     {
-      "id": "cs-sub-1791928214125-deaa4f4b382b",
+      "id": "cs-sub-1791939987701-6e97b249fedc",
       "subject": "de",
       "chapterNumber": 1,
-      "mainTopicId": "cs-main-1791928199203-678f00568386",
-      "title": "Number System",
+      "mainTopicId": "cs-main-1791939975274-beee27e5c24c",
+      "title": "Introduction to Digital Electronics",
       "order": 1,
-      "createdAt": "2026-10-13T21:50:14.125Z",
-      "updatedAt": "2026-10-13T21:50:14.125Z",
+      "createdAt": "2026-10-14T01:06:27.701Z",
+      "updatedAt": "2026-10-14T01:06:27.701Z",
       "source": "admin"
     },
     {
-      "id": "cs-sub-1791929542666-57853daa376f",
+      "id": "cs-sub-1791940024112-d344b15f91a1",
       "subject": "de",
       "chapterNumber": 1,
-      "mainTopicId": "cs-main-1791928199203-678f00568386",
+      "mainTopicId": "cs-main-1791940014058-2d750b7c1be4",
+      "title": "Number System",
+      "order": 1,
+      "createdAt": "2026-10-14T01:07:04.112Z",
+      "updatedAt": "2026-10-14T01:07:04.112Z",
+      "source": "admin"
+    },
+    {
+      "id": "cs-sub-1791940052325-fc4ad612d7aa",
+      "subject": "de",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1791940014058-2d750b7c1be4",
       "title": "Number Base Conversion",
       "order": 2,
-      "createdAt": "2026-10-13T22:12:22.665Z",
-      "updatedAt": "2026-10-13T22:12:22.665Z",
+      "createdAt": "2026-10-14T01:07:32.325Z",
+      "updatedAt": "2026-10-14T01:07:32.325Z",
       "source": "admin"
     }
   ]
