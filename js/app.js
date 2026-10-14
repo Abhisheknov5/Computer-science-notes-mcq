@@ -2360,13 +2360,18 @@ async function renderSubtopicMCQPage(subjectId, chapterNumber, subtopicId, title
 
     const loading = document.getElementById("csSetLoading");
 
+    // Generic behavior for every CS subject: when a subtopic has exactly one
+    // mapped HTML MCQ set, open it directly instead of showing a redundant
+    // intermediate Set 1 card. Keep the chooser when multiple sets are mapped.
+    if (items.length === 1) {
+        const onlyItem = items[0];
+        location.hash = `quiz/${encodeURIComponent(subjectId)}/${encodeURIComponent(chapterNumber)}/${encodeURIComponent(onlyItem.id)}/direct`;
+        return;
+    }
 
+    if (!items.length) { loading.innerHTML = `<h2>MCQ अभी उपलब्ध नहीं</h2><p>इस Subtopic के लिए अभी कोई MCQ Set upload नहीं किया गया है।</p>`; return; }
 
-    if (!items.length) { loading.innerHTML = `<h2>MCQ अभी उपलब्ध नहीं</h2><p>इस Subtopic के लिए अभी कोई MCQ Set upload नहीं किया गया है।</p>`; return; }
-
-
-
-    loading.remove();
+    loading.remove();
 
 
 
