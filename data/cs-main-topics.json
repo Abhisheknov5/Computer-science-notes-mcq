@@ -69,6 +69,16 @@
       "createdAt": "2026-10-08T13:46:32.378Z",
       "updatedAt": "2026-10-08T13:46:32.378Z",
       "source": "admin"
+    },
+    {
+      "id": "cs-main-1791928199203-678f00568386",
+      "subject": "de",
+      "chapterNumber": 1,
+      "title": "Binary System",
+      "order": 2,
+      "createdAt": "2026-10-13T21:49:59.203Z",
+      "updatedAt": "2026-10-13T21:49:59.203Z",
+      "source": "admin"
     }
   ]
 }

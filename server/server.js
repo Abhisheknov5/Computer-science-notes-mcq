@@ -4943,8 +4943,14 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             try{
                 const remote=await getFirebaseCSMainTopicsV2();
                 const map=new Map(mains.map(x=>[String(x.id),x]));
+                // Local CS registry is authoritative when an ID exists.
+                // Firebase is a fallback for IDs not present locally; stale remote
+                // copies must not overwrite a newer local topic title.
                 remote.filter(x=>String(x.subject).toLowerCase()===subject)
-                    .forEach(x=>map.set(String(x.id),x));
+                    .forEach(x=>{
+                        const id=String(x.id);
+                        if(!map.has(id)) map.set(id,x);
+                    });
                 mains=[...map.values()];
             }catch{}
         }
@@ -4956,8 +4962,13 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
             try{
                 const remote=await getFirebaseCSSubtopics();
                 const map=new Map(subs.map(x=>[String(x.id),x]));
+                // Keep local CS subtopic records authoritative by ID.
+                // Firebase-only records are still included as a fallback.
                 remote.filter(x=>String(x.subject).toLowerCase()===subject)
-                    .forEach(x=>map.set(String(x.id),x));
+                    .forEach(x=>{
+                        const id=String(x.id);
+                        if(!map.has(id)) map.set(id,x);
+                    });
                 subs=[...map.values()];
             }catch{}
         }

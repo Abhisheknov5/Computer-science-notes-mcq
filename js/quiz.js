@@ -669,7 +669,9 @@ function getChapterTitle() {
         quizData.title
     ) {
 
-        return quizData.title;
+        return String(quizData.title)
+            .replace(/\\s*(?:[-|—:]\\s*)?MCQ\\s*Practice\\s*$/i, "")
+            .trim();
 
     }
 
