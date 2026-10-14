@@ -1678,33 +1678,11 @@ async function deleteCSSubtopic(id){
         try{localStorage.setItem(key,JSON.stringify(value));}catch{}
     }
 
+    // The server registry is the source of truth for built-in visibility.
+    // Do NOT push browser-local deleted codes to the server: stale localStorage
+    // can hide a built-in subject (such as DE) even though it is active server-side.
     async function syncLocalDeletedSubjectsToServer(){
-        const deleted=readJSON(DELETED_KEY,[])
-            .map(x=>String(x||"").trim().toUpperCase())
-            .filter(Boolean);
-
-        if(!deleted.length)return;
-
-        try{
-            const response=await fetch("/api/cs/subjects/visibility",{
-                method:"POST",
-                headers:{"Content-Type":"application/json"},
-                credentials:"same-origin",
-                cache:"no-store",
-                body:JSON.stringify({deletedCodes:deleted})
-            });
-
-            const data=await response.json().catch(()=>({}));
-
-            if(!response.ok || !data.success){
-                console.warn(
-                    "CS subject visibility sync failed:",
-                    data.message || `HTTP ${response.status}`
-                );
-            }
-        }catch(error){
-            console.warn("CS subject visibility sync failed:",error.message);
-        }
+        return;
     }
     function slug(value){
         return String(value||"").trim().toLowerCase()
@@ -2073,6 +2051,19 @@ async function deleteCSSubtopic(id){
             const deleted=readJSON(DELETED_KEY,[]).map(x=>String(x).toUpperCase());
             const serverSubjects=data.items.filter(item=>item);
 
+            // Clear stale browser-local deleted flags for built-in subjects that
+            // the server currently returns as visible. The server list is canonical.
+            const visibleBuiltInCodes=new Set(
+                serverSubjects
+                    .filter(item=>item.builtIn!==false)
+                    .map(item=>String(item?.code||"").trim().toUpperCase())
+                    .filter(Boolean)
+            );
+            const cleanedDeleted=deleted.filter(code=>!visibleBuiltInCodes.has(code));
+            if(cleanedDeleted.length!==deleted.length){
+                writeJSON(DELETED_KEY,cleanedDeleted);
+            }
+
             const serverCodes=new Set(
                 serverSubjects
                     .map(item=>String(item?.code||"").trim().toUpperCase())
@@ -2093,7 +2084,8 @@ async function deleteCSSubtopic(id){
 
             serverSubjects.forEach(subject=>{
                 const code=String(subject.code||"").trim();
-                if(!code || deleted.includes(code.toUpperCase())) return;
+                const isBuiltIn=subject.builtIn!==false;
+                if(!code || (!isBuiltIn && deleted.includes(code.toUpperCase()))) return;
 
                 subjectIdMap[code]=subject.id;
                 subjectNameMap[code]=`${subject.name} (${code})`;
