@@ -1596,15 +1596,30 @@ app.post("/api/cs/subjects/visibility", requireOwner, async (req,res)=>{
             const code=String(item.code||"").trim().toLowerCase();
             if(!code) return;
 
+            const currentOverride=CS_SUBJECT_OVERRIDES[item.id]||{};
+
             if(normalizedCodes.has(code)){
-                if(!CS_SUBJECT_OVERRIDES[item.id]?.deleted){
+                if(!currentOverride.deleted){
                     CS_SUBJECT_OVERRIDES[item.id]={
-                        ...(CS_SUBJECT_OVERRIDES[item.id]||{}),
+                        ...currentOverride,
                         deleted:true,
                         updatedAt:new Date().toISOString()
                     };
                     changed++;
                 }
+            }else if(currentOverride.deleted){
+                // The visibility sync is the complete current deleted list.
+                // If a built-in code is absent from it, restore that subject.
+                const restored={...currentOverride};
+                delete restored.deleted;
+                restored.updatedAt=new Date().toISOString();
+
+                if(Object.keys(restored).length===1 && restored.updatedAt){
+                    delete CS_SUBJECT_OVERRIDES[item.id];
+                }else{
+                    CS_SUBJECT_OVERRIDES[item.id]=restored;
+                }
+                changed++;
             }
         });
 
