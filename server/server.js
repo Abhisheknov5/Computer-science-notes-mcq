@@ -5146,66 +5146,91 @@ const pdfUpload = multer({
 });
 
 function parsePdfMcqs(text) {
+    // Normalize PDF page breaks too: many PDFs insert a form-feed between options.
     const normalized = String(text || "")
-        .replace(/\r/g, "\n")
-        .replace(/\u00a0/g, " ")
-        .replace(/[ \t]+/g, " ")
+        .replace(/\r\n?/g, "\n")
+        .replace(/\f/g, "\n")
+        .replace(/[\u00a0\t]+/g, " ")
         .replace(/\n{3,}/g, "\n\n");
 
+    // The PDF may put all questions first and the answer/explanation key at the end.
     const answerMap = new Map();
     const answerRegex = /(?:^|\n)\s*(\d{1,4})[.)]\s*(?:Correct\s*Answer|Answer|Ans)\s*[:：.-]\s*\(?([A-E])\)?(?=\s|\)|\.|$)/gi;
-    for (const match of normalized.matchAll(answerRegex)) {
-        answerMap.set(Number(match[1]), match[2].toUpperCase());
-    }
+    for (const m of normalized.matchAll(answerRegex)) answerMap.set(Number(m[1]), m[2].toUpperCase());
 
     const explanationMap = new Map();
     const explanationRegex = /(?:^|\n)\s*(\d{1,4})[.)]\s*(?:Correct\s*Answer|Answer|Ans)\s*[:：.-]\s*\(?[A-E]\)?[^\n]*\n\s*(?:Explanation|Solution)\s*[:：.-]\s*([\s\S]*?)(?=\n\s*\d{1,4}[.)]\s*(?:Correct\s*Answer|Answer|Ans)\s*[:：.-]|$)/gi;
-    for (const match of normalized.matchAll(explanationRegex)) {
-        explanationMap.set(Number(match[1]), match[2].trim().replace(/\s*\n\s*/g, " "));
+    for (const m of normalized.matchAll(explanationRegex)) {
+        explanationMap.set(Number(m[1]), m[2].replace(/\s*\n\s*/g, " ").trim());
     }
 
     const starts = [...normalized.matchAll(/(?:^|\n)\s*(\d{1,4})[.)]\s+/g)];
     const questions = [];
     const seen = new Set();
-
     for (let i = 0; i < starts.length; i++) {
         const start = starts[i].index + (starts[i][0].startsWith("\n") ? 1 : 0);
         const end = i + 1 < starts.length ? starts[i + 1].index : normalized.length;
         const block = normalized.slice(start, end).trim();
         const number = Number(starts[i][1]);
-
         if (!Number.isInteger(number) || seen.has(number)) continue;
+        // Ignore numbered answer-key entries; they are mapped above, not questions.
         if (/^\d{1,4}[.)]\s*(?:Correct\s*Answer|Answer|Ans)\s*[:：.-]/i.test(block)) continue;
 
         const firstOption = block.search(/(?:^|\n)\s*\(?[A-Ea-e]\)?[.)]\s+/);
         if (firstOption < 0) continue;
-
         const stem = block.slice(0, firstOption)
-            .replace(/^\d{1,4}[.)]\s*/, "")
-            .replace(/\s*\n\s*/g, " ")
-            .trim();
+            .replace(/^\s*\d{1,4}[.)]\s*/, "")
+            .replace(/\s*\n\s*/g, " ").trim();
         if (!stem) continue;
 
         const optionMatches = [...block.matchAll(/(?:^|\n)\s*\(?([A-Ea-e])\)?[.)]\s+([\s\S]*?)(?=\n\s*\(?[A-Ea-e]\)?[.)]\s+|\n\s*(?:Correct\s*Answer|Answer|Ans|Explanation|Solution)\s*[:：.-]|$)/g)];
         const options = {};
-        for (const match of optionMatches) {
-            options[match[1].toUpperCase()] = match[2].replace(/\s*\n\s*/g, " ").trim();
-        }
-
-        if (!["A", "B", "C", "D", "E"].every(key => options[key] && options[key].trim())) continue;
+        for (const m of optionMatches) options[m[1].toUpperCase()] = m[2].replace(/\s*\n\s*/g, " ").replace(/\s*Answer\s+with\s+Explanation[\s\S]*$/i, "").trim();
+        if (!["A", "B", "C", "D", "E"].every(k => options[k])) continue;
 
         const localAnswer = block.match(/(?:Correct\s*Answer|Answer|Ans)\s*[:：.-]\s*\(?([A-E])\)?/i);
-        const answer = (localAnswer ? localAnswer[1].toUpperCase() : null) || answerMap.get(number) || null;
         const localExplanation = block.match(/(?:Explanation|Solution)\s*[:：.-]\s*([\s\S]*)$/i);
-        const explanation = (localExplanation ? localExplanation[1].trim() : "") || explanationMap.get(number) || "";
-
+        const answer = (localAnswer ? localAnswer[1].toUpperCase() : null) || answerMap.get(number) || null;
+        const explanation = (localExplanation ? localExplanation[1].replace(/\s*\n\s*/g, " ").trim() : "") || explanationMap.get(number) || "";
         questions.push({ number, question: stem, options, answer, explanation });
         seen.add(number);
     }
-
     questions.sort((a, b) => a.number - b.number);
     return { questions, text: normalized };
 }
+
+function pdfQuizEscape(value) {
+    return String(value ?? "").replace(/[&<>\"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+    }[ch]));
+}
+
+function buildPdfQuizHtml(item) {
+    const title = item.subtopicTitle || item.mainTopicTitle || item.originalName || "PDF MCQ Practice";
+    const questions = item.questions.map((q, i) => ({
+        number: Number(q.number) || i + 1,
+        question: String(q.question || ""),
+        options: ["A", "B", "C", "D", "E"].map(k => String(q.options?.[k] || "")),
+        answer: /^[A-E]$/i.test(String(q.answer || "")) ? String(q.answer).toUpperCase().charCodeAt(0) - 65 : null,
+        explanation: String(q.explanation || "")
+    }));
+    const data = JSON.stringify(questions).replace(/</g, "\\u003c");
+    const safeTitle = pdfQuizEscape(title);
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${safeTitle}</title><style>
+:root{color-scheme:light}body{font:16px/1.55 system-ui,Arial,sans-serif;margin:0;background:#f4f6fb;color:#172033}.wrap{max-width:900px;margin:auto;padding:20px}.head,.question{background:#fff;border:1px solid #e1e6ef;border-radius:14px;padding:18px;margin:14px 0}.head h1{font-size:1.4rem;margin:0 0 8px}.muted{color:#596579}.qtitle{font-weight:700;margin-bottom:12px}.option{display:block;width:100%;text-align:left;padding:11px 13px;margin:8px 0;border:1px solid #ccd4e0;border-radius:9px;background:#fff;color:inherit;cursor:pointer}.option:hover{background:#f1f5ff}.option.correct{border-color:#16834a;background:#e8f7ee}.option.wrong{border-color:#c43636;background:#fff0f0}.feedback{margin-top:12px;padding:12px;border-radius:8px;background:#f2f5fa;white-space:pre-wrap}.actions{display:flex;gap:10px;flex-wrap:wrap}.actions button{padding:10px 16px;border:0;border-radius:8px;background:#244fc5;color:white;cursor:pointer}.actions button:disabled{opacity:.4}.badge{font-size:.9rem;color:#596579}
+</style></head><body><main class="wrap"><header class="head"><h1>${safeTitle}</h1><div class="muted">PDF MCQ Practice · ${questions.length} questions</div><p id="progress" class="badge"></p></header><div id="quiz"></div><div class="actions"><button id="prev">Previous</button><button id="next">Next</button><button id="finish">Finish / Summary</button></div><div id="summary" class="head" hidden></div></main>
+<script>
+const questions=${data};let current=0;const chosen=Array(questions.length).fill(null);const checked=Array(questions.length).fill(false);
+const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+function render(){const q=questions[current];document.getElementById('progress').textContent='Question '+(current+1)+' of '+questions.length+' · Attempted '+chosen.filter(x=>x!==null).length;let html='<section class="question"><div class="qtitle">Q'+esc(q.number)+'. '+esc(q.question)+'</div>';
+q.options.forEach((o,i)=>{if(!o)return;let cls='option';if(checked[current]&&q.answer!==null&&i===q.answer)cls+=' correct';else if(checked[current]&&chosen[current]===i&&q.answer!==null&&i!==q.answer)cls+=' wrong';html+='<button class="'+cls+'" data-i="'+i+'" '+(checked[current]?'disabled':'')+'>'+String.fromCharCode(65+i)+') '+esc(o)+'</button>';});
+if(chosen[current]!==null){html+='<div class="feedback">'+(q.answer===null?'Correct answer PDF mein detect nahi hua.':(chosen[current]===q.answer?'Correct!':'Your answer: '+String.fromCharCode(65+chosen[current])+'. Correct answer: '+String.fromCharCode(65+q.answer)+'.'))+(q.explanation?'\n\nExplanation: '+esc(q.explanation):'\n\nExplanation available nahi hai.')+'</div>';}html+='</section>';document.getElementById('quiz').innerHTML=html;document.querySelectorAll('[data-i]').forEach(b=>b.addEventListener('click',()=>{chosen[current]=Number(b.dataset.i);checked[current]=true;render();}));document.getElementById('prev').disabled=current===0;document.getElementById('next').disabled=current===questions.length-1;}
+document.getElementById('prev').onclick=()=>{if(current>0){current--;render();}};document.getElementById('next').onclick=()=>{if(current<questions.length-1){current++;render();}};document.getElementById('finish').onclick=()=>{const attempted=chosen.filter(x=>x!==null).length;const correct=chosen.filter((x,i)=>x!==null&&questions[i].answer!==null&&x===questions[i].answer).length;const el=document.getElementById('summary');el.hidden=false;el.innerHTML='<h2>Summary</h2><p>Attempted: '+attempted+'/'+questions.length+'</p><p>Correct: '+correct+'</p><p>Questions without detected answer: '+questions.filter(q=>q.answer===null).length+'</p>';el.scrollIntoView({behavior:'smooth'});};render();
+</script></body></html>`;
+}
+
 app.post("/api/cs/pdf-mcq/import", requireOwner, pdfUpload.single("pdfFile"), async (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ success: false, message: "PDF file select karein." });
@@ -5222,12 +5247,45 @@ app.post("/api/cs/pdf-mcq/import", requireOwner, pdfUpload.single("pdfFile"), as
         const parsedPdf = await pdfParse(req.file.buffer);
         const parsed = parsePdfMcqs(parsedPdf.text);
         if (!parsed.questions.length) throw new Error("PDF text mila, lekin numbered questions aur kam-se-kam 4 A–D/E options detect nahi hue. Scanned PDF/OCR ya alag format ho sakta hai; koi MCQ save nahi kiya.");
-        const id = `pdf-mcq-${Date.now()}-${crypto.randomBytes(5).toString("hex")}`;
-        const dir = path.join(DATA_DIR, "cs-pdf-imports", subject, `chapter-${String(chapterNumber).padStart(2, "0")}`);
-        fs.mkdirSync(dir, { recursive: true });
-        const item = { id, originalName: req.file.originalname, subject, chapterNumber, mainTopicId, mainTopicTitle: mainTopic.title || mainTopic.name || "", subtopicId, subtopicTitle: subtopic.title || subtopic.name || "", questionCount: parsed.questions.length, questions: parsed.questions, createdAt: new Date().toISOString() };
-        fs.writeFileSync(path.join(dir, `${id}.json`), JSON.stringify(item, null, 2), "utf8");
-        res.json({ success: true, message: `${parsed.questions.length} questions extract hue. JSON import record local data/cs-pdf-imports mein save hua.`, item: { id, originalName: item.originalName, subject, chapterNumber, mainTopicTitle: item.mainTopicTitle, subtopicTitle: item.subtopicTitle, questionCount: item.questionCount, questions: parsed.questions.slice(0, 3) }, warning: "Yeh extraction record hai; ise existing student quiz cards mein publish karne ke liye quiz renderer integration aur real PDF testing abhi zaroori hai." });
+        const id = `cs-pdf-${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+        const fileName = `mcq-${id}.html`;
+        const now = new Date().toISOString();
+        const item = {
+            id, fileName, originalName: req.file.originalname,
+            name: `${subtopic.title || subtopic.name || mainTopic.title || mainTopic.name || "PDF MCQs"} — ${req.file.originalname.replace(/\.pdf$/i, "")}`,
+            subject, chapterNumber, mainTopicId, mainTopicTitle: mainTopic.title || mainTopic.name || "",
+            subtopicId, subtopicTitle: subtopic.title || subtopic.name || "",
+            questionCount: parsed.questions.length, createdAt: now, updatedAt: now,
+            url: `/api/cs/mcq-html/file/${encodeURIComponent(id)}`
+        };
+        const html = buildPdfQuizHtml({ ...item, questions: parsed.questions });
+
+        // Use the same permanent Firestore and local metadata flow as normal CS HTML uploads.
+        if (!firebaseEnabled || !db) {
+            throw new Error("Firebase Firestore connected nahi hai. PDF MCQ permanently publish nahi ho sakta; Render Environment/Secret mein firebase-service-account.json configure karein.");
+        }
+        const firebaseSaved = await saveHTMLToFirebase(
+            { classNumber: 0, subject, chapterNumber, subtopicId }, item, html
+        );
+        if (!firebaseSaved) throw new Error("PDF MCQ Firebase Firestore mein save nahi hua.");
+
+        const mcqDir = csChapterDir(subject, chapterNumber);
+        fs.mkdirSync(mcqDir, { recursive: true });
+        fs.writeFileSync(path.join(mcqDir, fileName), html, "utf8");
+        const items = readCSMCQMetadata(subject, chapterNumber);
+        if (!items.some(existing => existing.id === id)) items.push(item);
+        writeCSMCQMetadata(subject, chapterNumber, items);
+
+        // Keep the extraction record as a reviewable local backup after successful publication.
+        const importDir = path.join(DATA_DIR, "cs-pdf-imports", subject, `chapter-${String(chapterNumber).padStart(2, "0")}`);
+        fs.mkdirSync(importDir, { recursive: true });
+        fs.writeFileSync(path.join(importDir, `${id}.json`), JSON.stringify({ ...item, questions: parsed.questions }, null, 2), "utf8");
+        res.json({
+            success: true, firebaseSaved: true,
+            message: `${parsed.questions.length} MCQs extract hue aur existing CS student MCQ list mein publish ho gaye.`,
+            item: { ...item, topics: [{ title: item.subtopicTitle || item.mainTopicTitle, questionCount: parsed.questions.length }], questions: parsed.questions.slice(0, 3) },
+            warning: parsed.questions.some(q => !q.answer) ? `${parsed.questions.filter(q => !q.answer).length} questions ka correct answer PDF se detect nahi hua; inhe review karein.` : ""
+        });
     } catch (error) {
         console.error("CS PDF MCQ import error:", error);
         res.status(400).json({ success: false, message: error.message || "PDF import fail hua." });

@@ -208,6 +208,15 @@ function getSectionForQuestion(
         question?.sectionName ||
         "";
 
+    if (String(quizClass).toUpperCase() === "CS" &&
+        Number.isFinite(Number(question?.topicNumber)) &&
+        String(question?.topicTitle || "").trim()) {
+        const topicSection = sectionDefinitions.find(section =>
+            Number(section.topicNumber) === Number(question.topicNumber)
+        );
+        if (topicSection) return topicSection;
+    }
+
     if (typeof explicit === "string") {
 
         const value =
@@ -652,6 +661,71 @@ function initializeQuizSystem(
             }
         });
         sectionDefinitions = [...topicMap.values()].sort((a, b) => a.topicNumber - b.topicNumber);
+    } else if (String(classNumber).toUpperCase() === "CS" && allQuizQuestions.some(q =>
+        Number.isFinite(Number(q?.topicNumber)) && String(q?.topicTitle || "").trim()
+    )) {
+        const topicMap = new Map();
+        allQuizQuestions.forEach(q => {
+            const topicNumber = Number(q.topicNumber);
+            const topicTitle = String(q.topicTitle).trim();
+            if (!topicMap.has(topicNumber)) {
+                topicMap.set(topicNumber, {
+                    id: `TOPIC_${topicNumber}`,
+                    name: `Topic ${topicNumber}: ${topicTitle}`,
+                    topicNumber,
+                    start: null,
+                    end: null
+                });
+            }
+        });
+        sectionDefinitions = [...topicMap.values()].sort((a, b) => a.topicNumber - b.topicNumber);
+    } else if (
+        String(classNumber).toUpperCase() === "CS" &&
+        Array.isArray(data?.sections) &&
+        data.sections.length
+    ) {
+        // Use the uploaded HTML's own topic/section names and ranges.
+        sectionDefinitions = data.sections.map((section, index) => ({
+            id: String(section.id || `CS_SECTION_${index + 1}`),
+            name: String(section.name || `Topic ${index + 1}`),
+            start: Number(section.start),
+            end: Number(section.end)
+        })).filter(section =>
+            Number.isFinite(section.start) &&
+            Number.isFinite(section.end) &&
+            section.start >= 1 &&
+            section.end >= section.start
+        );
+    } else if (String(classNumber).toUpperCase() === "CS") {
+        // Computer Science must not inherit NCERT-specific section labels.
+        const explicitCSSections = new Map();
+        allQuizQuestions.forEach((q, index) => {
+            const explicit = String(
+                q?.sectionName || q?.sectionTitle || q?.section || q?.sectionId || ""
+            ).trim();
+            if (explicit && !/NCERT|SECTION\s*[A-E]\b/i.test(explicit)) {
+                const key = explicit.toLowerCase();
+                if (!explicitCSSections.has(key)) {
+                    explicitCSSections.set(key, {
+                        id: `CS_SECTION_${explicitCSSections.size + 1}`,
+                        name: explicit,
+                        start: index + 1,
+                        end: index + 1
+                    });
+                }
+                const section = explicitCSSections.get(key);
+                section.end = index + 1;
+            }
+        });
+
+        sectionDefinitions = explicitCSSections.size
+            ? [...explicitCSSections.values()]
+            : [{
+                id: "CS_ALL",
+                name: "Computer Science — Practice Questions",
+                start: 1,
+                end: allQuizQuestions.length
+            }];
     } else {
         sectionDefinitions = [
             { id: "A", name: "Section A — Basic / Direct NCERT Questions", start: 1, end: 35 },
@@ -766,7 +840,7 @@ function renderQuizHome() {
                 </h2>
 
                 <p>
-                    Class ${quizClass}
+                    ${String(quizClass).toUpperCase() === "CS" ? "Computer Science" : `Class ${quizClass}`}
                     •
                     ${allQuizQuestions.length}
                     MCQs
@@ -1689,19 +1763,29 @@ function renderQuizQuestion() {
         }
 
 
+        const answerIndex = normalizeAnswer(q.answer);
+        const answerLetter = answerIndex >= 0
+            ? String.fromCharCode(65 + answerIndex).toLowerCase()
+            : "";
+        const answerText = Array.isArray(q.options)
+            ? String(q.options[answerIndex] || "").trim()
+            : String(q.options?.[answerLetter] || q.options?.[answerLetter.toUpperCase()] || "").trim();
+        const sourceExplanation = String(
+            q.explanation || q.explain || q.solution ||
+            q.answerExplanation || q.answer_explanation || ""
+        ).trim();
+
+        // Keep the answer/explanation wording in the same readable sequence as the source PDF.
         explanation.innerHTML = `
-
-            <b>
-                Explanation
-            </b>
-
+            <b>${current + 1}. Correct Answer:</b>
+            ${answerLetter ? `${answerLetter}) ` : ""}${quizEscape(answerText)}
             <br><br>
-
-            ${quizEscape(
-                q.explanation ||
-                "इस प्रश्न की explanation उपलब्ध नहीं है।"
-            )}
-
+            <b>Explanation:</b>
+            ${quizEscape(sourceExplanation || (
+                answerIndex >= 0
+                    ? `Source mein detailed explanation nahi diya gaya hai. Correct answer: ${answerLetter}) ${answerText}`
+                    : "Is question ke source data mein explanation aur valid correct answer dono available nahi hain."
+            ))}
         `;
 
         explanation.classList.remove(

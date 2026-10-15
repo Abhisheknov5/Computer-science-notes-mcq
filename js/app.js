@@ -754,19 +754,173 @@ async function loadMCQHTML(path) {
 
 
 
-        const questions = Function(`"use strict"; return (${arrayText});`)();
+        const rawQuestions = Function(`"use strict"; return (${arrayText});`)();
+        if (!Array.isArray(rawQuestions)) return null;
+
+        // Repair PDF-to-HTML conversions that accidentally place multiple
+        // "Explanation:" paragraphs inside one question instead of their own questions.
+        const explanationOwnerIndex = rawQuestions.findIndex(q =>
+            /(?:^|\s)Explanation\s*:/i.test(String(q?.explanation || q?.explain || q?.solution || ""))
+        );
+        if (explanationOwnerIndex >= 0) {
+            const owner = rawQuestions[explanationOwnerIndex];
+            const combined = String(owner?.explanation || owner?.explain || owner?.solution || "").trim();
+            const pieces = combined.split(/Explanation\s*:/i).map(s => s.trim()).filter(Boolean);
+            if (pieces.length > 2) {
+                // Drop the unlabeled conversion preamble; keep only actual Explanation paragraphs.
+                pieces.shift();
+                const explanationPieces = pieces.filter(piece =>
+                    !/^the provided content states that .*?(?:last updated|tutorial was last updated).*?\.?$/i.test(piece)
+                );
+                const stopWords = new Set([
+                    "the","a","an","is","are","was","were","to","of","in","on","for","and","or",
+                    "that","this","it","what","which","with","from","by","as","used","uses","using",
+                    "does","do","can","be","indicates","following","content","explains","explained"
+                ]);
+                const words = value => String(value || "").toLowerCase()
+                    .replace(/[^a-z0-9]+/g, " ")
+                    .split(/\s+/)
+                    .filter(word => word.length > 2 && !stopWords.has(word));
+                const questionWords = rawQuestions.map(q => new Set(words([
+                    q?.question,
+                    ...(Array.isArray(q?.options) ? q.options : Object.values(q?.options || {}))
+                ].join(" "))));
+                const explanationWords = explanationPieces.map(piece => new Set(words(piece)));
+                const similarity = (a, b) => {
+                    let score = 0;
+                    for (const word of a) if (b.has(word)) score++;
+                    return score;
+                };
+
+                // The PDF converter bundles a run of consecutive explanations into
+                // one question. Recover the run as a sequence, not as independent
+                // guesses (which can attach a binary explanation to another question).
+                let bestStart = -1;
+                let bestTotal = -1;
+                for (let startIndex = 0; startIndex + explanationPieces.length <= rawQuestions.length; startIndex++) {
+                    let total = 0;
+                    for (let offset = 0; offset < explanationPieces.length; offset++) {
+                        total += similarity(explanationWords[offset], questionWords[startIndex + offset]);
+                    }
+                    if (total > bestTotal) {
+                        bestTotal = total;
+                        bestStart = startIndex;
+                    }
+                }
+                if (bestStart >= 0 && bestTotal > 0) {
+                    for (let offset = 0; offset < explanationPieces.length; offset++) {
+                        const target = rawQuestions[bestStart + offset];
+                        // Preserve an existing per-question explanation; only fill blanks.
+                        if (target && !String(target.explanation || target.explain || target.solution || "").trim()) {
+                            target.explanation = explanationPieces[offset].trim();
+                        }
+                    }
+                }
+
+                // Clear the misplaced bundle so it is not displayed on the wrong question.
+                owner.explanation = "";
+                if (Object.prototype.hasOwnProperty.call(owner, "explain")) owner.explain = "";
+                if (Object.prototype.hasOwnProperty.call(owner, "solution")) owner.solution = "";
+            }
+        }
+
+        // Normalize uploaded HTML question formats and preserve source topic labels.
+        const getSourceTopic = q => String(
+            q?.topicTitle || q?.topic_title || q?.topicName || q?.topic_name ||
+            q?.mainTopicTitle || q?.main_topic_title || q?.topic || ""
+        ).trim();
+
+        // Some PDF-to-MCQ HTML files store bold "Topic 1: ... — 10 MCQs"
+        // headings in the HTML text (sometimes accidentally inside an option),
+        // rather than on each question. Recover those ranges in source order.
+        const topicRanges = [];
+        const topicHeadingPattern =
+            /Topic\s*(\d+)\s*:?\s*-?\s*:?\s*([^<>\r\n"\\]{2,120}?)\s*[—–-]\s*(\d+)\s*MCQs\b/gi;
+        let topicHeadingMatch;
+        while ((topicHeadingMatch = topicHeadingPattern.exec(html)) !== null) {
+            const topicNumber = Number(topicHeadingMatch[1]);
+            const topicTitle = topicHeadingMatch[2].replace(/\s+/g, " ").trim();
+            const questionCount = Number(topicHeadingMatch[3]);
+            if (
+                Number.isInteger(topicNumber) && topicNumber > 0 &&
+                topicTitle && Number.isInteger(questionCount) && questionCount > 0 &&
+                !topicRanges.some(topic => topic.topicNumber === topicNumber)
+            ) {
+                topicRanges.push({
+                    topicNumber,
+                    topicTitle,
+                    start: topicRanges.reduce((sum, topic) => sum + topic.questionCount, 1),
+                    questionCount
+                });
+            }
+        }
+        topicRanges.sort((a, b) => a.topicNumber - b.topicNumber);
+
+        const questions = rawQuestions.map((q, index) => {
+            let topicTitle = getSourceTopic(q);
+            const rawTopicNumber = q?.topicNumber ?? q?.topic_number ?? q?.topicIndex ?? q?.topic_index;
+            const numericTopicNumber = Number(rawTopicNumber);
+            let topicNumber = Number.isFinite(numericTopicNumber) && numericTopicNumber > 0
+                ? numericTopicNumber
+                : null;
+
+            if (!topicTitle && topicRanges.length) {
+                const matchedTopic = topicRanges.find(topic =>
+                    index + 1 >= topic.start &&
+                    index + 1 < topic.start + topic.questionCount
+                );
+                if (matchedTopic) {
+                    topicTitle = matchedTopic.topicTitle;
+                    topicNumber = matchedTopic.topicNumber;
+                }
+            }
+
+            return {
+                ...q,
+                id: q?.id ?? index + 1,
+                question: q?.question ?? q?.q ?? q?.text ?? "",
+                options: Array.isArray(q?.options) ? q.options : [],
+                answer: q?.answer ?? q?.correctAnswer ?? q?.correct ?? null,
+                explanation: q?.explanation ?? q?.explain ?? q?.solution ?? q?.answerExplanation ?? q?.answer_explanation ?? q?.explanationText ?? q?.rationale ?? q?.reason ?? "",
+                ...(topicTitle ? {
+                    topicTitle,
+                    topicNumber: topicNumber || (topicRanges.length
+                        ? (topicRanges.find(topic => topic.topicTitle === topicTitle)?.topicNumber || null)
+                        : null)
+                } : {})
+            };
+        });
 
 
 
-        if (!Array.isArray(questions)) return null;
 
 
 
 
+        // Preserve topic/section ranges authored in the uploaded HTML.
+        let sections = [];
+        const sectionsIndex = html.indexOf("const sections");
+        if (sectionsIndex !== -1) {
+            try {
+                const sectionsText = extractBalancedArray(html, sectionsIndex);
+                if (sectionsText) {
+                    const parsedSections = Function(`"use strict"; return (${sectionsText});`)();
+                    if (Array.isArray(parsedSections)) {
+                        sections = parsedSections.filter(section =>
+                            section && typeof section.name === "string" &&
+                            Number.isFinite(Number(section.start)) &&
+                            Number.isFinite(Number(section.end)) &&
+                            Number(section.start) >= 1 &&
+                            Number(section.end) >= Number(section.start)
+                        );
+                    }
+                }
+            } catch (sectionError) {
+                console.warn("MCQ HTML section metadata parse failed:", sectionError);
+            }
+        }
 
-
-
-        return { title: getHTMLTitle(html), questions };
+        return { title: getHTMLTitle(html), questions, sections };
 
 
 
@@ -2583,7 +2737,8 @@ async function renderQuizPage(subjectId, chapterNumber, directStart = false, mcq
                         mcqData = {
                             title: uploaded.title || selectedItem.name || selectedItem.originalName || `Topic ${chapterNumber}`,
                             chapterTitle: uploaded.title || selectedItem.name || selectedItem.originalName || `Topic ${chapterNumber}`,
-                            questions: uploaded.questions
+                            questions: uploaded.questions,
+                            sections: uploaded.sections || []
                         };
                     }
                 }
@@ -2618,20 +2773,47 @@ async function renderQuizPage(subjectId, chapterNumber, directStart = false, mcq
         try {
             const response = await fetch(`/api/cs/mcq-html/${encodeURIComponent(subjectId)}/${chapterNumber}`, { cache: "no-store" });
             if (response.ok) {
-                const data = await response.json();
-                const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
-                const selectedItem = items.filter(item => item?.url).sort((a, b) =>
-                    String(b.createdAt || "").localeCompare(String(a.createdAt || ""))
+                const payload = await response.json();
+                const items = (Array.isArray(payload) ? payload : (Array.isArray(payload.items) ? payload.items : []))
+                    .filter(item => item?.url);
+
+                // Do not blindly pick the newest upload: that can be a flat quiz with no topic data,
+                // even when an older matching file contains the user's real topic structure.
+                const candidates = await Promise.all(items.map(async item => {
+                    const loaded = await loadMCQHTML(item.url);
+                    if (!loaded || !Array.isArray(loaded.questions) || !loaded.questions.length) return null;
+                    const questions = loaded.questions;
+                    const topicNames = new Set(questions.map(q => String(
+                        q?.topicTitle || q?.topic_title || q?.topicName || q?.topic_name ||
+                        q?.mainTopicTitle || q?.main_topic_title || q?.topic || ""
+                    ).trim()).filter(Boolean));
+                    const explanationCount = questions.filter(q => String(
+                        q?.explanation || q?.explain || q?.solution || q?.answerExplanation ||
+                        q?.answer_explanation || q?.explanationText || q?.rationale || q?.reason || ""
+                    ).trim()).length;
+                    const title = String(loaded.title || item.name || item.originalName || "");
+                    const titleMatchesChapter = /number\s*system/i.test(title) && /number|digital|electronics/i.test(String(subject?.name || ""));
+                    const score = topicNames.size * 1000 + (loaded.sections?.length || 0) * 500 +
+                        (explanationCount / questions.length) * 100 +
+                        (titleMatchesChapter ? 25 : 0) + Math.min(questions.length, 500) / 1000;
+                    return { item, loaded, score };
+                }));
+                const best = candidates.filter(Boolean).sort((a, b) =>
+                    b.score - a.score || String(b.item.createdAt || "").localeCompare(String(a.item.createdAt || ""))
                 )[0];
-                if (selectedItem) {
-                    const uploaded = await loadMCQHTML(selectedItem.url);
-                    if (uploaded && Array.isArray(uploaded.questions) && uploaded.questions.length) {
-                        mcqData = {
-                            title: uploaded.title || selectedItem.name || selectedItem.originalName || `Topic ${chapterNumber}`,
-                            chapterTitle: uploaded.title || selectedItem.name || selectedItem.originalName || `Topic ${chapterNumber}`,
-                            questions: uploaded.questions
-                        };
-                    }
+
+                if (best) {
+                    mcqData = {
+                        title: best.loaded.title || best.item.name || best.item.originalName || `Topic ${chapterNumber}`,
+                        chapterTitle: best.loaded.title || best.item.name || best.item.originalName || `Topic ${chapterNumber}`,
+                        questions: best.loaded.questions,
+                        sections: best.loaded.sections || []
+                    };
+                    console.info("Selected CS MCQ set by topic/explanation metadata:", {
+                        file: best.item.originalName || best.item.name || best.item.fileName,
+                        questionCount: best.loaded.questions.length,
+                        sectionCount: new Set(best.loaded.questions.map(q => String(q.topicTitle || q.topic || "").trim()).filter(Boolean)).size
+                    });
                 }
             }
         } catch (error) {

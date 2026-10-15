@@ -1,0 +1,1058 @@
+{
+  "id": "cs-pdf-1792030495105-2c66d79e8c7f",
+  "fileName": "mcq-cs-pdf-1792030495105-2c66d79e8c7f.html",
+  "originalName": "2-Number Base Conversion.pdf",
+  "name": "Number Base Conversion — 2-Number Base Conversion",
+  "subject": "de",
+  "chapterNumber": 1,
+  "mainTopicId": "cs-main-1792011065650-b7526f0e658a",
+  "mainTopicTitle": "Binary System",
+  "subtopicId": "cs-sub-1792030259691-f944dedbde86",
+  "subtopicTitle": "Number Base Conversion",
+  "questionCount": 80,
+  "createdAt": "2026-10-15T02:14:55.105Z",
+  "updatedAt": "2026-10-15T02:14:55.105Z",
+  "url": "/api/cs/mcq-html/file/cs-pdf-1792030495105-2c66d79e8c7f",
+  "questions": [
+    {
+      "number": 1,
+      "question": "When was the Number Base Conversion tutorial last updated?",
+      "options": {
+        "A": "17 March 2024",
+        "B": "17 March 2025",
+        "C": "17 April 2025",
+        "D": "17 February 2025",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 2,
+      "question": "What is the primary objective of Number Base Conversion?",
+      "options": {
+        "A": "To convert a number from one number system to another",
+        "B": "To perform database operations",
+        "C": "To design computer networks",
+        "D": "To create programming languages",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 3,
+      "question": "How many number systems are discussed in the provided tutorial?",
+      "options": {
+        "A": "Two",
+        "B": "Three",
+        "C": "Four",
+        "D": "Five",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 4,
+      "question": "Which of the following is not one of the four number systems discussed in the tutorial?",
+      "options": {
+        "A": "Binary",
+        "B": "Decimal",
+        "C": "Octal Topic 1:- Number Base Conversion Bhai, ye rahe Topic 1: Number Base Conversion — 80 MCQs. Saare 12 conversion types aur basic concepts cover kiye hain. Tumhare exact format mein numbering, options ke aage 5 spaces, koi bullets nahi, aur answers with explanations sabse last mein. Topic 1: Number Base Conversion",
+        "D": "Roman",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 5,
+      "question": "How many other number systems can each of the four number systems be converted into?",
+      "options": {
+        "A": "One",
+        "B": "Two",
+        "C": "Three",
+        "D": "Four",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 6,
+      "question": "Which operation is used to convert a binary number into a decimal number?",
+      "options": {
+        "A": "Multiplying each bit by its positional weight and adding the products",
+        "B": "Dividing every bit by 16",
+        "C": "Grouping bits into sets of three only",
+        "D": "Replacing every bit with a letter",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 7,
+      "question": "What is the base of the binary number system?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 8,
+      "question": "What is the base of the octal number system?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 9,
+      "question": "What is the base of the decimal number system?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 10,
+      "question": "What is the base of the hexadecimal number system?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": "The provided source states that the tutorial was last updated on 17 March 2025. Explanation: Number base conversion changes the representation of a number from one base to another. Explanation: The tutorial discusses binary, decimal, octal, and hexadecimal number systems. Explanation: Roman numerals are not among the four number systems discussed in this tutorial. Explanation: Each of the four systems can be converted into the remaining three systems. Explanation: Binary-to-decimal conversion uses powers of 2 as positional weights and adds the resulting products. Explanation: Binary is a base-2 number system. Explanation: Octal is a base-8 number system. Explanation: Decimal is a base-10 number system. Explanation: Hexadecimal is a base-16 number system."
+    },
+    {
+      "number": 11,
+      "question": "What is the decimal equivalent of (10110)₂?",
+      "options": {
+        "A": "20",
+        "B": "21",
+        "C": "22",
+        "D": "24",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 12,
+      "question": "What is the decimal equivalent of (1011)₂?",
+      "options": {
+        "A": "9",
+        "B": "10",
+        "C": "11",
+        "D": "12",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 13,
+      "question": "What is the decimal equivalent of (1101)₂?",
+      "options": {
+        "A": "11",
+        "B": "12",
+        "C": "13",
+        "D": "14",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 14,
+      "question": "What is the decimal equivalent of (10000)₂?",
+      "options": {
+        "A": "8",
+        "B": "12",
+        "C": "16",
+        "D": "32",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 15,
+      "question": "What is the decimal equivalent of (1111)₂?",
+      "options": {
+        "A": "13",
+        "B": "14",
+        "C": "15",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 16,
+      "question": "What is the decimal equivalent of (101.1)₂?",
+      "options": {
+        "A": "5.25",
+        "B": "5.5",
+        "C": "5.75",
+        "D": "6.5",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 17,
+      "question": "What is the decimal equivalent of (10.01)₂?",
+      "options": {
+        "A": "2.125",
+        "B": "2.25",
+        "C": "2.5",
+        "D": "2.75",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 18,
+      "question": "What is the decimal equivalent of (111.01)₂?",
+      "options": {
+        "A": "7.125",
+        "B": "7.25",
+        "C": "7.5",
+        "D": "7.75",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 19,
+      "question": "What is the decimal equivalent of (1001.101)₂?",
+      "options": {
+        "A": "9.5",
+        "B": "9.625",
+        "C": "9.75",
+        "D": "10.125",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 20,
+      "question": "What is the decimal equivalent of (11010)₂?",
+      "options": {
+        "A": "24",
+        "B": "25",
+        "C": "26",
+        "D": "28",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 21,
+      "question": "How many binary bits correspond to one octal digit?",
+      "options": {
+        "A": "One",
+        "B": "Two",
+        "C": "Three",
+        "D": "Four",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 22,
+      "question": "During binary-to-octal conversion, how should bits be grouped?",
+      "options": {
+        "A": "In groups of two",
+        "B": "In groups of three",
+        "C": "In groups of four",
+        "D": "In groups of eight",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 23,
+      "question": "When converting binary to octal, where should grouping begin?",
+      "options": {
+        "A": "From the binary point, moving outward on both sides",
+        "B": "Only from the leftmost bit",
+        "C": "Only from the rightmost bit",
+        "D": "From the middle bit",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 24,
+      "question": "What should be done if a binary group contains fewer than three bits during binary-to-octal conversion?",
+      "options": {
+        "A": "Remove the remaining bits",
+        "B": "Add zeros at the outer side to complete the group",
+        "C": "Replace the bits with decimal digits",
+        "D": "Multiply the group by 10",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 25,
+      "question": "What is the octal equivalent of (101110)₂?",
+      "options": {
+        "A": "(54)₈",
+        "B": "(55)₈",
+        "C": "(56)₈",
+        "D": "(57)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": "(16+4+2=22). Explanation: (8+2+1=11). Explanation: (8+4+1=13). Explanation: The binary number 10000 represents (2^4=16). Explanation: (8+4+2+1=15). Explanation: (4+1+0.5=5.5). Explanation: (2+0.25=2.25). Explanation: (4+2+1+0.25=7.25). Explanation: (8+1+0.5+0.125=9.625). Explanation: (16+8+2=26). Explanation: Each octal digit corresponds to a group of three binary bits. Explanation: Binary digits are grouped in threes to convert binary numbers into octal. Explanation: Grouping begins at the binary point and continues toward the left and right. Explanation: Leading or trailing zeros may be added at the outer ends without changing the number's value. Explanation: (101\\ 110) corresponds to octal digits 5 and 6."
+    },
+    {
+      "number": 26,
+      "question": "What is the octal equivalent of (111101)₂?",
+      "options": {
+        "A": "(73)₈",
+        "B": "(74)₈",
+        "C": "(75)₈",
+        "D": "(76)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 27,
+      "question": "What is the octal equivalent of (100111)₂?",
+      "options": {
+        "A": "(45)₈",
+        "B": "(46)₈",
+        "C": "(47)₈",
+        "D": "(51)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 28,
+      "question": "What is the octal equivalent of (1101011)₂?",
+      "options": {
+        "A": "(153)₈",
+        "B": "(154)₈",
+        "C": "(153)₈",
+        "D": "(155)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 29,
+      "question": "What is the octal equivalent of (11101010)₂?",
+      "options": {
+        "A": "(351)₈",
+        "B": "(352)₈",
+        "C": "(352)₈",
+        "D": "(354)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 30,
+      "question": "What is the octal equivalent of (101101.101)₂?",
+      "options": {
+        "A": "(55.4)₈",
+        "B": "(55.5)₈",
+        "C": "(55.6)₈",
+        "D": "(56.5)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 31,
+      "question": "How many binary bits correspond to one hexadecimal digit?",
+      "options": {
+        "A": "Two",
+        "B": "Three",
+        "C": "Four",
+        "D": "Eight",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 32,
+      "question": "During binary-to-hexadecimal conversion, bits are grouped into sets of:",
+      "options": {
+        "A": "Two",
+        "B": "Three",
+        "C": "Four",
+        "D": "Eight",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 33,
+      "question": "What should be done if a binary group has fewer than four bits during binary-to- hexadecimal conversion?",
+      "options": {
+        "A": "Add zeros at the outer side to complete the group",
+        "B": "Delete the group",
+        "C": "Replace the group with a decimal point",
+        "D": "Multiply the group by 16",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 34,
+      "question": "What is the hexadecimal equivalent of (10101111)₂?",
+      "options": {
+        "A": "(AD)₁₆",
+        "B": "(AE)₁₆",
+        "C": "(AF)₁₆",
+        "D": "(BF)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 35,
+      "question": "What is the hexadecimal equivalent of (11110000)₂?",
+      "options": {
+        "A": "(E0)₁₆",
+        "B": "(F0)₁₆",
+        "C": "(F1)₁₆",
+        "D": "(FF)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 36,
+      "question": "What is the hexadecimal equivalent of (10110101)₂?",
+      "options": {
+        "A": "(B4)₁₆",
+        "B": "(B5)₁₆",
+        "C": "(B6)₁₆",
+        "D": "(A5)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 37,
+      "question": "What is the hexadecimal equivalent of (11011010)₂?",
+      "options": {
+        "A": "(C9)₁₆",
+        "B": "(DA)₁₆",
+        "C": "(DB)₁₆",
+        "D": "(EA)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 38,
+      "question": "What is the hexadecimal equivalent of (11111111)₂?",
+      "options": {
+        "A": "(EF)₁₆",
+        "B": "(FE)₁₆",
+        "C": "(FF)₁₆",
+        "D": "(F0)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 39,
+      "question": "What is the hexadecimal equivalent of (101101.1011)₂?",
+      "options": {
+        "A": "(2D.B)₁₆",
+        "B": "(2D.A)₁₆",
+        "C": "(2E.B)₁₆",
+        "D": "(3D.B)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 40,
+      "question": "Which method is used to convert the integer part of a decimal number into another base?",
+      "options": {
+        "A": "Repeated division by the target base",
+        "B": "Repeated addition of the target base",
+        "C": "Repeated subtraction of one",
+        "D": "Grouping decimal digits into pairs only",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": "(111\\ 101) corresponds to octal digits 7 and 5. Explanation: (100\\ 111) corresponds to octal digits 4 and 7. Explanation: (001\\ 101\\ 011) corresponds to octal digits 1, 5, and 3. Explanation: (011\\ 101\\ 010) corresponds to octal digits 3, 5, and 2. Explanation: (101\\ 101.101) converts to octal digits 5, 5, and 5. Explanation: Each hexadecimal digit corresponds to four binary bits. Explanation: Binary digits are grouped in sets of four for hexadecimal conversion. Explanation: Zero padding completes a four-bit group without changing the number's value. Explanation: (1010= A) and (1111=F), giving AF. Explanation: (1111=F) and (0000=0), giving F0. Explanation: (1011=B) and (0101=5), giving B5. Explanation: (1101=D) and (1010=A), giving DA. Explanation: Both four-bit groups are 1111, which represents F. Explanation: (0010=2), (1101=D), and (1011=B). Explanation: Repeated division is used to convert the integer part into the target base."
+    },
+    {
+      "number": 41,
+      "question": "In repeated-division conversion, in what order are the remainders read?",
+      "options": {
+        "A": "From the first remainder to the last",
+        "B": "From the last remainder to the first",
+        "C": "In alphabetical order",
+        "D": "In ascending numerical order",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 42,
+      "question": "Which operation is used to convert the fractional part of a decimal number into another base?",
+      "options": {
+        "A": "Repeated multiplication by the target base",
+        "B": "Repeated division by 10 only",
+        "C": "Repeated subtraction of the target base",
+        "D": "Grouping digits into sets of eight",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 43,
+      "question": "During fractional conversion by repeated multiplication, which part is recorded as the next digit?",
+      "options": {
+        "A": "The integer part of each product",
+        "B": "The original denominator",
+        "C": "The last remainder of integer division",
+        "D": "The number of multiplication steps only",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 44,
+      "question": "What is the binary equivalent of (10)₁₀?",
+      "options": {
+        "A": "(1000)₂",
+        "B": "(1001)₂",
+        "C": "(1010)₂",
+        "D": "(1100)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 45,
+      "question": "What is the binary equivalent of (25)₁₀?",
+      "options": {
+        "A": "(11001)₂",
+        "B": "(11010)₂",
+        "C": "(11100)₂",
+        "D": "(10101)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 46,
+      "question": "What is the binary equivalent of (45)₁₀?",
+      "options": {
+        "A": "(101011)₂",
+        "B": "(101100)₂",
+        "C": "(101101)₂",
+        "D": "(101110)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 47,
+      "question": "What is the binary equivalent of (64)₁₀?",
+      "options": {
+        "A": "(100000)₂",
+        "B": "(1000000)₂",
+        "C": "(1100000)₂",
+        "D": "(10000000)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 48,
+      "question": "What is the binary equivalent of (0.5)₁₀?",
+      "options": {
+        "A": "(0.01)₂",
+        "B": "(0.1)₂",
+        "C": "(0.11)₂",
+        "D": "(1.1)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 49,
+      "question": "What is the binary equivalent of (0.25)₁₀?",
+      "options": {
+        "A": "(0.01)₂",
+        "B": "(0.1)₂",
+        "C": "(0.11)₂",
+        "D": "(0.001)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 50,
+      "question": "What is the binary equivalent of (0.75)₁₀?",
+      "options": {
+        "A": "(0.01)₂",
+        "B": "(0.10)₂",
+        "C": "(0.11)₂",
+        "D": "(1.01)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 51,
+      "question": "What is the octal equivalent of (64)₁₀?",
+      "options": {
+        "A": "(70)₈",
+        "B": "(80)₈",
+        "C": "(100)₈",
+        "D": "(110)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 52,
+      "question": "What is the octal equivalent of (100)₁₀?",
+      "options": {
+        "A": "(124)₈",
+        "B": "(144)₈",
+        "C": "(154)₈",
+        "D": "(164)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 53,
+      "question": "What is the octal equivalent of (255)₁₀?",
+      "options": {
+        "A": "(367)₈",
+        "B": "(377)₈",
+        "C": "(407)₈",
+        "D": "(477)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 54,
+      "question": "What is the octal equivalent of (0.5)₁₀?",
+      "options": {
+        "A": "(0.2)₈",
+        "B": "(0.4)₈",
+        "C": "(0.5)₈",
+        "D": "(0.6)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 55,
+      "question": "What is the octal equivalent of (0.25)₁₀?",
+      "options": {
+        "A": "(0.1)₈",
+        "B": "(0.2)₈",
+        "C": "(0.4)₈",
+        "D": "(0.6)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": "The integer digits are obtained by reading the remainders in reverse order. Explanation: Repeated multiplication is used to convert the fractional part. Explanation: The integer part of each product gives the next fractional digit. Explanation: (10=8+2), so its binary representation is 1010. Explanation: (25=16+8+1), giving 11001. Explanation: (45=32+8+4+1), giving 101101. Explanation: (64=2^6), so its binary representation is 1000000. Explanation: (0.1_2=1/2=0.5_{10}). Explanation: (0.01_2=1/4=0.25_{10}). Explanation: (0.11_2=1/2+1/4=0.75_{10}). Explanation: (64=1\\times8^2), so the octal representation is 100. Explanation: (100=1\\times64+4\\times8+4). Explanation: (255=3\\times64+7\\times8+7). Explanation: (0.4_8=4/8=0.5_{10}). Explanation: (0.4_8=4/8=0.5), while (0.2_8=2/8=0.25). Therefore, the correct option should be b) (0.2)₈."
+    },
+    {
+      "number": 56,
+      "question": "What is the hexadecimal equivalent of (26)₁₀?",
+      "options": {
+        "A": "(18)₁₆",
+        "B": "(19)₁₆",
+        "C": "(1A)₁₆",
+        "D": "(1B)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 57,
+      "question": "What is the hexadecimal equivalent of (100)₁₀?",
+      "options": {
+        "A": "(54)₁₆",
+        "B": "(64)₁₆",
+        "C": "(74)₁₆",
+        "D": "(84)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 58,
+      "question": "What is the hexadecimal equivalent of (255)₁₀?",
+      "options": {
+        "A": "(EE)₁₆",
+        "B": "(EF)₁₆",
+        "C": "(FE)₁₆",
+        "D": "(FF)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 59,
+      "question": "What is the hexadecimal equivalent of (0.5)₁₀?",
+      "options": {
+        "A": "(0.4)₁₆",
+        "B": "(0.8)₁₆",
+        "C": "(0.A)₁₆",
+        "D": "(0.C)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 60,
+      "question": "What is the hexadecimal equivalent of (0.25)₁₀?",
+      "options": {
+        "A": "(0.2)₁₆",
+        "B": "(0.4)₁₆",
+        "C": "(0.8)₁₆",
+        "D": "(0.C)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 61,
+      "question": "What is the decimal equivalent of (17)₈?",
+      "options": {
+        "A": "13",
+        "B": "14",
+        "C": "15",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 62,
+      "question": "What is the decimal equivalent of (25)₈?",
+      "options": {
+        "A": "19",
+        "B": "20",
+        "C": "21",
+        "D": "22",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 63,
+      "question": "What is the decimal equivalent of (157)₈?",
+      "options": {
+        "A": "109",
+        "B": "110",
+        "C": "111",
+        "D": "112",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 64,
+      "question": "What is the decimal equivalent of (0.4)₈?",
+      "options": {
+        "A": "0.25",
+        "B": "0.5",
+        "C": "0.625",
+        "D": "0.75",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 65,
+      "question": "What is the decimal equivalent of (12.4)₈?",
+      "options": {
+        "A": "10.25",
+        "B": "10.5",
+        "C": "10.75",
+        "D": "11.5",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 66,
+      "question": "How is an octal number converted into binary?",
+      "options": {
+        "A": "Replace each octal digit with its three-bit binary equivalent",
+        "B": "Replace each octal digit with four bits",
+        "C": "Divide every digit by 16",
+        "D": "Multiply every digit by 10",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 67,
+      "question": "What is the binary equivalent of (25)₈?",
+      "options": {
+        "A": "(010101)₂",
+        "B": "(010110)₂",
+        "C": "(011001)₂",
+        "D": "(101010)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 68,
+      "question": "What is the binary equivalent of (73)₈?",
+      "options": {
+        "A": "(111011)₂",
+        "B": "(111001)₂",
+        "C": "(110011)₂",
+        "D": "(101111)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 69,
+      "question": "What is the hexadecimal equivalent of (17)₈?",
+      "options": {
+        "A": "(E)₁₆",
+        "B": "(F)₁₆",
+        "C": "(10)₁₆",
+        "D": "(11)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 70,
+      "question": "What is the hexadecimal equivalent of (25)₈?",
+      "options": {
+        "A": "(13)₁₆",
+        "B": "(14)₁₆",
+        "C": "(15)₁₆",
+        "D": "(16)₁₆",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": "(26=1\\times16+10), and decimal 10 is represented by A. Explanation: (100=6\\times16+4). Explanation: (255=15\\times16+15), and 15 is represented by F. Explanation: (0.8_{16}=8/16=0.5_{10}). Explanation: (0.4_{16}=4/16=0.25_{10}). Explanation: (1\\times8+7=15). Explanation: (2\\times8+5=21). Explanation: (1\\times64+5\\times8+7=111). Explanation: (0.4_8=4/8=0.5). Explanation: (1\\times8+2+4/8=10.5). Explanation: Every octal digit corresponds to exactly three binary bits. Explanation: (2=010) and (5=101), giving 010101. Explanation: (7=111) and (3=011), giving 111011. Explanation: (17_8=1\\times8+7=15_{10}=F_{16}). Therefore, the correct answer should be b) (F)₁₆. Explanation: (25_8=2\\times8+5=21_{10}=15_{16})."
+    },
+    {
+      "number": 71,
+      "question": "In hexadecimal-to-decimal conversion, what does the symbol A represent?",
+      "options": {
+        "A": "8",
+        "B": "9",
+        "C": "10",
+        "D": "11",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 72,
+      "question": "What is the decimal equivalent of (1A)₁₆?",
+      "options": {
+        "A": "24",
+        "B": "25",
+        "C": "26",
+        "D": "27",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 73,
+      "question": "What is the decimal equivalent of (2F)₁₆?",
+      "options": {
+        "A": "45",
+        "B": "46",
+        "C": "47",
+        "D": "48",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 74,
+      "question": "What is the decimal equivalent of (100)₁₆?",
+      "options": {
+        "A": "128",
+        "B": "200",
+        "C": "255",
+        "D": "256",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 75,
+      "question": "How is a hexadecimal number converted into binary?",
+      "options": {
+        "A": "Replace each hexadecimal digit with its four-bit binary equivalent",
+        "B": "Replace each hexadecimal digit with three bits",
+        "C": "Divide every hexadecimal digit by 8",
+        "D": "Multiply every hexadecimal digit by 2",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 76,
+      "question": "What is the binary equivalent of (A)₁₆?",
+      "options": {
+        "A": "(1001)₂",
+        "B": "(1010)₂",
+        "C": "(1011)₂",
+        "D": "(1100)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 77,
+      "question": "What is the binary equivalent of (3F)₁₆?",
+      "options": {
+        "A": "(00111110)₂",
+        "B": "(00111111)₂",
+        "C": "(00111011)₂",
+        "D": "(00110111)₂",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 78,
+      "question": "How is a hexadecimal number converted into octal according to the tutorial's method?",
+      "options": {
+        "A": "Convert it to binary, then group bits in sets of three",
+        "B": "Convert it to decimal, then group digits in sets of four",
+        "C": "Divide each hexadecimal digit by 10",
+        "D": "Replace each hexadecimal digit with one octal digit directly",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 79,
+      "question": "What is the octal equivalent of (A)₁₆?",
+      "options": {
+        "A": "(10)₈",
+        "B": "(11)₈",
+        "C": "(12)₈",
+        "D": "(13)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 80,
+      "question": "What is the octal equivalent of (FF)₁₆?",
+      "options": {
+        "A": "(367)₈",
+        "B": "(377)₈",
+        "C": "(407)₈",
+        "D": "(477)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": "The hexadecimal symbol A represents decimal 10. Explanation: (1\\times16+10=26). Explanation: (2\\times16+15=47). Explanation: (100_{16}=1\\times16^2=256). Explanation: Each hexadecimal digit is represented by four binary bits. Explanation: Hexadecimal A represents decimal 10, which is 1010 in binary. Explanation: (3=0011) and (F=1111), giving 00111111. Explanation: The hexadecimal number is first converted to binary, then grouped into three-bit sets for octal conversion. Explanation: (A_{16}=10_{10}=12_8). Explanation: (FF_{16}=255_{10}=377_8)."
+    }
+  ]
+}

@@ -1,0 +1,668 @@
+{
+  "id": "cs-pdf-1792032083063-cfbbc32675dd",
+  "fileName": "mcq-cs-pdf-1792032083063-cfbbc32675dd.html",
+  "originalName": "(2)Binary System (1)Number System.pdf",
+  "name": "tocccccc — (2)Binary System (1)Number System",
+  "subject": "toc",
+  "chapterNumber": 1,
+  "mainTopicId": "cs-main-1792032008656-cdd72da555e8",
+  "mainTopicTitle": "toc",
+  "subtopicId": "cs-sub-1792032021400-a478f2c2c5bf",
+  "subtopicTitle": "tocccccc",
+  "questionCount": 50,
+  "createdAt": "2026-10-15T02:41:23.063Z",
+  "updatedAt": "2026-10-15T02:41:23.063Z",
+  "url": "/api/cs/mcq-html/file/cs-pdf-1792032083063-cfbbc32675dd",
+  "questions": [
+    {
+      "number": 1,
+      "question": "When was the Number System tutorial last updated?",
+      "options": {
+        "A": "17 March 2024",
+        "B": "17 March 2025",
+        "C": "17 April 2025",
+        "D": "17 February 2025",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 2,
+      "question": "What is the primary purpose of a number system in a digital system?",
+      "options": {
+        "A": "To represent information",
+        "B": "To design mechanical components",
+        "C": "To store chemical data",
+        "D": "To control hydraulic systems",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 3,
+      "question": "In a digital system, what is used to represent information?",
+      "options": {
+        "A": "Number systems",
+        "B": "Mechanical gears",
+        "C": "Chemical reactions",
+        "D": "Hydraulic pressure",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 4,
+      "question": "The value of a digit in a number system depends on which factor?",
+      "options": {
+        "A": "The digit",
+        "B": "The index or position of the digit",
+        "C": "The base of the number system",
+        "D": "All three factors mentioned above",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 5,
+      "question": "What does the base of a number system indicate?",
+      "options": {
+        "A": "The total number of digits available",
+        "B": "The total number of letters in a word",
+        "C": "The number of decimal points Topic 1: Number System — 10 MCQs",
+        "D": "The length of a computer program",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 6,
+      "question": "What is the base of a number system that uses digits from 0 to 9?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 7,
+      "question": "Which of the following is a number system used in digital computers?",
+      "options": {
+        "A": "Binary Number System",
+        "B": "Roman Number System",
+        "C": "Alphabetic Number System",
+        "D": "Chemical Number System",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 8,
+      "question": "Which of the following best describes the role of a number system?",
+      "options": {
+        "A": "Representing information using digits and symbols",
+        "B": "Manufacturing mechanical components",
+        "C": "Producing electronic pulses physically",
+        "D": "Designing computer networks",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": "The provided content states that the Number System tutorial was last updated on 17 March 2025. Explanation: Number systems are used to represent information in digital systems. Explanation: The content explains that number systems are used to represent information in digital systems. Explanation: The value of a digit depends on the digit itself, its position, and the base of the number system. Explanation: The base indicates the total number of digit symbols available in a number system. Explanation: The decimal number system uses ten digits, from 0 to 9. Explanation: Binary is one of the number systems listed in the tutorial."
+    },
+    {
+      "number": 9,
+      "question": "Which factor indicates the position of a digit in a number?",
+      "options": {
+        "A": "Index",
+        "B": "Colour",
+        "C": "Shape",
+        "D": "Sound",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 10,
+      "question": "Which statement about number systems is supported by the provided content?",
+      "options": {
+        "A": "They are used to represent information in digital systems",
+        "B": "They are used only in chemical laboratories",
+        "C": "They contain only alphabetic characters",
+        "D": "They cannot represent numerical values",
+        "E": "Not Attempt Topic 2: Types of Number System — 40 MCQs"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 11,
+      "question": "How many types of number systems are listed in the provided content?",
+      "options": {
+        "A": "Two",
+        "B": "Three",
+        "C": "Four",
+        "D": "Five",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 12,
+      "question": "Which of the following is a type of number system used in digital computers?",
+      "options": {
+        "A": "Binary Number System",
+        "B": "Roman Number System",
+        "C": "Alphabetic Number System",
+        "D": "Chemical Number System",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 13,
+      "question": "Which number system uses only two digits?",
+      "options": {
+        "A": "Decimal",
+        "B": "Binary",
+        "C": "Octal",
+        "D": "Hexadecimal",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 14,
+      "question": "What is the base of the Binary Number System?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 15,
+      "question": "Which digits are used in the Binary Number System?",
+      "options": {
+        "A": "0 and 1",
+        "B": "0 to 7",
+        "C": "0 to 9",
+        "D": "0 to 15",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 16,
+      "question": "What does the absence of an electronic pulse represent in the Binary Number System?",
+      "options": {
+        "A": "0",
+        "B": "1",
+        "C": "8",
+        "D": "10",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 17,
+      "question": "What does the presence of an electronic pulse represent in the Binary Number System?",
+      "options": {
+        "A": "0",
+        "B": "1",
+        "C": "2",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 18,
+      "question": "What is a single binary digit called?",
+      "options": {
+        "A": "Byte",
+        "B": "Nibble",
+        "C": "Bit",
+        "D": "Kilobyte",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 19,
+      "question": "What is a collection of four bits called?",
+      "options": {
+        "A": "Byte",
+        "B": "Nibble",
+        "C": "Word",
+        "D": "Kilobyte",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 20,
+      "question": "How many bits are present in a byte, according to the provided content?",
+      "options": {
+        "A": "2",
+        "B": "4",
+        "C": "8",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 21,
+      "question": "Which number system is also known as the base 2 number system?",
+      "options": {
+        "A": "Decimal",
+        "B": "Binary",
+        "C": "Octal",
+        "D": "Hexadecimal",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 22,
+      "question": "What does the position of a digit in a binary number represent?",
+      "options": {
+        "A": "A specific power of the base 2",
+        "B": "A specific power of the base 8",
+        "C": "A specific power of the base 10",
+        "D": "A specific power of the base 16",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": "The content describes number systems as a way to represent information using digits and symbols. Explanation: The index indicates the position of a digit in a number. Explanation: The tutorial explicitly states that number systems are used to represent information in digital systems. Explanation: The content lists Binary, Decimal, Hexadecimal, and Octal number systems. Explanation: Binary is explicitly listed as a number system used in digital computers. Explanation: Binary uses only two digits: 0 and 1. Explanation: Binary is the base 2 number system. Explanation: The only digits used in binary are 0 and 1. Explanation: The tutorial associates the absence of an electronic pulse with 0. Explanation: The tutorial associates the presence of an electronic pulse with 1. Explanation: Each digit in a binary number is called a bit. Explanation: A collection of four bits is called a nibble. Explanation: The provided content defines a byte as a collection of eight bits. Explanation: Binary is also known as the base 2 number system. Explanation: Each digit position in a binary number represents a power of its base, 2."
+    },
+    {
+      "number": 23,
+      "question": "Which of the following is an example of a binary number given in the content?",
+      "options": {
+        "A": "(10100)₂",
+        "B": "(258)₈",
+        "C": "(19)₂",
+        "D": "(AB)₁₀",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 24,
+      "question": "Which number system is commonly used in everyday life?",
+      "options": {
+        "A": "Binary",
+        "B": "Decimal",
+        "C": "Octal",
+        "D": "Hexadecimal",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 25,
+      "question": "What is the base of the Decimal Number System?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 26,
+      "question": "Which digits are used in the Decimal Number System?",
+      "options": {
+        "A": "0 and 1",
+        "B": "0 to 7",
+        "C": "0 to 9",
+        "D": "0 to 15",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 27,
+      "question": "What is the minimum digit value in the Decimal Number System?",
+      "options": {
+        "A": "0",
+        "B": "1",
+        "C": "8",
+        "D": "9",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 28,
+      "question": "What is the maximum digit value in the Decimal Number System?",
+      "options": {
+        "A": "7",
+        "B": "8",
+        "C": "9",
+        "D": "10",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 29,
+      "question": "In the decimal number 2541, which digit occupies the units position?",
+      "options": {
+        "A": "2",
+        "B": "5",
+        "C": "4",
+        "D": "1",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 30,
+      "question": "In the decimal number 2541, which digit occupies the tens position?",
+      "options": {
+        "A": "1",
+        "B": "4",
+        "C": "5",
+        "D": "2",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 31,
+      "question": "In the decimal number 2541, which digit occupies the hundreds position?",
+      "options": {
+        "A": "1",
+        "B": "4",
+        "C": "5",
+        "D": "2",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 32,
+      "question": "In the decimal number 2541, which digit occupies the thousands position?",
+      "options": {
+        "A": "1",
+        "B": "4",
+        "C": "5",
+        "D": "2",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 33,
+      "question": "Which number system has a base of 8?",
+      "options": {
+        "A": "Binary",
+        "B": "Decimal",
+        "C": "Octal",
+        "D": "Hexadecimal",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 34,
+      "question": "Which digits are used in the Octal Number System?",
+      "options": {
+        "A": "0 and 1",
+        "B": "0 to 7",
+        "C": "0 to 9",
+        "D": "0 to 15",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 35,
+      "question": "How many possible digit values are available in the Octal Number System?",
+      "options": {
+        "A": "Two",
+        "B": "Eight",
+        "C": "Ten",
+        "D": "Sixteen",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 36,
+      "question": "How many bits are required to represent an octal digit, according to the tutorial?",
+      "options": {
+        "A": "One bit",
+        "B": "Two bits",
+        "C": "Three bits",
+        "D": "Four bits",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 37,
+      "question": "Which of the following is a valid octal number listed in the content?",
+      "options": {
+        "A": "(273)₈",
+        "B": "(298)₈",
+        "C": "(589)₈",
+        "D": "(819)₈",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": "(10100)₂ is one of the binary examples explicitly listed in the content. Explanation: The tutorial states that decimal numbers are used in everyday life. Explanation: The decimal number system has base 10. Explanation: Decimal uses the ten digits from 0 through 9. Explanation: The minimum digit value in the decimal system is 0. Explanation: The maximum digit value in the decimal system is 9. Explanation: In 2541, the rightmost digit 1 occupies the units position. Explanation: In 2541, the digit 4 occupies the tens position. Explanation: In 2541, the digit 5 occupies the hundreds position. Explanation: In 2541, the digit 2 occupies the thousands position. Explanation: The octal number system uses base 8. Explanation: Octal uses eight digits, from 0 through 7. Explanation: The octal system has eight possible digit values. Explanation: The provided tutorial states that an octal digit can be represented using three bits. Explanation: (273)₈ is listed as an example of an octal number in the content."
+    },
+    {
+      "number": 38,
+      "question": "Which binary group represents octal digit 5 in the provided table?",
+      "options": {
+        "A": "001",
+        "B": "010",
+        "C": "101",
+        "D": "111",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 39,
+      "question": "Which binary group represents octal digit 7 in the provided table?",
+      "options": {
+        "A": "011",
+        "B": "100",
+        "C": "110",
+        "D": "111",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 40,
+      "question": "Which number system uses sixteen symbols?",
+      "options": {
+        "A": "Binary",
+        "B": "Decimal",
+        "C": "Octal",
+        "D": "Hexadecimal",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 41,
+      "question": "What is the base of the Hexadecimal Number System?",
+      "options": {
+        "A": "2",
+        "B": "8",
+        "C": "10",
+        "D": "16",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 42,
+      "question": "Which symbols are used in the Hexadecimal Number System?",
+      "options": {
+        "A": "Only 0 and 1",
+        "B": "Digits 0 to 7",
+        "C": "Digits 0 to 9 and letters A to F",
+        "D": "Letters A to Z only",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 43,
+      "question": "Which hexadecimal letter represents decimal value 10?",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "F",
+        "E": "Not Attempt"
+      },
+      "answer": "A",
+      "explanation": ""
+    },
+    {
+      "number": 44,
+      "question": "Which hexadecimal letter represents decimal value 11?",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "D",
+        "D": "E",
+        "E": "Not Attempt"
+      },
+      "answer": "B",
+      "explanation": ""
+    },
+    {
+      "number": 45,
+      "question": "Which hexadecimal letter represents decimal value 12?",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "F",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 46,
+      "question": "Which hexadecimal letter represents decimal value 13?",
+      "options": {
+        "A": "B",
+        "B": "C",
+        "C": "D",
+        "D": "E",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 47,
+      "question": "Which hexadecimal letter represents decimal value 14?",
+      "options": {
+        "A": "A",
+        "B": "C",
+        "C": "E",
+        "D": "F",
+        "E": "Not Attempt"
+      },
+      "answer": "C",
+      "explanation": ""
+    },
+    {
+      "number": 48,
+      "question": "Which hexadecimal letter represents decimal value 15?",
+      "options": {
+        "A": "B",
+        "B": "D",
+        "C": "E",
+        "D": "F",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 49,
+      "question": "How many bits are required to represent one hexadecimal digit?",
+      "options": {
+        "A": "One bit",
+        "B": "Two bits",
+        "C": "Three bits",
+        "D": "Four bits",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": ""
+    },
+    {
+      "number": 50,
+      "question": "Which binary group represents hexadecimal symbol F in the provided table?",
+      "options": {
+        "A": "1010",
+        "B": "1100",
+        "C": "1110",
+        "D": "1111",
+        "E": "Not Attempt"
+      },
+      "answer": "D",
+      "explanation": "The octal digit 5 corresponds to binary group 101 in the provided table. Explanation: The octal digit 7 corresponds to binary group 111 in the provided table. Explanation: The hexadecimal number system uses sixteen symbols. Explanation: Hexadecimal is the base 16 number system. Explanation: Hexadecimal uses ten digits and six letters, giving sixteen symbols. Explanation: The hexadecimal symbol A represents decimal value 10. Explanation: The hexadecimal symbol B represents decimal value 11. Explanation: The hexadecimal symbol C represents decimal value 12. Explanation: The hexadecimal symbol D represents decimal value 13. Explanation: The hexadecimal symbol E represents decimal value 14. Explanation: The hexadecimal symbol F represents decimal value 15. Explanation: The tutorial states that four bits are required to represent a hexadecimal digit. Explanation: The provided hexadecimal conversion table maps binary group 1111 to hexadecimal symbol F."
+    }
+  ]
+}

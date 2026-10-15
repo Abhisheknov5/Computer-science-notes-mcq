@@ -25,19 +25,52 @@
       "url": "/api/cs/mcq-html/file/cs-1791940036180-17f64675e8d5"
     },
     {
-      "id": "cs-pdf-1792010815336-df1f684614db",
-      "fileName": "mcq-cs-pdf-1792010815336-df1f684614db.html",
-      "originalName": "DE-6.pdf",
-      "name": "Introduction to Digital Electronics — PDF MCQs",
-      "questionCount": 80,
+      "id": "cs-pdf-1792028551041-984e320a012b",
+      "fileName": "mcq-cs-pdf-1792028551041-984e320a012b.html",
+      "originalName": "1-Digital Electronics Tutorial.pdf",
+      "name": "Introduction to Digital Electronics — 1-Digital Electronics Tutorial",
+      "subject": "de",
+      "chapterNumber": 1,
       "mainTopicId": "cs-main-1792006824835-560e587769aa",
-      "subtopicId": "cs-sub-1792006836334-ec1178045e10",
       "mainTopicTitle": "Digital Electronics",
+      "subtopicId": "cs-sub-1792023083987-6d5c96797882",
       "subtopicTitle": "Introduction to Digital Electronics",
-      "createdAt": "2026-10-14T20:46:55.337Z",
-      "updatedAt": "2026-10-14T20:46:55.337Z",
-      "url": "/api/cs/mcq-html/file/cs-pdf-1792010815336-df1f684614db",
-      "sourceType": "pdf"
+      "questionCount": 20,
+      "createdAt": "2026-10-15T01:42:31.041Z",
+      "updatedAt": "2026-10-15T01:42:31.041Z",
+      "url": "/api/cs/mcq-html/file/cs-pdf-1792028551041-984e320a012b"
+    },
+    {
+      "id": "cs-pdf-1792028560037-acbb249a95d3",
+      "fileName": "mcq-cs-pdf-1792028560037-acbb249a95d3.html",
+      "originalName": "(2)Binary System (1)Number System.pdf",
+      "name": "Number System — (2)Binary System (1)Number System",
+      "subject": "de",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1792011065650-b7526f0e658a",
+      "mainTopicTitle": "Binary System",
+      "subtopicId": "cs-sub-1792011077621-dbbd0b0d94c5",
+      "subtopicTitle": "Number System",
+      "questionCount": 50,
+      "createdAt": "2026-10-15T01:42:40.037Z",
+      "updatedAt": "2026-10-15T01:42:40.037Z",
+      "url": "/api/cs/mcq-html/file/cs-pdf-1792028560037-acbb249a95d3"
+    },
+    {
+      "id": "cs-pdf-1792031029992-888f0522991d",
+      "fileName": "mcq-cs-pdf-1792031029992-888f0522991d.html",
+      "originalName": "2-Number Base Conversion.pdf",
+      "name": "Number Base Conversion — 2-Number Base Conversion",
+      "subject": "de",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1792011065650-b7526f0e658a",
+      "mainTopicTitle": "Binary System",
+      "subtopicId": "cs-sub-1792030259691-f944dedbde86",
+      "subtopicTitle": "Number Base Conversion",
+      "questionCount": 80,
+      "createdAt": "2026-10-15T02:23:49.992Z",
+      "updatedAt": "2026-10-15T02:23:49.992Z",
+      "url": "/api/cs/mcq-html/file/cs-pdf-1792031029992-888f0522991d"
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "cs-pdf-1792032083063-cfbbc32675dd",
+      "fileName": "mcq-cs-pdf-1792032083063-cfbbc32675dd.html",
+      "originalName": "(2)Binary System (1)Number System.pdf",
+      "name": "tocccccc — (2)Binary System (1)Number System",
+      "subject": "toc",
+      "chapterNumber": 1,
+      "mainTopicId": "cs-main-1792032008656-cdd72da555e8",
+      "mainTopicTitle": "toc",
+      "subtopicId": "cs-sub-1792032021400-a478f2c2c5bf",
+      "subtopicTitle": "tocccccc",
+      "questionCount": 50,
+      "createdAt": "2026-10-15T02:41:23.063Z",
+      "updatedAt": "2026-10-15T02:41:23.063Z",
+      "url": "/api/cs/mcq-html/file/cs-pdf-1792032083063-cfbbc32675dd"
+    }
+  ]
+}
