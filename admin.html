@@ -592,7 +592,16 @@
                 <div class="section-heading"><div><h2>📕 PDF se MCQ Import</h2><p>Selected Subject → Main Topic → Subtopic mein PDF se numbered questions aur options extract karein. Existing HTML upload alag se available rahega.</p></div></div>
                 <div class="upload-grid">
                     <div class="file-drop"><div class="upload-icon">📕</div><strong>MCQ PDF file select karein</strong><div class="file-select-row"><input type="file" id="mcqPdfFile" accept="application/pdf,.pdf"></div><div id="pdfFileName" class="file-name">No PDF selected</div></div>
-                    <div class="upload-side"><button type="button" class="primary-btn" onclick="uploadMCQPDF()">📥 Extract MCQs from PDF</button><div id="pdfUploadMessage" class="message"></div><div id="pdfImportPreview"></div></div>
+                    <div class="upload-side">
+                        <div class="upload-summary">
+                            <div><span>Subject</span><strong id="pdfUploadSubjectText">—</strong></div>
+                            <div><span>Main Topic</span><strong id="pdfUploadMainTopicText">—</strong></div>
+                            <div><span>Subtopic</span><strong id="pdfUploadSubtopicText">—</strong></div>
+                        </div>
+                        <button type="button" class="primary-btn" onclick="uploadMCQPDF()">📥 Extract MCQs from PDF</button>
+                        <div id="pdfUploadMessage" class="message"></div>
+                        <div id="pdfImportPreview"></div>
+                    </div>
                 </div>
             </section>
 
@@ -860,7 +869,7 @@
 </div>
 
 
-<script src="js/admin.js"></script>
+<script src="js/admin.js?v=20261015-pdf-metadata-sync-fix"></script>
 
 
 <script>

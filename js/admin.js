@@ -168,6 +168,17 @@ function updateSelectionUI(){
     const uploadSubtopic=getElementOptional("uploadSubtopicText");
     if(uploadSubtopic) uploadSubtopic.textContent=currentSubtopic?.title||"—";
 
+    // Keep the PDF import summary in sync with the same selected hierarchy
+    // shown by the existing HTML upload panel.
+    const pdfUploadSubject=getElementOptional("pdfUploadSubjectText");
+    if(pdfUploadSubject) pdfUploadSubject.textContent=currentSubject?subjectText:"—";
+
+    const pdfUploadMainTopic=getElementOptional("pdfUploadMainTopicText");
+    if(pdfUploadMainTopic) pdfUploadMainTopic.textContent=currentMainTopic?.title||"—";
+
+    const pdfUploadSubtopic=getElementOptional("pdfUploadSubtopicText");
+    if(pdfUploadSubtopic) pdfUploadSubtopic.textContent=currentSubtopic?.title||"—";
+
     const description=getElementOptional("listDescription");
     if(description){
         description.textContent=currentSubject&&currentChapter
