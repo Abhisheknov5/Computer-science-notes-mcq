@@ -2513,11 +2513,25 @@ app.get("/api/cs/main-topics/:subject", async (req, res) => {
     try {
         const subject = normalizeCSSubject(req.params.subject);
 
-        const mainTopics = readCSChapters()
+        const rawMainTopics = readCSChapters()
             .filter(item =>
                 String(item.subject).toLowerCase() === subject
             )
             .sort((a, b) => Number(a.number) - Number(b.number));
+
+        // Public chapter/topic page uses this legacy endpoint. Deduplicate by
+        // normalized title here as well as in the V2 endpoint, because older
+        // data may contain duplicate records with different IDs/numbers.
+        const seenMainTopicTitles = new Set();
+        const mainTopics = rawMainTopics.filter(item => {
+            const titleKey = String(item.title || item.chapterTitle || "")
+                .trim()
+                .replace(/\s+/g, " ")
+                .toLocaleLowerCase();
+            if (!titleKey || seenMainTopicTitles.has(titleKey)) return false;
+            seenMainTopicTitles.add(titleKey);
+            return true;
+        }).map((item, index) => ({ ...item, number: index + 1 }));
 
         const allSubtopics = readCSSubtopics()
             .filter(item =>
