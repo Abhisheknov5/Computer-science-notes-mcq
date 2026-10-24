@@ -2373,7 +2373,7 @@ async function getOrderedCSSubtopics(subject, chapterNumber, mainTopicId) {
         );
     }
 
-    return all.sort((a, b) =>
+    const sorted = all.sort((a, b) =>
         (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
         (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
         String(a.title || "").localeCompare(
@@ -2382,6 +2382,19 @@ async function getOrderedCSSubtopics(subject, chapterNumber, mainTopicId) {
             { sensitivity: "base" }
         )
     );
+
+    // Same subtopic title can exist with different IDs in local JSON and Firestore.
+    // Hide repeated titles in the UI without deleting or rewriting stored records.
+    const seenTitles = new Set();
+    return sorted.filter(item => {
+        const titleKey = String(item.title || "")
+            .trim()
+            .replace(/\s+/g, " ")
+            .toLocaleLowerCase();
+        if (!titleKey || seenTitles.has(titleKey)) return false;
+        seenTitles.add(titleKey);
+        return true;
+    });
 }
 
 /* ------------------------------------------------------
@@ -4560,7 +4573,7 @@ app.get("/api/cs/main-topics/:subject/:chapterNumber",async(req,res)=>{
         });
         const byTitle=new Map();
         [...byId.values()].forEach(item=>{
-            const key=String(item.title||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+            const key=String(item.title||"").trim().replace(/\s+/g," ").toLocaleLowerCase();
             if(!key) return;
             if(!byTitle.has(key)) byTitle.set(key,item);
         });
@@ -4594,7 +4607,7 @@ app.post("/api/cs/main-topics",requireOwner,async(req,res)=>{
             catch(error){ console.warn("CS Main Topic duplicate check failed:",error.message); }
         }
 
-        const normalizeTopicTitle=value=>String(value||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+        const normalizeTopicTitle=value=>String(value||"").trim().replace(/\s+/g," ").toLocaleLowerCase();
         const duplicate=allExisting.find(x=>
             String(x.subject).toLowerCase()===subject &&
             Number(x.chapterNumber)===chapterNumber &&
@@ -4787,7 +4800,7 @@ app.post("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
             catch(error){ console.warn("CS Subtopic duplicate check failed:",error.message); }
         }
 
-        const normalizeSubtopicTitle=value=>String(value||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+        const normalizeSubtopicTitle=value=>String(value||"").trim().replace(/\s+/g," ").toLocaleLowerCase();
         const duplicate=allExisting.find(x=>
             String(x.subject).toLowerCase()===subject &&
             Number(x.chapterNumber)===chapterNumber &&
