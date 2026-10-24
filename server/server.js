@@ -2513,25 +2513,11 @@ app.get("/api/cs/main-topics/:subject", async (req, res) => {
     try {
         const subject = normalizeCSSubject(req.params.subject);
 
-        const rawMainTopics = readCSChapters()
+        const mainTopics = readCSChapters()
             .filter(item =>
                 String(item.subject).toLowerCase() === subject
             )
             .sort((a, b) => Number(a.number) - Number(b.number));
-
-        // Public chapter/topic page uses this legacy endpoint. Deduplicate by
-        // normalized title here as well as in the V2 endpoint, because older
-        // data may contain duplicate records with different IDs/numbers.
-        const seenMainTopicTitles = new Set();
-        const mainTopics = rawMainTopics.filter(item => {
-            const titleKey = String(item.title || item.chapterTitle || "")
-                .trim()
-                .replace(/\s+/g, " ")
-                .toLocaleLowerCase();
-            if (!titleKey || seenMainTopicTitles.has(titleKey)) return false;
-            seenMainTopicTitles.add(titleKey);
-            return true;
-        }).map((item, index) => ({ ...item, number: index + 1 }));
 
         const allSubtopics = readCSSubtopics()
             .filter(item =>
@@ -5087,10 +5073,23 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
 
         mains.sort((a,b)=>Number(a.order||0)-Number(b.order||0) || String(a.title||'').localeCompare(String(b.title||''),undefined,{sensitivity:'base'}));
 
-        const items=mains.map(main=>{
+        // Merge duplicate main-topic titles for public display without deleting stored records.
+        // Keep all source IDs in the group so subtopics/MCQs attached to either duplicate remain available.
+        const normalizePublicTopicTitle=value=>String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase();
+        const mainGroups=new Map();
+        for(const main of mains){
+            const titleKey=normalizePublicTopicTitle(main.title);
+            const chapterKey=Number(main.chapterNumber);
+            const key=`${chapterKey}::${titleKey}`;
+            if(!mainGroups.has(key)) mainGroups.set(key,{main,ids:new Set()});
+            mainGroups.get(key).ids.add(String(main.id));
+        }
+
+        const items=[...mainGroups.values()].map(({main,ids})=>{
             const chapterNumber=Number(main.chapterNumber);
             const chapterMcqs=mcqByChapter.get(chapterNumber)||[];
-            const children=subs.filter(s=>String(s.mainTopicId||'')===String(main.id))
+            const seenSubtopicTitles=new Set();
+            const children=subs.filter(s=>ids.has(String(s.mainTopicId||'')))
                 .sort((a,b)=>
                     (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
                     (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
@@ -5100,6 +5099,12 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
                         {sensitivity:'base'}
                     )
                 )
+                .filter(sub=>{
+                    const key=normalizePublicTopicTitle(sub.title);
+                    if(!key || seenSubtopicTitles.has(key)) return false;
+                    seenSubtopicTitles.add(key);
+                    return true;
+                })
                 .map(sub=>({
                     ...sub,
                     mcqSets:chapterMcqs.filter(item=>String(item.subtopicId||'')===String(sub.id))
