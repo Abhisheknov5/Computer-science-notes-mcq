@@ -4550,10 +4550,22 @@ app.get("/api/cs/main-topics/:subject/:chapterNumber",async(req,res)=>{
             }catch{}
         }
 
-        const map=new Map();
-        [...local,...remote].forEach(x=>x?.id&&map.set(String(x.id),x));
+        // Merge local JSON + Firestore by both ID and normalized title.
+        // Older duplicate records can have different IDs, so ID-only merging
+        // still displayed the same topic multiple times.
+        const byId=new Map();
+        [...local,...remote].forEach(x=>{
+            if(!x?.id) return;
+            byId.set(String(x.id),x);
+        });
+        const byTitle=new Map();
+        [...byId.values()].forEach(item=>{
+            const key=String(item.title||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+            if(!key) return;
+            if(!byTitle.has(key)) byTitle.set(key,item);
+        });
 
-        const items=[...map.values()].sort((a,b)=>
+        const items=[...byTitle.values()].sort((a,b)=>
             Number(a.order||0)-Number(b.order||0) ||
             String(a.title||"").localeCompare(String(b.title||""),undefined,{sensitivity:"base"})
         );
@@ -4576,15 +4588,22 @@ app.post("/api/cs/main-topics",requireOwner,async(req,res)=>{
         if(!chapter) throw new Error("Pehle Course/Chapter select karein.");
 
         const items=readCSMainTopicsV2();
+        let allExisting=[...items];
+        if(firebaseEnabled&&db){
+            try{ allExisting=allExisting.concat(await getFirebaseCSMainTopicsV2()); }
+            catch(error){ console.warn("CS Main Topic duplicate check failed:",error.message); }
+        }
 
-        const duplicate=items.find(x=>
+        const normalizeTopicTitle=value=>String(value||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+        const duplicate=allExisting.find(x=>
             String(x.subject).toLowerCase()===subject &&
             Number(x.chapterNumber)===chapterNumber &&
-            String(x.title||"").trim().toLowerCase()===title.toLowerCase()
+            normalizeTopicTitle(x.title)===normalizeTopicTitle(title)
         );
 
         if(duplicate){
-            return res.json({success:true,item:duplicate,migratedLegacySubtopics:0});
+            // Return the existing record instead of creating another ID.
+            return res.json({success:true,item:duplicate,migratedLegacySubtopics:0,duplicatePrevented:true});
         }
 
         const siblings=items.filter(x=>
@@ -4762,15 +4781,21 @@ app.post("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
         if(!mainTopic) throw new Error("Selected Main Topic valid nahi hai.");
 
         const items=backfillLocalCSSubtopicOrders();
+        let allExisting=[...items];
+        if(firebaseEnabled&&db){
+            try{ allExisting=allExisting.concat(await getFirebaseCSSubtopics()); }
+            catch(error){ console.warn("CS Subtopic duplicate check failed:",error.message); }
+        }
 
-        const duplicate=items.find(x=>
+        const normalizeSubtopicTitle=value=>String(value||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+        const duplicate=allExisting.find(x=>
             String(x.subject).toLowerCase()===subject &&
             Number(x.chapterNumber)===chapterNumber &&
             String(x.mainTopicId||"")===mainTopicId &&
-            String(x.title||"").trim().toLowerCase()===title.toLowerCase()
+            normalizeSubtopicTitle(x.title)===normalizeSubtopicTitle(title)
         );
 
-        if(duplicate) return res.json({success:true,item:duplicate});
+        if(duplicate) return res.json({success:true,item:duplicate,duplicatePrevented:true});
 
         let siblingOrders=items
             .filter(x =>
