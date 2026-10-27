@@ -3139,19 +3139,44 @@ app.delete("/api/cs/mcq-html",requireOwner,async(req,res)=>{
     try{
         const subject=normalizeCSSubject(req.body.subject);
         const chapterNumber=Number(req.body.chapterNumber);
-        const id=String(req.body.id||"");
+        const id=String(req.body.id||"").trim();
+        if(!id) return res.status(400).json({success:false,message:"MCQ ID missing hai."});
+
         const items=readCSMCQMetadata(subject,chapterNumber);
-        const item=items.find(x=>x.id===id);
-        if(!item) return res.status(404).json({success:false,message:"MCQ nahi mila."});
+        const item=items.find(x=>String(x.id)===id);
+        const ref=(firebaseEnabled&&db)?firestoreHTMLRef(id):null;
+        let firebaseSnapshot=null;
 
-        writeCSMCQMetadata(subject,chapterNumber,items.filter(x=>x.id!==id));
+        if(ref){
+            firebaseSnapshot=await ref.get();
+        }
 
-        const file=path.join(csChapterDir(subject,chapterNumber),item.fileName);
-        if(fs.existsSync(file)) fs.unlinkSync(file);
-        if(firebaseEnabled&&db){try{await deleteHTMLFromFirebase(id);}catch{}}
+        if(!item && !firebaseSnapshot?.exists){
+            return res.status(404).json({success:false,message:"MCQ nahi mila."});
+        }
 
-        res.json({success:true});
-    }catch(error){res.status(400).json({success:false,message:error.message});}
+        // Firebase-backed sets may appear in the admin list even when there is
+        // no local metadata entry. Delete the selected Firebase record first;
+        // if that fails, leave local data untouched so the set cannot silently reappear.
+        if(firebaseSnapshot?.exists){
+            await deleteHTMLFromFirebase(id);
+        }
+
+        if(item){
+            const file=path.join(csChapterDir(subject,chapterNumber),item.fileName);
+            if(fs.existsSync(file)) fs.unlinkSync(file);
+            writeCSMCQMetadata(subject,chapterNumber,items.filter(x=>String(x.id)!==id));
+        }
+
+        res.json({
+            success:true,
+            message:"Selected MCQ Set delete ho gaya.",
+            deletedLocal:Boolean(item),
+            deletedFirebase:Boolean(firebaseSnapshot?.exists)
+        });
+    }catch(error){
+        res.status(400).json({success:false,message:error.message||"MCQ delete nahi hua."});
+    }
 });
 
 app.get("/api/cs/subject-notes/:subject",async(req,res)=>{
@@ -4763,10 +4788,41 @@ app.get("/api/cs/subtopics-v2/:subject/:chapterNumber",async(req,res)=>{
 
         if(!mainTopic) return res.status(404).json({success:false,message:"Main Topic nahi mila."});
 
-        const items = await getOrderedCSSubtopics(
-            subject,
-            chapterNumber,
-            mainTopicId
+        // A public topic may merge older duplicate main-topic IDs by title.
+        // Load subtopics from all matching IDs so the admin list can manage
+        // legacy subtopics instead of showing a different list from the public page.
+        const normalizeMainTitle=value=>String(value||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+        const targetTitle=normalizeMainTitle(mainTopic.title);
+        let candidateMains=readCSMainTopicsV2().filter(x=>
+            String(x.subject).toLowerCase()===subject &&
+            Number(x.chapterNumber)===chapterNumber &&
+            normalizeMainTitle(x.title)===targetTitle
+        );
+        if(firebaseEnabled&&db){
+            try{
+                const remoteMains=await getFirebaseCSMainTopicsV2();
+                const byId=new Map(candidateMains.map(x=>[String(x.id),x]));
+                remoteMains.filter(x=>
+                    String(x.subject).toLowerCase()===subject &&
+                    Number(x.chapterNumber)===chapterNumber &&
+                    normalizeMainTitle(x.title)===targetTitle
+                ).forEach(x=>{if(!byId.has(String(x.id))) byId.set(String(x.id),x);});
+                candidateMains=[...byId.values()];
+            }catch{}
+        }
+        if(!candidateMains.some(x=>String(x.id)===mainTopicId)) candidateMains.push(mainTopic);
+
+        const combined=new Map();
+        for(const candidate of candidateMains){
+            const children=await getOrderedCSSubtopics(subject,chapterNumber,String(candidate.id));
+            for(const child of children){
+                if(child?.id && !combined.has(String(child.id))) combined.set(String(child.id),child);
+            }
+        }
+        const items=[...combined.values()].sort((a,b)=>
+            (numericSubtopicOrder(a) ?? Number.MAX_SAFE_INTEGER) -
+            (numericSubtopicOrder(b) ?? Number.MAX_SAFE_INTEGER) ||
+            String(a.title||"").localeCompare(String(b.title||""),undefined,{sensitivity:"base"})
         );
 
         res.json({
@@ -4877,6 +4933,7 @@ app.patch("/api/cs/subtopics-v2/rename",requireOwner,async(req,res)=>{
         const mainTopicId=String(req.body.mainTopicId||"").trim();
         const id=String(req.body.id||"").trim();
         const newTitle=String(req.body.newTitle||"").trim();
+        if(!id||!mainTopicId||!newTitle) throw new Error("Subtopic, Main Topic aur naya naam required hai.");
 
         const items=readCSSubtopics();
         const index=items.findIndex(x=>
@@ -4885,28 +4942,40 @@ app.patch("/api/cs/subtopics-v2/rename",requireOwner,async(req,res)=>{
             Number(x.chapterNumber)===chapterNumber &&
             String(x.mainTopicId||"")===mainTopicId
         );
+        let target=index>=0?items[index]:null;
+        if(!target&&firebaseEnabled&&db){
+            const remote=await getFirebaseCSSubtopics();
+            target=remote.find(x=>
+                String(x.id)===id &&
+                String(x.subject).toLowerCase()===subject &&
+                Number(x.chapterNumber)===chapterNumber &&
+                String(x.mainTopicId||"")===mainTopicId
+            )||null;
+        }
+        if(!target) return res.status(404).json({success:false,message:"Subtopic nahi mila."});
 
-        if(index<0) return res.status(404).json({success:false,message:"Subtopic nahi mila."});
-
-        const duplicate=items.some(x=>
+        let allItems=[...items];
+        if(firebaseEnabled&&db){
+            try{allItems=allItems.concat(await getFirebaseCSSubtopics());}catch{}
+        }
+        const normalized=value=>String(value||"").trim().replace(/\\s+/g," ").toLocaleLowerCase();
+        const duplicate=allItems.some(x=>
             String(x.id)!==id &&
             String(x.subject).toLowerCase()===subject &&
             Number(x.chapterNumber)===chapterNumber &&
             String(x.mainTopicId||"")===mainTopicId &&
-            String(x.title||"").trim().toLowerCase()===newTitle.toLowerCase()
+            normalized(x.title)===normalized(newTitle)
         );
-
         if(duplicate) return res.status(409).json({success:false,message:"Is naam ka Subtopic already hai."});
 
-        items[index].title=newTitle;
-        items[index].updatedAt=new Date().toISOString();
-        writeCSSubtopics(items);
-
-        if(firebaseEnabled&&db){
-            try{await saveFirebaseCSSubtopic(items[index]);}catch{}
+        target.title=newTitle;
+        target.updatedAt=new Date().toISOString();
+        if(index>=0){
+            items[index]=target;
+            writeCSSubtopics(items);
         }
-
-        res.json({success:true,item:items[index]});
+        if(firebaseEnabled&&db) await saveFirebaseCSSubtopic(target);
+        res.json({success:true,item:target});
     }catch(error){
         res.status(400).json({success:false,message:error.message});
     }
@@ -4918,22 +4987,31 @@ app.delete("/api/cs/subtopics-v2",requireOwner,async(req,res)=>{
         const chapterNumber=Number(req.body.chapterNumber);
         const mainTopicId=String(req.body.mainTopicId||"").trim();
         const id=String(req.body.id||"").trim();
+        if(!id||!mainTopicId) throw new Error("Subtopic aur Main Topic required hai.");
 
         const items=readCSSubtopics();
-        const found=items.find(x=>
+        const index=items.findIndex(x=>
             String(x.id)===id &&
             String(x.subject).toLowerCase()===subject &&
             Number(x.chapterNumber)===chapterNumber &&
             String(x.mainTopicId||"")===mainTopicId
         );
-
-        if(!found) return res.status(404).json({success:false,message:"Subtopic nahi mila."});
-
-        writeCSSubtopics(items.filter(x=>String(x.id)!==id));
-
+        let remoteFound=false;
         if(firebaseEnabled&&db){
-            try{await deleteFirebaseCSSubtopic(id);}catch{}
+            const remote=await getFirebaseCSSubtopics();
+            remoteFound=remote.some(x=>
+                String(x.id)===id &&
+                String(x.subject).toLowerCase()===subject &&
+                Number(x.chapterNumber)===chapterNumber &&
+                String(x.mainTopicId||"")===mainTopicId
+            );
         }
+        if(index<0&&!remoteFound) return res.status(404).json({success:false,message:"Subtopic nahi mila."});
+
+        // Delete Firebase first when a remote copy exists. If this fails,
+        // retain the local registry so the item does not silently reappear.
+        if(remoteFound) await deleteFirebaseCSSubtopic(id);
+        if(index>=0) writeCSSubtopics(items.filter(x=>String(x.id)!==id));
 
         res.json({success:true,message:"Subtopic delete ho gaya. Existing MCQ files delete nahi hue."});
     }catch(error){

@@ -1622,7 +1622,7 @@ async function renameCSSubtopic(id){
             body:JSON.stringify({
                 subject:subjectIdMap[currentSubject],
                 chapterNumber:Number(currentChapter),
-                mainTopicId:currentMainTopic?.id||item.mainTopicId||"",
+                mainTopicId:item.mainTopicId||currentMainTopic?.id||"",
                 id:item.id,
                 newTitle
             })
@@ -1651,7 +1651,7 @@ async function deleteCSSubtopic(id){
             body:JSON.stringify({
                 subject:subjectIdMap[currentSubject],
                 chapterNumber:Number(currentChapter),
-                mainTopicId:currentMainTopic?.id||item.mainTopicId||"",
+                mainTopicId:item.mainTopicId||currentMainTopic?.id||"",
                 id:item.id
             })
         });
