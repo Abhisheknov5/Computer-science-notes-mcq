@@ -100,6 +100,31 @@ function firestoreHTMLRef(id) {
     return db.collection("mcqHtml").doc(String(id));
 }
 
+// Persistent tombstones prevent deleted MCQs from returning from stale local
+// copies or Firestore during later uploads and public hierarchy merges.
+function deletedHTMLRef(id) {
+    if (!firebaseEnabled || !db) return null;
+    return db.collection("deletedMcqHtml").doc(String(id));
+}
+
+async function markHTMLAsDeleted(id, info = {}) {
+    const ref = deletedHTMLRef(id);
+    if (!ref) throw new Error("Firebase Firestore connected nahi hai. Permanent delete possible nahi hai.");
+    await ref.set({
+        id: String(id),
+        subject: String(info.subject || "").toLowerCase(),
+        chapterNumber: Number(info.chapterNumber) || null,
+        deletedAt: new Date().toISOString()
+    }, { merge: true });
+}
+
+async function getDeletedHTMLIds(ids) {
+    if (!firebaseEnabled || !db || !ids.length) return new Set();
+    const refs = ids.map(id => deletedHTMLRef(id)).filter(Boolean);
+    const snapshots = await db.getAll(...refs);
+    return new Set(snapshots.filter(snapshot => snapshot.exists).map(snapshot => snapshot.id));
+}
+
 async function saveHTMLToFirebase(info, item, html) {
     if (!firebaseEnabled || !db) return false;
 
@@ -165,10 +190,10 @@ async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
     }
 
     const snapshot = await query.get();
+    const deletedIds = await getDeletedHTMLIds(snapshot.docs.map(doc => doc.id));
 
-    return snapshot.docs.map(doc => {
+    return snapshot.docs.filter(doc => !deletedIds.has(doc.id)).map(doc => {
         const data = doc.data();
-
         return {
             id: doc.id,
             fileName: data.fileName,
@@ -178,7 +203,7 @@ async function listHTMLFromFirestore(classNumber, subject, chapterNumber) {
             subtopicId: data.subtopicId || null,
             createdAt: data.createdAt,
             updatedAt: data.updatedAt,
-            url: `/api/mcq-html/file/${encodeURIComponent(doc.id)}`,
+            url: `/api/cs/mcq-html/file/${encodeURIComponent(doc.id)}`,
             source: "firebase-firestore"
         };
     });
@@ -3010,6 +3035,15 @@ app.post("/api/cs/mcq-html/upload",requireOwner,mcqHTMLUpload.single("mcqFile"),
 app.get("/api/cs/mcq-html/file/:id",async(req,res)=>{
     const id=String(req.params.id||"");
 
+    try {
+        if ((await getDeletedHTMLIds([id])).has(id)) {
+            return res.status(404).send("MCQ permanently deleted.");
+        }
+    } catch (error) {
+        console.error("CS MCQ deletion status check failed:", error.message);
+        return res.status(503).send("MCQ deletion status unavailable. Please retry.");
+    }
+
     // Local MCQ HTML is authoritative. Firebase is only a fallback.
     // This prevents stale Firebase HTML from overriding the current local file.
     const root=path.resolve(CS_MCQ_ROOT);
@@ -3067,7 +3101,9 @@ app.get("/api/cs/mcq-html/:subject/:chapterNumber",async(req,res)=>{
         const chapterNumber=Number(req.params.chapterNumber);
         const requestedSubtopicId=String(req.query.subtopicId||"").trim();
 
-        const localItems=readCSMCQMetadata(subject,chapterNumber);
+        const rawLocalItems=readCSMCQMetadata(subject,chapterNumber);
+        const localDeletedIds=await getDeletedHTMLIds(rawLocalItems.map(item => String(item?.id || "")).filter(Boolean));
+        const localItems=rawLocalItems.filter(item => !localDeletedIds.has(String(item.id)));
         let firebaseItems=[];
         if(firebaseEnabled&&db){
             try{firebaseItems=await listHTMLFromFirestore(0,subject,chapterNumber);}catch{}
@@ -3142,25 +3178,27 @@ app.delete("/api/cs/mcq-html",requireOwner,async(req,res)=>{
         const id=String(req.body.id||"").trim();
         if(!id) return res.status(400).json({success:false,message:"MCQ ID missing hai."});
 
-        const items=readCSMCQMetadata(subject,chapterNumber);
-        const item=items.find(x=>String(x.id)===id);
-        const ref=(firebaseEnabled&&db)?firestoreHTMLRef(id):null;
-        let firebaseSnapshot=null;
-
-        if(ref){
-            firebaseSnapshot=await ref.get();
+        if(!firebaseEnabled||!db){
+            throw new Error("Firebase Firestore connected nahi hai. Permanent delete ke liye Firebase connection zaroori hai.");
         }
 
-        if(!item && !firebaseSnapshot?.exists){
+        const items=readCSMCQMetadata(subject,chapterNumber);
+        const item=items.find(x=>String(x.id)===id);
+        const ref=firestoreHTMLRef(id);
+        const firebaseSnapshot=await ref.get();
+
+        if(!item && !firebaseSnapshot.exists){
+            const alreadyDeleted=(await getDeletedHTMLIds([id])).has(id);
+            if(alreadyDeleted){
+                return res.json({success:true,message:"MCQ pehle hi permanently delete ho chuka hai.",alreadyDeleted:true});
+            }
             return res.status(404).json({success:false,message:"MCQ nahi mila."});
         }
 
-        // Firebase-backed sets may appear in the admin list even when there is
-        // no local metadata entry. Delete the selected Firebase record first;
-        // if that fails, leave local data untouched so the set cannot silently reappear.
-        if(firebaseSnapshot?.exists){
-            await deleteHTMLFromFirebase(id);
-        }
+        // Persist the tombstone before removing the document. All list and
+        // file-serving paths check this record to prevent resurrection.
+        await markHTMLAsDeleted(id,{subject,chapterNumber});
+        if(firebaseSnapshot.exists) await ref.delete();
 
         if(item){
             const file=path.join(csChapterDir(subject,chapterNumber),item.fileName);
@@ -3170,9 +3208,10 @@ app.delete("/api/cs/mcq-html",requireOwner,async(req,res)=>{
 
         res.json({
             success:true,
-            message:"Selected MCQ Set delete ho gaya.",
+            message:"MCQ permanently delete ho gaya. Upload/refresh ke baad wapas nahi aayega.",
             deletedLocal:Boolean(item),
-            deletedFirebase:Boolean(firebaseSnapshot?.exists)
+            deletedFirebase:Boolean(firebaseSnapshot.exists),
+            permanent:true
         });
     }catch(error){
         res.status(400).json({success:false,message:error.message||"MCQ delete nahi hua."});
@@ -5109,7 +5148,14 @@ app.get("/api/cs/public-hierarchy-v2/:subject", async (req,res)=>{
         const mcqByChapter=new Map();
         for(const chapterNumber of chapterNumbers){
             let items=[];
-            try{ items=readCSMCQMetadata(subject,chapterNumber); }catch{}
+            try{
+                items=readCSMCQMetadata(subject,chapterNumber);
+                const deletedLocalIds=await getDeletedHTMLIds(items.map(x=>String(x?.id||"")).filter(Boolean));
+                items=items.filter(x=>!deletedLocalIds.has(String(x.id)));
+            }catch(error){
+                console.error("CS MCQ tombstone check failed:",error.message);
+                items=[];
+            }
             if(firebaseEnabled&&db){
                 try{
                     const remote=await listHTMLFromFirestore(0,subject,chapterNumber);
